@@ -19,14 +19,21 @@
 
         <TextBlock Grid.Row="0" Grid.Column="0" Text="表根目录" VerticalAlignment="Center" />
         <TextBox x:Name="TablePathBox" Grid.Row="0" Grid.Column="1" Margin="8,0,8,8" />
-        <Button Grid.Row="0" Grid.Column="2" Content="扫描" Padding="18,4" Click="Scan_Click" />
+        <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal">
+            <Button Content="浏览" Padding="12,4" Margin="0,0,8,0" Click="BrowseTablePath_Click" />
+            <Button Content="扫描" Padding="18,4" Click="Scan_Click" />
+        </StackPanel>
 
         <TextBlock Grid.Row="1" Grid.Column="0" Text="输出数据目录" VerticalAlignment="Center" />
         <TextBox x:Name="DataOutputPathBox" Grid.Row="1" Grid.Column="1" Margin="8,0,8,8" />
-        <Button Grid.Row="1" Grid.Column="2" Content="校验" Padding="18,4" Click="Validate_Click" />
+        <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal">
+            <Button Content="浏览" Padding="12,4" Margin="0,0,8,0" Click="BrowseDataOutputPath_Click" />
+            <Button Content="校验" Padding="18,4" Click="Validate_Click" />
+        </StackPanel>
 
         <TextBlock Grid.Row="2" Grid.Column="0" Text="输出代码目录" VerticalAlignment="Center" />
         <TextBox x:Name="CodeOutputPathBox" Grid.Row="2" Grid.Column="1" Margin="8,0,8,8" />
+        <Button Grid.Row="2" Grid.Column="2" Content="浏览" Padding="12,4" Click="BrowseCodeOutputPath_Click" />
 
         <StackPanel Grid.Row="3" Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,4,0,12">
             <CheckBox x:Name="JsonCheckBox" Content="JSON" IsChecked="True" Margin="0,0,16,0" />

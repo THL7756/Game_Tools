@@ -36,7 +36,7 @@ public sealed class TableValidator
         var keys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var row in document.Rows)
         {
-            foreach (var field in fields)
+            foreach (var field in document.Schema.AllFields)
             {
                 var raw = row.RawValues.TryGetValue(field.Name, out var value) ? value : null;
                 var text = string.IsNullOrWhiteSpace(raw) ? field.DefaultValue : raw;

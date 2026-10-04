@@ -18,6 +18,8 @@ public sealed class ExportTests
         Assert.Equal(first, second);
         Assert.Contains("Skill", first);
         Assert.Contains("effects", first);
+        Assert.Contains("\"type\": \"int()\"", first);
+        Assert.DoesNotContain("int(())", first);
     }
 
     [Fact]

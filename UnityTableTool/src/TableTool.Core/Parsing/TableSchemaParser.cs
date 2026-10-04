@@ -11,7 +11,9 @@ public sealed class TableSchemaParser
 
     public TableDocument Parse(RawTableGrid grid)
     {
-        if (grid.Rows.Count < 6)
+        if (grid.Rows.Count == 0)
+            throw new FormatException("A table must contain at least one row.");
+        if (grid.Rows.Count < (IsSingleton(grid.Rows[0]) ? 5 : 6))
             throw new FormatException("A table must contain six header rows.");
 
         var tableName = ParseTableName(grid.Rows[0]);
@@ -25,24 +27,27 @@ public sealed class TableSchemaParser
         var names = SliceHeader(grid.Rows[3], offset);
         var targets = SliceHeader(grid.Rows[4], offset);
         var defaults = SliceHeader(grid.Rows[5], offset);
+        var validationFields = new List<FieldSchema>();
         var fields = new List<FieldSchema>();
 
         for (var i = 0; i < names.Count; i++)
         {
             var name = names[i]?.Trim() ?? string.Empty;
-            if (ShouldIgnoreColumn(name))
+            if (ShouldSkipColumn(name))
                 continue;
+            var isTestColumn = IsTestColumn(name);
 
             var typeText = Get(types, i)?.Trim() ?? string.Empty;
             var type = TypeDescriptor.Parse(typeText);
             var target = ParseTarget(Get(targets, i));
-            fields.Add(new FieldSchema(
+            var field = new FieldSchema(
                 i + offset,
                 name,
                 Get(descriptions, i)?.Trim() ?? string.Empty,
                 type,
                 target,
-                EmptyToNull(Get(defaults, i))));
+                EmptyToNull(Get(defaults, i)));
+            (isTestColumn ? validationFields : fields).Add(field);
         }
 
         if (fields.Count == 0)
@@ -63,7 +68,7 @@ public sealed class TableSchemaParser
                 ? 1
                 : 0;
             var values = new Dictionary<string, string?>(StringComparer.Ordinal);
-            foreach (var field in fields)
+            foreach (var field in fields.Concat(validationFields))
             {
                 var index = field.SourceColumn - offset + valueOffset;
                 values[field.Name] = index >= 0 && index < sourceRow.Count ? sourceRow[index]?.Trim() : null;
@@ -74,7 +79,7 @@ public sealed class TableSchemaParser
             rows.Add(new TableRow(rowIndex + 1, isTest, values));
         }
 
-        return new TableDocument(grid.SourceName, new TableSchema(tableName, fields, fields[0].Name), rows);
+        return new TableDocument(grid.SourceName, new TableSchema(tableName, fields, fields[0].Name, false, validationFields), rows);
     }
 
     private static TableDocument ParseSingleton(RawTableGrid grid, string tableName)
@@ -230,10 +235,11 @@ public sealed class TableSchemaParser
 
     private static string? EmptyToNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private static bool ShouldIgnoreColumn(string name) =>
-        string.IsNullOrWhiteSpace(name)
-        || name.StartsWith("##", StringComparison.Ordinal)
-        || name.StartsWith("#test", StringComparison.OrdinalIgnoreCase)
+    private static bool ShouldSkipColumn(string name) =>
+        string.IsNullOrWhiteSpace(name) || name.StartsWith("##", StringComparison.Ordinal);
+
+    private static bool IsTestColumn(string name) =>
+        name.StartsWith("#test", StringComparison.OrdinalIgnoreCase)
         || name.StartsWith("#ceshi", StringComparison.OrdinalIgnoreCase);
 
     private static FieldTarget ParseTarget(string? value) => value?.Trim().ToLowerInvariant() switch

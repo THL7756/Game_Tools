@@ -1,4 +1,5 @@
 using TableTool.Core.Models;
+using TableTool.Core.Parsing;
 
 namespace TableTool.Serialization;
 
@@ -15,20 +16,18 @@ public sealed class ExportService
 
     public ExportResult ExportAll(IEnumerable<TableDocument> documents, ExportOptions options)
     {
-        var tableDocuments = documents.ToArray();
+        var tableDocuments = TableDocumentMerger.Merge(documents).ToArray();
         if (tableDocuments.Length == 0)
             throw new InvalidOperationException("No table documents were found.");
-        var duplicateNames = tableDocuments.GroupBy(document => document.Schema.Name, StringComparer.OrdinalIgnoreCase)
-            .Where(group => group.Count() > 1)
-            .Select(group => group.Key)
-            .ToArray();
-        if (duplicateNames.Length > 0)
-            throw new InvalidOperationException($"Duplicate table names: {string.Join(", ", duplicateNames)}.");
+        if (string.IsNullOrWhiteSpace(options.DataOutputDirectory))
+            throw new ArgumentException("Data output directory cannot be empty.");
+        if (string.IsNullOrWhiteSpace(options.CodeOutputDirectory))
+            throw new ArgumentException("Code output directory cannot be empty.");
 
         var dataOutput = Path.GetFullPath(options.DataOutputDirectory);
         var codeOutput = Path.GetFullPath(options.CodeOutputDirectory);
-        if (string.Equals(dataOutput, codeOutput, StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("Data and code output directories must be different.");
+        if (IsSameOrDescendant(dataOutput, codeOutput) || IsSameOrDescendant(codeOutput, dataOutput))
+            throw new ArgumentException("Data and code output directories must be separate and cannot contain each other.");
 
         var dataStaging = dataOutput + ".staging";
         var codeStaging = codeOutput + ".staging";
@@ -74,6 +73,11 @@ public sealed class ExportService
                 .Replace(codeStaging, codeOutput, StringComparison.OrdinalIgnoreCase)).ToArray(),
             string.Join(";", tableDocuments.Select(document => SchemaHasher.Compute(document.Schema))));
     }
+
+    private static bool IsSameOrDescendant(string candidate, string root) =>
+        string.Equals(candidate, root, StringComparison.OrdinalIgnoreCase)
+        || candidate.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+        || candidate.StartsWith(root + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
 
     private static string Write(string root, string folder, string name, string content)
     {

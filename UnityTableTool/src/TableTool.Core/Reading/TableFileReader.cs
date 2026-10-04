@@ -47,7 +47,49 @@ public static class TableFileReader
     private static Parsing.RawTableGrid ReadDelimited(string path)
     {
         var separator = Path.GetExtension(path).Equals(".tsv", StringComparison.OrdinalIgnoreCase) ? '\t' : ',';
-        var rows = File.ReadAllLines(path).Select(line => (IReadOnlyList<string?>)line.Split(separator).Cast<string?>().ToArray()).ToArray();
+        var rows = File.ReadAllLines(path)
+            .Select(line => (IReadOnlyList<string?>)ParseLine(line, separator).Cast<string?>().ToArray())
+            .ToArray();
         return new Parsing.RawTableGrid(path, rows);
+    }
+
+    private static IReadOnlyList<string> ParseLine(string line, char separator)
+    {
+        var fields = new List<string>();
+        var value = new StringBuilder();
+        var quoted = false;
+
+        for (var index = 0; index < line.Length; index++)
+        {
+            var character = line[index];
+            if (character == '"')
+            {
+                if (quoted && index + 1 < line.Length && line[index + 1] == '"')
+                {
+                    value.Append('"');
+                    index++;
+                }
+                else
+                {
+                    quoted = !quoted;
+                }
+                continue;
+            }
+
+            if (character == separator && !quoted)
+            {
+                fields.Add(value.ToString());
+                value.Clear();
+                continue;
+            }
+
+            value.Append(character);
+        }
+
+        if (quoted)
+            throw new FormatException("Quoted CSV field is not closed.");
+
+        fields.Add(value.ToString());
+        return fields;
     }
 }

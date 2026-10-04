@@ -32,7 +32,7 @@ public sealed class ValueParserTests
 
         var value = ValueParser.Parse("1|2#3;4|5#6", type);
 
-        Assert.Equal(new[] { new[] { new[] { 1, 2 }, new[] { 3 } }, new[] { new[] { 4, 5 }, new[] { 6 } } }, (int[][][])value);
+        Assert.Equal(new[] { new[] { new[] { 1 }, new[] { 2, 3 } }, new[] { new[] { 4 }, new[] { 5, 6 } } }, (int[][][])value);
     }
 
     [Fact]

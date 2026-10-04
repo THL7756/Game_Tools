@@ -2,6 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
+    <AssemblyName>UnityTableTool</AssemblyName>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
@@ -12,4 +13,3 @@
     <ProjectReference Include="..\TableTool.Serialization\TableTool.Serialization.csproj" />
   </ItemGroup>
 </Project>
-

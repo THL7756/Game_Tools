@@ -13,10 +13,10 @@
     <ProjectReference Include="..\TableTool.Serialization\TableTool.Serialization.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\UnityRuntimePackage\com.company.unity-table-runtime\Runtime\RuntimeFormat.cs" Link="RuntimeFormat.cs" />
-    <Compile Include="..\UnityRuntimePackage\com.company.unity-table-runtime\Runtime\ITableDataReader.cs" Link="ITableDataReader.cs" />
-    <Compile Include="..\UnityRuntimePackage\com.company.unity-table-runtime\Runtime\JsonTableDataReader.cs" Link="JsonTableDataReader.cs" />
-    <Compile Include="..\UnityRuntimePackage\com.company.unity-table-runtime\Runtime\BinaryTableDataReader.cs" Link="BinaryTableDataReader.cs" />
+    <Compile Include="..\..\UnityRuntimePackage\com.company.unity-table-runtime\Runtime\RuntimeFormat.cs" Link="RuntimeFormat.cs" />
+    <Compile Include="..\..\UnityRuntimePackage\com.company.unity-table-runtime\Runtime\ITableDataReader.cs" Link="ITableDataReader.cs" />
+    <Compile Include="..\..\UnityRuntimePackage\com.company.unity-table-runtime\Runtime\JsonTableDataReader.cs" Link="JsonTableDataReader.cs" />
+    <Compile Include="..\..\UnityRuntimePackage\com.company.unity-table-runtime\Runtime\BinaryTableDataReader.cs" Link="BinaryTableDataReader.cs" />
   </ItemGroup>
 </Project>
 

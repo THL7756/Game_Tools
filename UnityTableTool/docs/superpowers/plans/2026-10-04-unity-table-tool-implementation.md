@@ -199,3 +199,4 @@ public static TableRuntimeDocument ReadAuto(byte[] data, string manifestFormat =
 - [ ] Step 2: Check release layout against the design spec.
 - [ ] Step 3: Verify no Diff tool, CLI executable, remote configuration or platform GUI implementation was added.
 - [ ] Step 4: Report verified checks and any SDK/tooling limitations.
+> 注意：本文件是首版实现计划，保留其历史任务上下文。当前目录、输出端别、文件名表列表、搜索、最近打表、关联表和无 manifest 规则以 `superpowers/specs` 及 `docs` 为准。

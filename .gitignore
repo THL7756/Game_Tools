@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+*.user
+*.suo
+.vs/
+UnityTableTool/release/*.dll
+UnityTableTool/release/*.pdb
+UnityTableTool/release/*.json
+UnityTableTool/release/*.xml
+UnityTableTool/release/*.exe
+UnityTableTool/release/*.config

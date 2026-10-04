@@ -49,6 +49,28 @@ public sealed class TableValidatorTests
     }
 
     [Fact]
+    public void ValidatesTestColumnsWithoutExportingThem()
+    {
+        var grid = new RawTableGrid("memory", new[]
+        {
+            (IReadOnlyList<string?>)["table: Skill"],
+            (IReadOnlyList<string?>)["字段说明", "ID", "调试值"],
+            (IReadOnlyList<string?>)["字段类型", "int", "int"],
+            (IReadOnlyList<string?>)["字段名", "id", "#test"],
+            (IReadOnlyList<string?>)["客户端服务器", "cs", "cs"],
+            (IReadOnlyList<string?>)["默认值", "0", ""],
+            (IReadOnlyList<string?>)["1", "not-an-int"]
+        });
+
+        var document = new TableSchemaParser().Parse(grid);
+        var issues = new TableValidator().Validate(document);
+
+        Assert.Single(document.Schema.Fields);
+        Assert.Contains(issues, issue => issue.FieldName == "#test");
+        Assert.Contains(issues, issue => issue.Code == ErrorCodes.FieldTypeUnknown);
+    }
+
+    [Fact]
     public void ReportsInvalidSingletonRowCount()
     {
         var document = new TableDocument(

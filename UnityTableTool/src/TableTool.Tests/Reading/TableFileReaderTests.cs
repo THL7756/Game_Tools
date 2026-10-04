@@ -27,4 +27,22 @@ public sealed class TableFileReaderTests
             Directory.Delete(root, recursive: true);
         }
     }
+
+    [Fact]
+    public void PreservesCommasInsideQuotedCsvFields()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "unity-table-tool-quoted-" + Guid.NewGuid().ToString("N") + ".csv");
+        File.WriteAllText(path, "table: Skill\n字段说明,名称\n字段类型,string\n字段名,name\n客户端服务器,cs\n默认值,\n,\"火球,冲击\"");
+
+        try
+        {
+            var grid = Assert.Single(TableFileReader.Read(path));
+
+            Assert.Equal("火球,冲击", grid.Rows[6][1]);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
 }

@@ -9,12 +9,11 @@
 
 目录用途：
 
-- `src/TableTool.Core`：读取 `.xlsx`、`.xls`、`.csv`、`.tsv`，解析表结构、类型、注释和校验规则。
-- `src/TableTool.Serialization`：输出 C#、JSON、UTB1 bytes 和 manifest。
-- `src/TableTool.Gui`：Windows WPF 图形界面，负责选择路径、扫描、校验和导出。
+- `src/TableTool.Core`：读取 `.xlsx`、`.xls`、`.csv`、`.tsv`，解析表结构、类型、注释、校验规则并合并同名分表。
+- `src/TableTool.Serialization`：输出 C#、JSON 和 UTB1 bytes。
+- `src/TableTool.Gui`：Windows WPF 图形界面，负责扫描、文件名列表、搜索、最近打表、勾选、端别选择、校验和导出。
 - `src/TableTool.Tests`：Core、导出和 Runtime 读取逻辑的自动化测试。
-- `UnityRuntimePackage`：Unity 项目运行时读取 JSON/bytes 的包，本版不要求先接入 Unity 验收。
-- `samples`：示例输入表和示例输出；输入目录可以继续嵌套子目录。
-- `build`：SDK 构建和 self-contained 发布命令；`release`：发布包布局说明。
+- `UnityRuntimePackage`：Unity 项目运行时读取 JSON/bytes 的包。
+- `Data`：示例源表；`Data_c`、`Data_s`：客户端/服务器数据输出；`Code`：独立代码输出。
 
-GUI 中的三个路径含义：表根目录负责递归发现输入表；输出数据目录保存 JSON、bytes、manifest；输出代码目录保存生成的 C# 文件。
+GUI 的表列表、搜索和最近记录均以文件名为主。可以只打客户端或只打服务器；勾选一张表时，关联表会自动加入本次导出。`Data_c` 和 `Data_s` 中的 JSON、bytes 平铺存放，不生成 manifest，数据内容也不记录字段端别。

@@ -25,7 +25,7 @@ public sealed class JsonTableExporter
             fields = document.Schema.Fields.Select(field => new
             {
                 name = field.Name,
-                type = field.Type.BaseType + new string('(', field.Type.Dimensions) + new string(')', field.Type.Dimensions),
+                type = field.Type.BaseType + string.Concat(Enumerable.Repeat("()", field.Type.Dimensions)),
                 target = field.Target.ToString(),
                 defaultValue = field.DefaultValue
             }).ToArray(),

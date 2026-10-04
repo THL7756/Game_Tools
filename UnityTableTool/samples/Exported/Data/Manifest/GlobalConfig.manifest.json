@@ -1,7 +1,0 @@
-{
-  "tableName": "GlobalConfig",
-  "isSingleton": true,
-  "schemaHash": "generated-by-UnityTableTool",
-  "rowCount": 1,
-  "formats": [ "json", "bytes" ]
-}
