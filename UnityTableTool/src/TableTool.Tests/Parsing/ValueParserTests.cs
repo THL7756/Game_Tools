@@ -16,21 +16,21 @@ public sealed class ValueParserTests
     }
 
     [Fact]
-    public void ParsesTwoDimensionalIntArrayUsingHashThenPipe()
+    public void ParsesTwoDimensionalIntArrayUsingPipeThenHash()
     {
         var type = TypeDescriptor.Parse("int()()");
 
-        var value = ValueParser.Parse("1|2#3|4", type);
+        var value = ValueParser.Parse("1#2|3#4", type);
 
         Assert.Equal(new[] { new[] { 1, 2 }, new[] { 3, 4 } }, (int[][])value);
     }
 
     [Fact]
-    public void ParsesThreeDimensionalIntArrayUsingHashPipeThenUnderscore()
+    public void ParsesThreeDimensionalIntArrayUsingSemicolonPipeThenHash()
     {
         var type = TypeDescriptor.Parse("int()()()");
 
-        var value = ValueParser.Parse("1|2_3#4|5_6", type);
+        var value = ValueParser.Parse("1|2#3;4|5#6", type);
 
         Assert.Equal(new[] { new[] { new[] { 1, 2 }, new[] { 3 } }, new[] { new[] { 4, 5 }, new[] { 6 } } }, (int[][][])value);
     }

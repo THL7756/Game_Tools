@@ -10,6 +10,7 @@ public sealed class ManifestExporter
         return JsonSerializer.Serialize(new
         {
             tableName = document.Schema.Name,
+            isSingleton = document.Schema.IsSingleton,
             schemaHash = SchemaHasher.Compute(document.Schema),
             rowCount = document.Rows.Count(row => !row.IsTest),
             formats = formats.OrderBy(format => format, StringComparer.Ordinal).ToArray()

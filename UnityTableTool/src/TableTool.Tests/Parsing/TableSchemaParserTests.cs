@@ -46,6 +46,63 @@ public sealed class TableSchemaParserTests
         Assert.Equal("1001", document.Rows[0].RawValues["id"]);
     }
 
+    [Fact]
+    public void ParsesSingletonMetadataAndRequiresOneDataRow()
+    {
+        var grid = Grid(
+            ["table: GlobalConfig", "type:single"],
+            ["常量ID", "数值类型", "具体数值"],
+            ["str", "str", "str"],
+            ["id", "type", "data"],
+            ["name", "string", "正式配置"],
+            ["", "", ""]);
+
+        var document = new TableSchemaParser().Parse(grid);
+
+        Assert.True(document.Schema.IsSingleton);
+        Assert.Single(document.Rows);
+        Assert.Equal("正式配置", document.Rows[0].RawValues["name"]);
+    }
+
+    [Fact]
+    public void ParsesSingletonRowsWithOptionalDescriptionAndFlexibleColumns()
+    {
+        var grid = Grid(
+            ["table: GlobalConfig\ntype:single"],
+            ["常量ID", "常量描述（不导表）", "数值类型", "具体数值", "前后端"],
+            ["str", "", "str", "str", "cs"],
+            ["id", "desc", "type", "data", ""],
+            ["", "", "", "", "cs"],
+            ["team_num", "预设阵容数量", "int", "5", "c"],
+            ["slot_num", "化形槽位数", "int", "1", "s"]);
+
+        var document = new TableSchemaParser().Parse(grid);
+
+        Assert.True(document.Schema.IsSingleton);
+        Assert.Equal(new[] { "team_num", "slot_num" }, document.Schema.Fields.Select(field => field.Name));
+        Assert.Equal(new[] { "c", "s" }, document.Schema.Fields.Select(field => field.Target.ToString()[0].ToString().ToLowerInvariant()));
+        Assert.Single(document.Rows);
+        Assert.Equal("5", document.Rows[0].RawValues["team_num"]);
+        Assert.Equal("1", document.Rows[0].RawValues["slot_num"]);
+    }
+
+    [Fact]
+    public void ParsesSingletonWithoutDescriptionColumn()
+    {
+        var grid = Grid(
+            ["table: GlobalConfig", "type:single"],
+            ["前后端", "具体数值", "常量ID", "数值类型"],
+            ["cs", "str", "str", "str"],
+            ["", "data", "id", "type"],
+            ["cs", "5", "team_num", "int"]);
+
+        var document = new TableSchemaParser().Parse(grid);
+
+        Assert.Single(document.Schema.Fields);
+        Assert.Equal("team_num", document.Schema.Fields[0].Name);
+        Assert.Equal("5", document.Rows[0].RawValues["team_num"]);
+    }
+
     private static RawTableGrid Grid(params string[][] rows) =>
         new("memory", rows.Select(row => (IReadOnlyList<string?>)row).ToArray());
 }

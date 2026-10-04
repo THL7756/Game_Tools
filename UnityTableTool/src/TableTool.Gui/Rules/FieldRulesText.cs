@@ -16,11 +16,14 @@ UnityTableTool 字段规则
 #test 和 #ceshi 开头的行或列会校验，但不会进入最终数据。
 
 类型和拆分：
-int() 使用 #；int()() 先按 # 再按 |；int()()() 先按 #、再按 |、最后按 _。
+int() 使用 #；int()() 外层按 |、内层按 #；int()()() 外层按 ;、中层按 |、内层按 #。
 分隔符固定，最多三维；错误层级或空元素会阻止导出。
 
+单例表：
+第一行追加 type:single；前几行用 id、type、data 语义列识别，desc 可选，列顺序任意；正式配置生成一个单例对象，运行时使用 GetSingleton。
+
 输出：
-C# 用于 Unity 编译；JSON 用于调试和开发环境；UTB1 bytes 用于正式运行时。
+C# 输出到代码目录；JSON、UTB1 bytes 和 manifest 输出到数据目录。JSON 用于调试和开发环境；UTB1 bytes 用于正式运行时。
 Runtime Package 会优先使用 manifest 声明，其次检测 UTB1 magic，最后检测 JSON。
 """;
 }

@@ -1,7 +1,8 @@
 namespace TableTool.Serialization;
 
 public sealed record ExportOptions(
-    string OutputDirectory,
+    string DataOutputDirectory,
+    string CodeOutputDirectory,
     bool GenerateCode = true,
     bool GenerateJson = true,
     bool GenerateBytes = true,

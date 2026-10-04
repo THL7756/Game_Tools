@@ -48,6 +48,27 @@ public sealed class RuntimeFormatDetectionTests
         Assert.Throws<FormatException>(() => RuntimeFormat.ReadAuto(bytes));
     }
 
+    [Fact]
+    public void ReadsSingletonThroughSingletonAccessor()
+    {
+        var grid = new RawTableGrid("memory", new[]
+        {
+            (IReadOnlyList<string?>)["table: GlobalConfig", "type:single"],
+            (IReadOnlyList<string?>)["常量ID", "数值类型", "具体数值"],
+            (IReadOnlyList<string?>)["str", "str", "str"],
+            (IReadOnlyList<string?>)["id", "type", "data"],
+            (IReadOnlyList<string?>)["name", "string", "正式配置"],
+            (IReadOnlyList<string?>)["", "", ""]
+        });
+        var document = new TableSchemaParser().Parse(grid);
+        var json = Encoding.UTF8.GetBytes(new JsonTableExporter().Export(document));
+
+        var runtime = RuntimeFormat.ReadAuto(json);
+
+        Assert.True(runtime.TryGetSingleton(out var row));
+        Assert.Equal("正式配置", row["name"]);
+    }
+
     private static TableTool.Core.Models.TableDocument CreateDocument()
     {
         var grid = new RawTableGrid("memory", new[]

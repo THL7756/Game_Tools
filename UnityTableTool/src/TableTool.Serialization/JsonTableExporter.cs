@@ -20,7 +20,8 @@ public sealed class JsonTableExporter
             formatVersion = 1,
             tableName = document.Schema.Name,
             schemaHash = SchemaHasher.Compute(document.Schema),
-            primaryKey = document.Schema.PrimaryKey,
+            isSingleton = document.Schema.IsSingleton,
+            primaryKey = document.Schema.IsSingleton ? null : document.Schema.PrimaryKey,
             fields = document.Schema.Fields.Select(field => new
             {
                 name = field.Name,

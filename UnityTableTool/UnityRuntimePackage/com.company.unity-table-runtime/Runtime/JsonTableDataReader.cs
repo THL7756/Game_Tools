@@ -27,7 +27,10 @@ public static class JsonTableDataReader
         var root = json.RootElement;
         var tableName = root.GetProperty("tableName").GetString() ?? string.Empty;
         var schemaHash = root.GetProperty("schemaHash").GetString() ?? string.Empty;
-        var primaryKey = root.GetProperty("primaryKey").GetString() ?? "id";
+        var isSingleton = root.TryGetProperty("isSingleton", out var singletonProperty) && singletonProperty.GetBoolean();
+        var primaryKey = root.TryGetProperty("primaryKey", out var primaryKeyProperty) && primaryKeyProperty.ValueKind != JsonValueKind.Null
+            ? primaryKeyProperty.GetString()
+            : null;
         var rows = new List<IReadOnlyDictionary<string, string?>>();
         foreach (var row in root.GetProperty("rows").EnumerateArray())
         {
@@ -36,6 +39,6 @@ public static class JsonTableDataReader
                 values[property.Name] = property.Value.ValueKind == JsonValueKind.Null ? null : property.Value.ToString();
             rows.Add(values);
         }
-        return new TableRuntimeDocument(tableName, schemaHash, rows, primaryKey);
+        return new TableRuntimeDocument(tableName, schemaHash, rows, primaryKey, isSingleton);
     }
 }

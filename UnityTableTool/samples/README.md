@@ -1,14 +1,16 @@
 # 示例表
 
-`Skill.csv` 展示了完整规则：
+`Skill.xlsx` 展示了完整规则：
 
 - `int()` 使用 `#` 拆分。
-- `int()()` 使用 `#` 后再使用 `|` 拆分。
-- `int()()()` 使用 `#`、`|`、`_` 三层拆分。
+- `int()()` 使用外层 `|`、内层 `#` 拆分。
+- `int()()()` 使用外层 `;`、中层 `|`、内层 `#` 拆分。
 - `c`、`s`、`cs` 和空标记。
 - `##` 注释列和注释行。
 - `#test` 测试列和测试行。
 
-CSV 与 XLSX 使用相同的六行表头。实际项目可以把这些示例复制到 Excel 后另存为 `.xlsx`。
+`GlobalConfig.xlsx` 展示单例表：第一行带 `type:single`，语义行包含 `id`、`type`、`data`，`desc` 可选，正式数据最终生成一个单例对象。
 
-导出目录由 GUI 选择，默认输出到 `samples/Exported`，包含 `Code`、`Json`、`Bytes` 和 `Manifest` 子目录。
+示例使用 Excel `.xlsx`，工具仍同时支持 `.xlsx`、`.xls`、`.csv`、`.tsv` 输入。
+
+GUI 选择 `samples` 作为表根目录，再分别选择 `samples/Exported/Data` 和 `samples/Exported/Code`。数据目录包含 `Json`、`Bytes`、`Manifest`，代码目录直接包含生成的 `*.cs`。

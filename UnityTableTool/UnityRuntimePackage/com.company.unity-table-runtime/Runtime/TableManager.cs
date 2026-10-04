@@ -21,4 +21,11 @@ public sealed class TableManager
             throw new KeyNotFoundException($"Table '{tableName}' does not contain key '{key}'.");
         return row;
     }
+
+    public IReadOnlyDictionary<string, string?> GetSingleton(string tableName)
+    {
+        if (!tables.TryGetValue(tableName, out var table) || !table.TryGetSingleton(out var row))
+            throw new KeyNotFoundException($"Table '{tableName}' is not a singleton table.");
+        return row;
+    }
 }

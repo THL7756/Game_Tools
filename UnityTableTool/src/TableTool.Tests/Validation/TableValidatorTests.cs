@@ -8,6 +8,25 @@ namespace TableTool.Tests.Validation;
 public sealed class TableValidatorTests
 {
     [Fact]
+    public void SingletonDoesNotRequireAPrimaryKey()
+    {
+        var grid = new RawTableGrid("memory", new[]
+        {
+            (IReadOnlyList<string?>)["table: GlobalConfig\ntype:single"],
+            (IReadOnlyList<string?>)["常量ID", "数值类型", "具体数值"],
+            (IReadOnlyList<string?>)["str", "str", "str"],
+            (IReadOnlyList<string?>)["id", "type", "data"],
+            (IReadOnlyList<string?>)["team_num", "int", "5"],
+            (IReadOnlyList<string?>)["slot_num", "int", "1"]
+        });
+        var document = new TableSchemaParser().Parse(grid);
+
+        var issues = new TableValidator().Validate(document);
+
+        Assert.DoesNotContain(issues, issue => issue.Code == ErrorCodes.PrimaryKeyMissing);
+    }
+
+    [Fact]
     public void ReportsDuplicatePrimaryKeysAndInvalidArrayValues()
     {
         var grid = new RawTableGrid("memory", new[]
@@ -27,5 +46,20 @@ public sealed class TableValidatorTests
 
         Assert.Contains(issues, issue => issue.Code == ErrorCodes.PrimaryKeyDuplicate);
         Assert.Contains(issues, issue => issue.Code == ErrorCodes.FieldArraySeparatorInvalid);
+    }
+
+    [Fact]
+    public void ReportsInvalidSingletonRowCount()
+    {
+        var document = new TableDocument(
+            "memory",
+            new TableSchema("GlobalConfig", [new FieldSchema(2, "value", "", TypeDescriptor.Parse("string"), FieldTarget.Both, null)], "value", true),
+            [
+                new TableRow(7, false, new Dictionary<string, string?> { ["value"] = "A" }),
+                new TableRow(8, false, new Dictionary<string, string?> { ["value"] = "B" })
+            ]);
+        var issues = new TableValidator().Validate(document);
+
+        Assert.Contains(issues, issue => issue.Code == ErrorCodes.SingletonRowCountInvalid);
     }
 }

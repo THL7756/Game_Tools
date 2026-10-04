@@ -1,8 +1,0 @@
-table: Item,,,
-字段说明,物品 ID,名称,价格
-字段类型,int,string,int
-字段名,id,name,price
-客户端服务器,cs,cs,cs
-默认值,0,,0
-,2001,药水,50
-,2002,钥匙,10

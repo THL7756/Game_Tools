@@ -8,6 +8,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
@@ -16,22 +17,25 @@
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="表目录" VerticalAlignment="Center" />
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="表根目录" VerticalAlignment="Center" />
         <TextBox x:Name="TablePathBox" Grid.Row="0" Grid.Column="1" Margin="8,0,8,8" />
         <Button Grid.Row="0" Grid.Column="2" Content="扫描" Padding="18,4" Click="Scan_Click" />
 
-        <TextBlock Grid.Row="1" Grid.Column="0" Text="输出目录" VerticalAlignment="Center" />
-        <TextBox x:Name="OutputPathBox" Grid.Row="1" Grid.Column="1" Margin="8,0,8,8" />
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="输出数据目录" VerticalAlignment="Center" />
+        <TextBox x:Name="DataOutputPathBox" Grid.Row="1" Grid.Column="1" Margin="8,0,8,8" />
         <Button Grid.Row="1" Grid.Column="2" Content="校验" Padding="18,4" Click="Validate_Click" />
 
-        <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,4,0,12">
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="输出代码目录" VerticalAlignment="Center" />
+        <TextBox x:Name="CodeOutputPathBox" Grid.Row="2" Grid.Column="1" Margin="8,0,8,8" />
+
+        <StackPanel Grid.Row="3" Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,4,0,12">
             <CheckBox x:Name="JsonCheckBox" Content="JSON" IsChecked="True" Margin="0,0,16,0" />
             <CheckBox x:Name="BytesCheckBox" Content="bytes" IsChecked="True" Margin="0,0,16,0" />
             <CheckBox x:Name="CodeCheckBox" Content="C#" IsChecked="True" Margin="0,0,16,0" />
             <Button Content="导出" Padding="18,4" Click="Export_Click" />
         </StackPanel>
 
-        <TabControl Grid.Row="3" Grid.ColumnSpan="3">
+        <TabControl Grid.Row="4" Grid.ColumnSpan="3">
             <TabItem Header="检测结果"><ListBox x:Name="LogList" /></TabItem>
             <TabItem Header="字段规则"><ScrollViewer Padding="12"><TextBlock Text="{x:Static local:FieldRulesText.Content}" TextWrapping="Wrap" /></ScrollViewer></TabItem>
         </TabControl>

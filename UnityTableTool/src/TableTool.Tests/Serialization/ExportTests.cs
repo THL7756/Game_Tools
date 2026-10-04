@@ -34,6 +34,29 @@ public sealed class ExportTests
         Assert.True(first.Length > 32);
     }
 
+    [Fact]
+    public void ExportAllSeparatesDataAndCodeDirectories()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "unity-table-tool-tests", Guid.NewGuid().ToString("N"));
+        var dataDirectory = Path.Combine(root, "data");
+        var codeDirectory = Path.Combine(root, "code");
+        try
+        {
+            var result = new ExportService().ExportAll([CreateDocument()], new ExportOptions(dataDirectory, codeDirectory));
+
+            Assert.True(File.Exists(Path.Combine(dataDirectory, "Json", "Skill.json")));
+            Assert.True(File.Exists(Path.Combine(dataDirectory, "Bytes", "Skill.bytes")));
+            Assert.True(File.Exists(Path.Combine(dataDirectory, "Manifest", "Skill.manifest.json")));
+            Assert.True(File.Exists(Path.Combine(codeDirectory, "SkillData.cs")));
+            Assert.Equal(4, result.Files.Count);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
+
     private static TableTool.Core.Models.TableDocument CreateDocument()
     {
         var grid = new RawTableGrid("memory", new[]

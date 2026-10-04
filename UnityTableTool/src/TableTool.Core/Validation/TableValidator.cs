@@ -9,6 +9,20 @@ public sealed class TableValidator
     {
         var issues = new List<ValidationIssue>();
         var fields = document.Schema.Fields;
+        var formalRows = document.Rows.Where(row => !row.IsTest).ToArray();
+        if (document.Schema.IsSingleton && formalRows.Length != 1)
+        {
+            issues.Add(new ValidationIssue(
+                ErrorCodes.SingletonRowCountInvalid,
+                ValidationSeverity.Error,
+                $"Singleton table must contain exactly one formal data row, found {formalRows.Length}.",
+                document.SourceName,
+                Suggestion: "删除多余数据行，或去掉 type:single 元数据。"));
+        }
+
+        if (document.Schema.IsSingleton)
+            return issues;
+
         if (!fields.Any(field => field.Name == document.Schema.PrimaryKey))
         {
             issues.Add(new ValidationIssue(

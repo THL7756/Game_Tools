@@ -8,21 +8,34 @@ public sealed class TableRuntimeDocument
 {
     private readonly Dictionary<string, IReadOnlyDictionary<string, string?>> rows;
 
-    public TableRuntimeDocument(string tableName, string schemaHash, IEnumerable<IReadOnlyDictionary<string, string?>> rows, string primaryKey)
+    public TableRuntimeDocument(string tableName, string schemaHash, IEnumerable<IReadOnlyDictionary<string, string?>> rows, string? primaryKey, bool isSingleton)
     {
         TableName = tableName;
         SchemaHash = schemaHash;
+        IsSingleton = isSingleton;
         PrimaryKey = primaryKey;
-        this.rows = rows.Where(row => row.TryGetValue(primaryKey, out var key) && !string.IsNullOrWhiteSpace(key))
-            .ToDictionary(row => row[primaryKey]!, row => row, StringComparer.Ordinal);
+        var materializedRows = rows.ToArray();
+        SingletonRow = isSingleton ? materializedRows.SingleOrDefault() : null;
+        this.rows = isSingleton || string.IsNullOrWhiteSpace(primaryKey)
+            ? new Dictionary<string, IReadOnlyDictionary<string, string?>>(StringComparer.Ordinal)
+            : materializedRows.Where(row => row.TryGetValue(primaryKey!, out var key) && !string.IsNullOrWhiteSpace(key))
+                .ToDictionary(row => row[primaryKey!]!, row => row, StringComparer.Ordinal);
     }
 
     public string TableName { get; }
     public string SchemaHash { get; }
-    public string PrimaryKey { get; }
+    public string? PrimaryKey { get; }
+    public bool IsSingleton { get; }
+    public IReadOnlyDictionary<string, string?>? SingletonRow { get; }
     public IReadOnlyCollection<string> Keys => rows.Keys;
 
     public bool TryGet(string key, out IReadOnlyDictionary<string, string?> row) => rows.TryGetValue(key, out row!);
+
+    public bool TryGetSingleton(out IReadOnlyDictionary<string, string?> row)
+    {
+        row = SingletonRow!;
+        return SingletonRow is not null;
+    }
 }
 
 public static class RuntimeFormat

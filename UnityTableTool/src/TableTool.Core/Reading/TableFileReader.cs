@@ -6,6 +6,11 @@ namespace TableTool.Core.Reading;
 
 public static class TableFileReader
 {
+    private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".xlsx", ".xls", ".csv", ".tsv"
+    };
+
     public static IReadOnlyList<Parsing.RawTableGrid> Read(string path)
     {
         if (!File.Exists(path))
@@ -25,6 +30,18 @@ public static class TableFileReader
         return dataSet.Tables.Cast<DataTable>().Select(table => new Parsing.RawTableGrid(
             $"{Path.GetFileName(path)}::{table.TableName}",
             table.Rows.Cast<DataRow>().Select(row => (IReadOnlyList<string?>)row.ItemArray.Select(cell => cell == DBNull.Value ? null : Convert.ToString(cell)).ToArray()).ToArray())).ToArray();
+    }
+
+    public static IReadOnlyList<Parsing.RawTableGrid> ReadDirectory(string rootDirectory)
+    {
+        if (!Directory.Exists(rootDirectory))
+            throw new DirectoryNotFoundException($"Table root directory was not found: {rootDirectory}");
+
+        return Directory.EnumerateFiles(rootDirectory, "*.*", SearchOption.AllDirectories)
+            .Where(path => SupportedExtensions.Contains(Path.GetExtension(path)))
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .SelectMany(Read)
+            .ToArray();
     }
 
     private static Parsing.RawTableGrid ReadDelimited(string path)
