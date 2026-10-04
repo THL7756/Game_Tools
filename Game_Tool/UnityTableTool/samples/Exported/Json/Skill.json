@@ -1,0 +1,17 @@
+{
+  "formatVersion": 1,
+  "tableName": "Skill",
+  "schemaHash": "generated-by-UnityTableTool",
+  "primaryKey": "id",
+  "fields": [
+    { "name": "id", "type": "int", "target": "Both", "defaultValue": "0" },
+    { "name": "name", "type": "string", "target": "Client", "defaultValue": null },
+    { "name": "damage", "type": "int", "target": "Client", "defaultValue": "0" },
+    { "name": "effects", "type": "int()", "target": "Client", "defaultValue": "0" },
+    { "name": "matrix", "type": "int()()", "target": "Server", "defaultValue": "0|0" },
+    { "name": "cube", "type": "int()()()", "target": "Server", "defaultValue": "0|0_0" }
+  ],
+  "rows": [
+    { "id": "1001", "name": "火球", "damage": "120", "effects": "1#2#3", "matrix": "1|2#3|4", "cube": "1|2_3#4|5_6" }
+  ]
+}
