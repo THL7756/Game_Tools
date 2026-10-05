@@ -9,4 +9,6 @@ public static class ErrorCodes
     public const string PrimaryKeyMissing = "PRIMARY_KEY_MISSING";
     public const string FieldTargetInvalid = "FIELD_TARGET_INVALID";
     public const string SingletonRowCountInvalid = "SINGLETON_ROW_COUNT_INVALID";
+    public const string TableReferenceMissing = "TABLE_REFERENCE_MISSING";
+    public const string TableMergeInvalid = "TABLE_MERGE_ERROR";
 }

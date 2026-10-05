@@ -5,6 +5,4 @@ public sealed class SkillData
     public string Name;
     public int Damage;
     public int[] Effects;
-    public int[][] Matrix;
-    public int[][][] Cube;
 }

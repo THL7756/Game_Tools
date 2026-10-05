@@ -8,4 +8,4 @@ Diff 后续放在 `Game_Tools/UnityTableToolDiff`，作为同级独立工具开�
 - GUI 的平台启动器可接入其他桌面平台。
 - Runtime 的加载回调可接入 AssetBundle、Addressables 或远程资源。
 
-这些接口不会改变六行表头、三层拆分协议、JSON 结构或 UTB1 magic。
+这些接口不会改变六行表头、三层拆分协议或 UTB1 magic。JSON 普通表结构保持稳定，单例表使用 `data` 对象表示单一输出对象。

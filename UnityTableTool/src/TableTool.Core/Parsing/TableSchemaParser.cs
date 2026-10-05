@@ -118,15 +118,24 @@ public sealed class TableSchemaParser
             }
             if (string.IsNullOrWhiteSpace(id))
                 continue;
-            if (values.ContainsKey(id))
-                throw new FormatException($"Duplicate singleton field '{id}'.");
-
             var typeText = Get(row, typeColumn)?.Trim() ?? string.Empty;
             var data = EmptyToNull(Get(row, dataColumn));
             var type = TypeDescriptor.Parse(typeText);
             var target = targetColumn >= 0 && !string.IsNullOrWhiteSpace(Get(row, targetColumn))
                 ? ParseTarget(Get(row, targetColumn))
                 : defaultTarget;
+            var existingIndex = fields.FindIndex(field => field.Name.Equals(id, StringComparison.Ordinal));
+            if (existingIndex >= 0)
+            {
+                var existing = fields[existingIndex];
+                if (existing.Type != type)
+                    throw new FormatException($"Duplicate singleton field '{id}' has incompatible types in {grid.SourceName}.");
+                fields[existingIndex] = existing with { Target = MergeTarget(existing.Target, target) };
+                if (string.IsNullOrWhiteSpace(values[id]) && data is not null)
+                    values[id] = data;
+                continue;
+            }
+
             fields.Add(new FieldSchema(
                 dataColumn,
                 id,
@@ -240,7 +249,9 @@ public sealed class TableSchemaParser
 
     private static bool IsTestColumn(string name) =>
         name.StartsWith("#test", StringComparison.OrdinalIgnoreCase)
-        || name.StartsWith("#ceshi", StringComparison.OrdinalIgnoreCase);
+        || name.StartsWith("#ceshi", StringComparison.OrdinalIgnoreCase)
+        || name.StartsWith("test_", StringComparison.OrdinalIgnoreCase)
+        || name.StartsWith("ceshi_", StringComparison.OrdinalIgnoreCase);
 
     private static FieldTarget ParseTarget(string? value) => value?.Trim().ToLowerInvariant() switch
     {
@@ -249,5 +260,8 @@ public sealed class TableSchemaParser
         "s" => FieldTarget.Server,
         _ => throw new FormatException($"Unknown field target '{value}'.")
     };
+
+    private static FieldTarget MergeTarget(FieldTarget left, FieldTarget right) =>
+        left == right ? left : FieldTarget.Both;
 
 }

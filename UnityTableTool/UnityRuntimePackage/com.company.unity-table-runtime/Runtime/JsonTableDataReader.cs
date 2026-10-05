@@ -12,8 +12,8 @@ public static class JsonTableDataReader
         {
             using var json = JsonDocument.Parse(data);
             return json.RootElement.TryGetProperty("tableName", out _)
-                && json.RootElement.TryGetProperty("rows", out var rows)
-                && rows.ValueKind == JsonValueKind.Array;
+                && ((json.RootElement.TryGetProperty("rows", out var rows) && rows.ValueKind == JsonValueKind.Array)
+                    || (json.RootElement.TryGetProperty("data", out var singletonData) && singletonData.ValueKind == JsonValueKind.Object));
         }
         catch (JsonException)
         {
@@ -26,19 +26,27 @@ public static class JsonTableDataReader
         using var json = JsonDocument.Parse(data);
         var root = json.RootElement;
         var tableName = root.GetProperty("tableName").GetString() ?? string.Empty;
-        var schemaHash = root.GetProperty("schemaHash").GetString() ?? string.Empty;
+        var schemaHash = root.TryGetProperty("schemaHash", out var schemaProperty) ? schemaProperty.GetString() ?? string.Empty : string.Empty;
         var isSingleton = root.TryGetProperty("isSingleton", out var singletonProperty) && singletonProperty.GetBoolean();
         var primaryKey = root.TryGetProperty("primaryKey", out var primaryKeyProperty) && primaryKeyProperty.ValueKind != JsonValueKind.Null
             ? primaryKeyProperty.GetString()
             : null;
         var rows = new List<IReadOnlyDictionary<string, string?>>();
-        foreach (var row in root.GetProperty("rows").EnumerateArray())
+        if (isSingleton && root.TryGetProperty("data", out var singletonData) && singletonData.ValueKind == JsonValueKind.Object)
+            rows.Add(ReadRow(singletonData));
+        else if (root.TryGetProperty("rows", out var rowArray) && rowArray.ValueKind == JsonValueKind.Array)
         {
-            var values = new Dictionary<string, string?>(StringComparer.Ordinal);
-            foreach (var property in row.EnumerateObject())
-                values[property.Name] = property.Value.ValueKind == JsonValueKind.Null ? null : property.Value.ToString();
-            rows.Add(values);
+            foreach (var row in rowArray.EnumerateArray())
+                rows.Add(ReadRow(row));
         }
         return new TableRuntimeDocument(tableName, schemaHash, rows, primaryKey, isSingleton);
+    }
+
+    private static IReadOnlyDictionary<string, string?> ReadRow(JsonElement row)
+    {
+        var values = new Dictionary<string, string?>(StringComparer.Ordinal);
+        foreach (var property in row.EnumerateObject())
+            values[property.Name] = property.Value.ValueKind == JsonValueKind.Null ? null : property.Value.ToString();
+        return values;
     }
 }

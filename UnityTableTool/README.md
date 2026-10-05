@@ -1,42 +1,57 @@
 # UnityTableTool
 
-UnityTableTool 是一个 Windows 本地 Unity 配置表检测和导出工具。源码、Runtime Package、示例和中文文档都在本目录内。
+UnityTableTool 是一个 Windows 本地 Unity 配置表扫描、校验和导出工具。当前版本已经完成可直接使用的发布底包，发布文件位于 `release/UnityTableTool/UnityTableTool.exe`。
+
+## 已完成的功能
+
+- 扫描 `.xlsx`、`.xls`、`.csv`、`.tsv`，启动时自动定位项目 `Data` 目录并立即扫描。
+- 表列表支持搜索、收藏、最近 10 张、所有表四种组合筛选；每项可以勾选、收藏或打开源文件。
+- 勾选一张分表会自动带出同一 `table:` 逻辑表的其他分表；`<逻辑表名>_id` 关联表也会自动加入。
+- 客户端和服务器可以同时导出，分别写入 `Data_c`、`Data_s`；代码输出到 `Code/Client`、`Code/Server`。
+- JSON 与 bytes 二选一，C# 代码可独立开关；校验只在导出前执行，校验失败不会替换输出目录。
+- 导出成功后自动取消所有表的勾选，并把本次文件记录为最近打表。
+- 单例表会聚合为一个对象，JSON 使用 `data` 对象，Runtime 支持 `GetSingleton`。
+- 设置页集中管理目录、浅色/深色/跟随系统主题和字体大小；主界面左右模块可拖拽调整宽度。
+- 内置字段规则页和字段类型示例页，包含基础类型、Unity 类型和一到三维数组写法。
+- Runtime Package 支持 JSON 和 UTB1 bytes 自动识别，不依赖 manifest。
 
 ## 快速使用
 
-1. 打开 `UnityTableTool.exe`；源码开发时运行 `TableTool.Gui` 项目。
-2. 在“表根目录”选择 `Data` 或其他包含表格的目录，工具递归读取 `.xlsx`、`.xls`、`.csv`、`.tsv`。
-3. 扫描后，表列表按**文件名**展示；搜索框按文件名筛选，最近打表按文件名记录最近使用项。
-4. 用复选框勾选一张或多张表；勾选表的关联表即使未勾选，也会在打表时自动一起导出。
-5. 打表时选择“只打客户端”或“只打服务器”。客户端结果写入 `Data_c`，服务器结果写入 `Data_s`；两个目录中的 `.json` 和 `.bytes` 直接平铺存放，不建立 `Json`、`Bytes` 子目录，也不生成 manifest。
-6. JSON 和 bytes 数据不记录字段属于客户端还是服务器；端别只由本次导出模式和 `Data_c`/`Data_s` 输出目录决定。
-7. C# 代码单独输出到 `Code`，不放在示例源表目录 `Data` 中。
-8. 先校验，再点击“导出”；校验存在错误时不会提交输出。
-
-Runtime Package 后续接入 Unity 时复制到项目的 `Packages` 目录。
-
-表结构、类型、注释、测试标记、输出格式和关联表规则见 `docs` 目录。示例源表见 `Data/README.md`。
+1. 双击 `release/UnityTableTool/UnityTableTool.exe`。
+2. 工具会自动扫描项目 `Data` 目录；也可以在“设置”中改成其他表根目录。
+3. 在列表中搜索并勾选一张或多张表。
+4. 选择客户端、服务器或同时选择两端，选择 JSON 或 bytes，按需选择 C# 代码。
+5. 点击“导出”。导出前会自动完成关联表展开、合并和校验。
 
 ## 目录
 
-- `src/TableTool.Core`：表结构解析、类型解析、校验、文件读取和同名分表合并。
-- `src/TableTool.Serialization`：C#、JSON、UTB1 bytes 导出。
+- `src/TableTool.Core`：表读取、解析、类型处理、关联表展开和校验。
+- `src/TableTool.Serialization`：客户端/服务器分端导出、C#、JSON、UTB1 bytes。
 - `src/TableTool.Gui`：Windows WPF 图形界面。
-- `UnityRuntimePackage`：Unity 运行时 JSON/bytes reader。
-- `Data`：示例源表目录。
-- `Data_c`：客户端数据输出目录。
-- `Data_s`：服务器数据输出目录。
-- `Code`：生成的 C# 输出目录。
-- `docs`：使用和规则文档。
+- `UnityRuntimePackage`：Unity 运行时读取包。
+- `Data`：示例源表。
+- `docs`：表结构、字段规则、导出格式和 Runtime 接入文档。
 
-同一文件名对应的逻辑表可以在多个 Sheet 或多个文件中分表维护；扫描后按 schema 合并，再统一校验和导出。
+## 构建和发布
 
-## 构建
-
-源码按 .NET 8 工程组织，可执行：
+项目固定使用 .NET 8 SDK。已安装 .NET 8 SDK 或 .NET 10 SDK 的 Windows 环境均可运行：
 
 ```text
-dotnet restore UnityTableTool.sln
-dotnet test UnityTableTool.sln
-dotnet build UnityTableTool.sln -c Release
+dotnet test UnityTableTool.sln -c Release
+dotnet build src/TableTool.Gui/TableTool.Gui.csproj -c Release
+publish.cmd
 ```
+
+`publish.cmd` 会先测试，再生成 `release/UnityTableTool`。当前发布为 framework-dependent 版本，需要目标机器安装 .NET 8 Desktop Runtime 或 SDK。
+
+构建缓存写入 Windows 临时目录 `%TEMP%\UnityTableTool-build`，不会在项目根目录创建 `.build`、`.nuget` 等缓存目录。若当前环境无法访问 NuGet，但源码已有成功的 Release 构建，脚本会自动打包该构建；恢复网络后重新运行即可执行完整还原、测试和发布。
+
+## 文档索引
+
+- [总功能和发布清单](docs/README.md)
+- [表结构](docs/TableFormat.md)
+- [字段规则](docs/FieldRules.md)
+- [导出格式](docs/ExportFormats.md)
+- [Runtime Package 接入](docs/RuntimeIntegration.md)
+- [排错](docs/Troubleshooting.md)
+- [扩展接口](docs/ExtensionPoints.md)

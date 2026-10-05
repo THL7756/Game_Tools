@@ -7,8 +7,17 @@ public sealed class GuiExportService
 {
     private readonly ExportService exportService = new();
 
-    public ExportResult Export(TableDocument document, string dataOutputDirectory, string codeOutputDirectory, bool code, bool json, bool bytes)
+    public ExportResult Export(
+        IEnumerable<TableDocument> documents,
+        string dataOutputDirectory,
+        string codeOutputDirectory,
+        ExportTarget target,
+        bool code,
+        bool json,
+        bool bytes)
     {
-        return exportService.Export(document, new ExportOptions(dataOutputDirectory, codeOutputDirectory, code, json, bytes));
+        return exportService.ExportAll(
+            documents,
+            new ExportOptions(dataOutputDirectory, codeOutputDirectory, code, json, bytes, target));
     }
 }

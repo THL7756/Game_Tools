@@ -13,13 +13,13 @@ public sealed class SampleExportIntegrationTests
     public void ScansValidatesAndExportsSampleWorkbooks()
     {
         var root = FindRepositoryRoot();
-        var sampleRoot = Path.Combine(root, "samples");
+        var sampleRoot = Path.Combine(root, "Data");
         var updateSamples = Environment.GetEnvironmentVariable("UPDATE_SAMPLES") == "1";
         var outputRoot = updateSamples
-            ? Path.Combine(root, "samples", "Exported")
+            ? Path.Combine(root, "Data_c")
             : Path.Combine(Path.GetTempPath(), "unity-table-tool-integration", Guid.NewGuid().ToString("N"));
-        var dataOutput = Path.Combine(outputRoot, "Data");
-        var codeOutput = Path.Combine(outputRoot, "Code");
+        var dataOutput = updateSamples ? outputRoot : Path.Combine(outputRoot, "Data_c");
+        var codeOutput = updateSamples ? Path.Combine(root, "Code") : Path.Combine(outputRoot, "Code");
 
         try
         {
@@ -41,10 +41,10 @@ public sealed class SampleExportIntegrationTests
             Console.WriteLine($"export:done {result.Files.Count}");
 
             Assert.NotEmpty(result.Files);
-            Assert.True(File.Exists(Path.Combine(dataOutput, "Json", "Skill.json")));
-            Assert.True(File.Exists(Path.Combine(dataOutput, "Bytes", "Skill.bytes")));
-            Assert.True(File.Exists(Path.Combine(dataOutput, "Manifest", "Skill.manifest.json")));
-            Assert.True(File.Exists(Path.Combine(codeOutput, "SkillData.cs")));
+            Assert.NotEmpty(Directory.EnumerateFiles(dataOutput, "*.json"));
+            Assert.NotEmpty(Directory.EnumerateFiles(dataOutput, "*.bytes"));
+            Assert.Empty(Directory.EnumerateFiles(dataOutput, "*.manifest.json", SearchOption.AllDirectories));
+            Assert.NotEmpty(Directory.EnumerateFiles(codeOutput, "*Data.cs"));
         }
         finally
         {

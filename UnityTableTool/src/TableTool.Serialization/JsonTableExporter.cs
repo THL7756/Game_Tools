@@ -15,6 +15,10 @@ public sealed class JsonTableExporter
 
     public string Export(TableDocument document)
     {
+        var rows = document.Rows.Where(row => !row.IsTest).Select(row => row.RawValues.ToDictionary(
+            pair => pair.Key,
+            pair => pair.Value,
+            StringComparer.Ordinal)).ToArray();
         var payload = new
         {
             formatVersion = 1,
@@ -26,13 +30,10 @@ public sealed class JsonTableExporter
             {
                 name = field.Name,
                 type = field.Type.BaseType + string.Concat(Enumerable.Repeat("()", field.Type.Dimensions)),
-                target = field.Target.ToString(),
                 defaultValue = field.DefaultValue
             }).ToArray(),
-            rows = document.Rows.Where(row => !row.IsTest).Select(row => row.RawValues.ToDictionary(
-                pair => pair.Key,
-                pair => pair.Value,
-                StringComparer.Ordinal)).ToArray()
+            rows = document.Schema.IsSingleton ? Array.Empty<Dictionary<string, string?>>() : rows,
+            data = document.Schema.IsSingleton ? rows.SingleOrDefault() : null
         };
 
         return JsonSerializer.Serialize(payload, Options);
