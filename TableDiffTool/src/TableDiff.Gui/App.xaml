@@ -1,0 +1,8 @@
+<!-- 用途：定义 TableDiff WPF 应用入口资源。编写时间：2026-10-05。作者：Codex。 -->
+<Application x:Class="TableDiff.Gui.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+    </Application.Resources>
+</Application>

@@ -1,0 +1,49 @@
+<!-- 用途：提供 Excel Diff 和双向替换的 WPF 主界面。编写时间：2026-10-05。作者：Codex。 -->
+<Window x:Class="TableDiff.Gui.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="TableDiff - Excel Diff" Height="760" Width="1280" MinHeight="600" MinWidth="900">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="左侧文件" />
+        <TextBox x:Name="LeftPathBox" Grid.Row="0" Grid.Column="1" Margin="0,0,8,8" MinWidth="520" />
+        <Button Grid.Row="0" Grid.Column="2" Margin="0,0,0,8" Padding="14,4" Click="BrowseLeft_Click" Content="选择..." />
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="右侧文件" />
+        <TextBox x:Name="RightPathBox" Grid.Row="1" Grid.Column="1" Margin="0,0,8,8" />
+        <Button Grid.Row="1" Grid.Column="2" Margin="0,0,0,8" Padding="14,4" Click="BrowseRight_Click" Content="选择..." />
+
+        <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,0,0,8">
+            <TextBlock VerticalAlignment="Center" Margin="0,0,8,0" Text="主键列" />
+            <TextBox x:Name="KeyColumnBox" Width="180" Margin="0,0,12,0" Text="id" />
+            <Button Padding="16,4" Margin="0,0,8,0" Click="Compare_Click" Content="比较" />
+            <Button Padding="16,4" Margin="0,0,8,0" Click="ApplyLeftToRight_Click" Content="左侧替换到右侧" />
+            <Button Padding="16,4" Click="ApplyRightToLeft_Click" Content="右侧替换到左侧" />
+        </StackPanel>
+
+        <DataGrid x:Name="DiffGrid" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="False" HeadersVisibility="Column" SelectionMode="Extended">
+            <DataGrid.Columns>
+                <DataGridCheckBoxColumn Header="应用" Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" Width="54" />
+                <DataGridTextColumn Header="类型" Binding="{Binding Kind}" Width="90" IsReadOnly="True" />
+                <DataGridTextColumn Header="工作表" Binding="{Binding SheetName}" Width="140" IsReadOnly="True" />
+                <DataGridTextColumn Header="主键" Binding="{Binding RowKey}" Width="140" IsReadOnly="True" />
+                <DataGridTextColumn Header="字段" Binding="{Binding ColumnName}" Width="140" IsReadOnly="True" />
+                <DataGridTextColumn Header="左侧值" Binding="{Binding LeftValue}" Width="*" IsReadOnly="True" />
+                <DataGridTextColumn Header="右侧值" Binding="{Binding RightValue}" Width="*" IsReadOnly="True" />
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <TextBlock x:Name="StatusText" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,8,0,0" Text="请选择两个 Excel 文件开始比较。" />
+    </Grid>
+</Window>
