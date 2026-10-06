@@ -16,7 +16,7 @@
 - 客户端、服务器可以分别或同时导出。
 - 数据输出目录分别为 `Data_c`、`Data_s`。
 - 同时导出时，代码目录分别为 `Code/Client`、`Code/Server`。
-- JSON 和 bytes 互斥选择，C# 代码独立选择。
+- GUI 打表只输出 JSON，客户端与服务器可独立或同时选择。
 - 导出前执行扫描、关联表检查、schema 合并和字段校验。
 - 校验结果只显示在 GUI 中，不写入代码目录。
 - 导出成功后自动取消表勾选并更新最近列表。
@@ -28,7 +28,7 @@
 - 客户端/服务器重复声明的同名单例字段会合并端别。
 - JSON 单例使用 `data` 对象；Runtime 同时兼容旧的 `rows` 数组。
 - `schemaHash` 用于识别结构变化，`formatVersion` 用于识别格式版本，当前保留。
-- Runtime Package 自动识别 JSON 和 UTB1 bytes，不再依赖 manifest。
+- GUI 只生成 JSON；Runtime Package 仍可兼容 JSON 与 UTB1 bytes。
 
 ### GUI
 
@@ -42,7 +42,7 @@
 
 - `TableFormat.md`：表头、单例表、分表和数组格式。
 - `FieldRules.md`：客户端/服务器字段标记、注释和测试列。
-- `ExportFormats.md`：Data_c、Data_s、Code 和 JSON/bytes 结构。
+- `ExportFormats.md`：客户端/服务器 JSON 输出结构。
 - `RuntimeIntegration.md`：Unity Package 接入和读取 API。
 - `Troubleshooting.md`：常见错误和处理方法。
 - `ExtensionPoints.md`：当前不在发布范围内的扩展方向。
@@ -61,6 +61,6 @@ publish.cmd
 release/UnityTableTool/UnityTableTool.exe
 ```
 
-当前验证结果：`34/34` 测试通过，GUI Release 构建通过。发布包为 framework-dependent，需要 Windows 安装 .NET 8 Desktop Runtime 或 .NET 8 SDK。
+当前验证结果：`35/35` 测试通过，GUI Release 构建通过。发布包为 Windows x64 自包含版本。
 
 构建缓存位于 `%TEMP%\UnityTableTool-build`，`.build`、`.nuget`、`.dotnet-home` 等目录不是发布包必需内容。网络不可用时，脚本会在存在既有 Release 构建的情况下直接打包该构建，并明确输出提示。

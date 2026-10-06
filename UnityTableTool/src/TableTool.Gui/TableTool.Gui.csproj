@@ -4,12 +4,17 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <AssemblyName>UnityTableTool</AssemblyName>
     <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <ImplicitUsings>disable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\TableTool.Core\TableTool.Core.csproj" />
     <ProjectReference Include="..\TableTool.Serialization\TableTool.Serialization.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Assets\Icons\*.png" />
+    <None Include="Assets\Icons\*.svg" />
   </ItemGroup>
 </Project>

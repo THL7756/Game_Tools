@@ -1,7 +1,11 @@
-# 发布目录
+# UnityTableTool 发布包
 
-运行根目录的 `publish.cmd` 后，可执行文件会生成在 `release/UnityTableTool`。
+- 程序目录：`release/UnityTableTool-2.4.0`
+- 压缩包：`release/UnityTableTool-2.4.0-win-x64.zip`
+- 平台：Windows x64
+- 发布类型：自包含
+- 打表格式：JSON
 
-发布前需要安装 .NET 8 SDK 和 .NET 8 Windows Desktop Runtime。仓库通过 `global.json` 固定 SDK 版本，脚本生成 framework-dependent 发布目录。
+直接运行 `UnityTableTool-2.4.0/UnityTableTool.exe`。首次启动会扫描可访问项目中的 `Data` 目录；也可在“设置 / 项目路径”中指定配置表和客户端、服务器输出目录。
 
-将 `Data` 目录复制到发布目录旁边后，启动 `UnityTableTool.exe` 即可扫描示例表；客户端和服务器结果分别写入 `Data_c`、`Data_s`，代码写入 `Code`。
+包内文件均由 `publish.cmd` 生成，源表、导出结果和开发缓存不会包含在发布目录中。

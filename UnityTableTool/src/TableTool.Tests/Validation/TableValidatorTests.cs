@@ -27,6 +27,28 @@ public sealed class TableValidatorTests
     }
 
     [Fact]
+    public void IgnoresDuplicateKeysInCommentedAndTestRows()
+    {
+        var grid = new RawTableGrid("memory", new[]
+        {
+            (IReadOnlyList<string?>)["table: Skill"],
+            (IReadOnlyList<string?>)["字段说明", "ID"],
+            (IReadOnlyList<string?>)["字段类型", "int"],
+            (IReadOnlyList<string?>)["字段名", "id"],
+            (IReadOnlyList<string?>)["客户端服务器", "cs"],
+            (IReadOnlyList<string?>)["默认值", "0"],
+            (IReadOnlyList<string?>)["", "1"],
+            (IReadOnlyList<string?>)["## 注释重复", "1"],
+            (IReadOnlyList<string?>)["#test", "1"]
+        });
+
+        var document = new TableSchemaParser().Parse(grid);
+        var issues = new TableValidator().Validate(document);
+
+        Assert.DoesNotContain(issues, issue => issue.Code == ErrorCodes.PrimaryKeyDuplicate);
+    }
+
+    [Fact]
     public void ReportsDuplicatePrimaryKeysAndInvalidArrayValues()
     {
         var grid = new RawTableGrid("memory", new[]
