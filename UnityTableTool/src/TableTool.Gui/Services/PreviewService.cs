@@ -1,5 +1,6 @@
 // 用途：生成配置表预览、字段标题和校验问题。
-// 最近修改日期：2026-10-06
+// 编写日期：2026-10-06
+// 作者：Codex（按用户需求修改）
 
 using System.Data;
 using System.IO;
@@ -50,7 +51,7 @@ public sealed class PreviewService
         var issues = new List<ValidationIssue>(new TableValidator().Validate(document));
         var selectedDocuments = allTables
             .Where(item => item.IsSelected)
-            .Select(item => item.Document)
+            .SelectMany(item => item.Sheets.Select(sheet => sheet.Document))
             .ToArray();
         if (selectedDocuments.Length > 0)
         {
@@ -60,7 +61,7 @@ public sealed class PreviewService
             foreach (var name in missing)
             {
                 issues.Add(new ValidationIssue(
-                    "REFERENCE_MISSING",
+                    ErrorCodes.TableReferenceMissing,
                     ValidationSeverity.Warning,
                     $"引用表 {name} 未找到。",
                     document.SourceName,
@@ -70,16 +71,14 @@ public sealed class PreviewService
 
         var errors = issues.Count(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal);
         var warnings = issues.Count(issue => issue.Severity == ValidationSeverity.Warning);
-        var sheetNames = document.SourceName
-            .Split(" + ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(GetSheetName)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+        var sheetNames = table.Sheets
+            .Select(sheet => sheet.SheetName)
             .ToArray();
 
         return new PreviewViewModel(
             table.DisplayName,
-            $"修改于 {GetModifiedTime(table.SourcePath):HH:mm}",
-            $"{GetRelativeSource(table.SourcePath)} · {string.Join(" / ", sheetNames)}",
+            LanguageManager.Format("修改于 {0}", GetModifiedTime(table.SourcePath).ToString("HH:mm")),
+            $"{GetRelativeSource(table.SourcePath)} · {table.CurrentSheet.SheetName}",
             sheetNames,
             fields,
             data,
@@ -96,12 +95,6 @@ public sealed class PreviewService
         if (field.Name.EndsWith("_id", StringComparison.OrdinalIgnoreCase))
             return $"{type} · 引用";
         return type;
-    }
-
-    private static string GetSheetName(string sourceName)
-    {
-        var separator = sourceName.IndexOf("::", StringComparison.Ordinal);
-        return separator >= 0 ? sourceName[(separator + 2)..] : Path.GetFileNameWithoutExtension(sourceName);
     }
 
     private static DateTime GetModifiedTime(string path) =>

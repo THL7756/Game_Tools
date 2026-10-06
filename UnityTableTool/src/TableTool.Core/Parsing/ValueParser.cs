@@ -1,3 +1,7 @@
+// 用途：按字段类型解析配置表数据，覆盖标量、结构值和一到三维数组。
+// 编写日期：2026-10-06
+// 作者：Codex（按用户需求修改）
+
 using System.Globalization;
 
 namespace TableTool.Core.Parsing;
@@ -84,17 +88,70 @@ public static class ValueParser
             {
                 "int" => int.Parse(text, NumberStyles.Integer, CultureInfo.InvariantCulture),
                 "long" => long.Parse(text, NumberStyles.Integer, CultureInfo.InvariantCulture),
-                "float" => float.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture),
-                "double" => double.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture),
+                "float" => ParseFloating(text, baseType, isDouble: false),
+                "double" => ParseFloating(text, baseType, isDouble: true),
                 "bool" => ParseBool(text),
                 "string" => text,
-                _ => text
+                "vector2" => ParseComponents(text, baseType, 2),
+                "vector3" => ParseComponents(text, baseType, 3),
+                "vector4" => ParseComponents(text, baseType, 4),
+                "color" => ParseColor(text),
+                "quaternion" => ParseComponents(text, baseType, 4),
+                _ => throw new FormatException($"Unknown type '{baseType}'.")
             };
         }
         catch (Exception ex) when (ex is FormatException or OverflowException)
         {
+            if (ex is FormatException format && format.Message.Contains("invalid for type", StringComparison.OrdinalIgnoreCase))
+                throw;
             throw new FormatException($"Value '{text}' is invalid for type '{baseType}'.", ex);
         }
+    }
+
+    private static object ParseFloating(string text, string baseType, bool isDouble)
+    {
+        if (isDouble)
+        {
+            var value = double.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture);
+            if (!double.IsFinite(value))
+                throw new FormatException($"Value '{text}' is invalid for type '{baseType}'.");
+            return value;
+        }
+
+        var single = float.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture);
+        if (!float.IsFinite(single))
+            throw new FormatException($"Value '{text}' is invalid for type '{baseType}'.");
+        return single;
+    }
+
+    private static float[] ParseComponents(string text, string baseType, int expectedCount)
+    {
+        var normalized = RemoveOptionalBrackets(text.Trim());
+        var parts = normalized.Split(',', StringSplitOptions.TrimEntries);
+        if (parts.Length != expectedCount || parts.Any(string.IsNullOrWhiteSpace))
+            throw new FormatException($"Value '{text}' is invalid for type '{baseType}'; expected {expectedCount} comma-separated components.");
+
+        return parts.Select(part => (float)ParseFloating(part, baseType, isDouble: false)).ToArray();
+    }
+
+    private static float[] ParseColor(string text)
+    {
+        var normalized = RemoveOptionalBrackets(text.Trim());
+        var parts = normalized.Split(',', StringSplitOptions.TrimEntries);
+        if (parts.Length is not (3 or 4) || parts.Any(string.IsNullOrWhiteSpace))
+            throw new FormatException($"Value '{text}' is invalid for type 'Color'; expected three or four comma-separated components.");
+
+        return parts.Select(part => (float)ParseFloating(part, "Color", isDouble: false)).ToArray();
+    }
+
+    private static string RemoveOptionalBrackets(string value)
+    {
+        if (value.Length >= 2
+            && ((value[0] == '(' && value[^1] == ')')
+                || (value[0] == '[' && value[^1] == ']')
+                || (value[0] == '{' && value[^1] == '}')))
+            return value[1..^1].Trim();
+        return value;
     }
 
     private static bool ParseBool(string text) => text.ToLowerInvariant() switch
@@ -112,6 +169,7 @@ public static class ValueParser
         "double" => typeof(double),
         "bool" => typeof(bool),
         "string" => typeof(string),
-        _ => typeof(string)
+        "vector2" or "vector3" or "vector4" or "color" or "quaternion" => typeof(float[]),
+        _ => throw new FormatException($"Unknown type '{baseType}'.")
     };
 }

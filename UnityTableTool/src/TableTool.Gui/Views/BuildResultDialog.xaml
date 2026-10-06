@@ -1,0 +1,63 @@
+<!-- 用途：显示主题适配的打表成功或失败结果。 -->
+<!-- 编写日期：2026-10-06 -->
+<!-- 作者：Codex（按用户需求修改） -->
+<Window x:Class="TableTool.Gui.Views.BuildResultDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Width="360"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Background="{DynamicResource Brush.Window}"
+        Foreground="{DynamicResource Brush.Text}">
+    <Border Margin="1"
+            Padding="22,18"
+            Background="{DynamicResource Brush.Panel}"
+            BorderBrush="{DynamicResource Brush.Border}"
+            BorderThickness="1"
+            CornerRadius="6">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Orientation="Horizontal">
+                <Border Width="30"
+                        Height="30"
+                        CornerRadius="15"
+                        Background="{DynamicResource Brush.AccentSoft}"
+                        VerticalAlignment="Center">
+                    <Image x:Name="ResultIcon" Width="16" Height="16" />
+                </Border>
+                <TextBlock x:Name="ResultTitle"
+                           Margin="12,0,0,0"
+                           VerticalAlignment="Center"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource Brush.Text}" />
+            </StackPanel>
+
+            <TextBlock x:Name="ResultMessage"
+                       Grid.Row="1"
+                       Margin="42,12,0,0"
+                       FontSize="12"
+                       Foreground="{DynamicResource Brush.TextSecondary}"
+                       TextWrapping="Wrap" />
+
+            <StackPanel Grid.Row="2"
+                        Margin="0,20,0,0"
+                        HorizontalAlignment="Right">
+                <Button x:Name="CloseButton"
+                        Width="88"
+                        Height="32"
+                        Style="{StaticResource Button.Primary}"
+                        Click="Close_Click"
+                        Content="确定" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

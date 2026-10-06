@@ -1,9 +1,11 @@
 // 用途：实现项目路径和视觉风格设置页面交互。
 // 最近修改日期：2026-10-06
+// 作者：Codex（按用户需求修改）
 
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using Microsoft.Win32;
 using TableTool.Gui.Models;
@@ -14,22 +16,19 @@ namespace TableTool.Gui.Views;
 public partial class SettingsView : System.Windows.Controls.UserControl
 {
     private readonly AppSettings settings;
-    private readonly string requestedPage;
     private string currentPage = "appearance";
     private bool isInitializing = true;
+    private bool isChangingPage;
 
     public event EventHandler? SettingsSaved;
 
     public SettingsView(AppSettings settings, string initialPage)
     {
-        InitializeComponent();
         this.settings = settings;
-        requestedPage = initialPage;
+        InitializeComponent();
         LoadControls();
         ShowPage(initialPage);
         isInitializing = false;
-        Loaded += (_, _) => ShowPage(requestedPage);
-        Dispatcher.BeginInvoke(() => ShowPage(requestedPage));
     }
 
     private void LoadControls()
@@ -39,16 +38,18 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         ClientOutputBox.Text = settings.ClientOutputDirectory;
         ServerOutputBox.Text = settings.ServerOutputDirectory;
         BuildScriptBox.Text = settings.BuildScriptPath;
+        SearchShortcutBox.Text = settings.SearchShortcut;
+        BuildShortcutBox.Text = settings.BuildShortcut;
+        RefreshShortcutBox.Text = settings.RefreshShortcut;
+        VerticalWheelStepSlider.Value = NormalizeWheelStep(settings.VerticalWheelScrollStep);
+        HorizontalWheelStepSlider.Value = NormalizeWheelStep(settings.HorizontalWheelScrollStep);
+        UpdateWheelStepLabels();
         AccentTextBox.Text = settings.AccentColor.ToUpperInvariant();
         BackgroundTextBox.Text = settings.BackgroundColor.ToUpperInvariant();
         ForegroundTextBox.Text = settings.ForegroundColor.ToUpperInvariant();
 
-        ThemeCombo.SelectedIndex = settings.AppearanceMode switch
-        {
-            AppearanceMode.Light => 0,
-            AppearanceMode.Dark => 1,
-            _ => 2
-        };
+        if (ThemeCombo.Parent is Grid themeRow)
+            themeRow.Visibility = Visibility.Collapsed;
         FontCombo.SelectedIndex = settings.FontFamilyName switch
         {
             "Microsoft YaHei UI" => 1,
@@ -73,6 +74,63 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         SetPreviewSelection(settings.AppearanceMode);
     }
 
+    private void ShortcutBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (sender is not TextBox box)
+            return;
+
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt
+            or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        if (key is Key.Back or Key.Delete)
+        {
+            box.Text = string.Empty;
+            SetShortcutValue(box, string.Empty);
+            PersistSettings();
+            e.Handled = true;
+            return;
+        }
+
+        var modifiers = Keyboard.Modifiers;
+        if (key == Key.None)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        var parts = new List<string>();
+        if (modifiers.HasFlag(ModifierKeys.Control)) parts.Add("Ctrl");
+        if (modifiers.HasFlag(ModifierKeys.Shift)) parts.Add("Shift");
+        if (modifiers.HasFlag(ModifierKeys.Alt)) parts.Add("Alt");
+        if (modifiers.HasFlag(ModifierKeys.Windows)) parts.Add("Win");
+        parts.Add(key.ToString());
+        box.Text = string.Join("+", parts);
+        SetShortcutValue(box, box.Text);
+        PersistSettings();
+        e.Handled = true;
+    }
+
+    private void SetShortcutValue(TextBox box, string value)
+    {
+        switch (box.Tag?.ToString())
+        {
+            case "build":
+                settings.BuildShortcut = value;
+                break;
+            case "refresh":
+                settings.RefreshShortcut = value;
+                break;
+            default:
+                settings.SearchShortcut = value;
+                break;
+        }
+    }
+
     private void SetPreviewSelection(AppearanceMode mode)
     {
         isInitializing = true;
@@ -93,33 +151,45 @@ public partial class SettingsView : System.Windows.Controls.UserControl
 
     private void ShowPage(string page)
     {
-        currentPage = page;
-        AppearancePanel.Visibility = page == "appearance" ? Visibility.Visible : Visibility.Collapsed;
-        PathsPanel.Visibility = page == "paths" ? Visibility.Visible : Visibility.Collapsed;
-        ShortcutsPanel.Visibility = page == "shortcuts" ? Visibility.Visible : Visibility.Collapsed;
-        AboutPanel.Visibility = page == "about" ? Visibility.Visible : Visibility.Collapsed;
-        isInitializing = true;
-        switch (page)
+        if (isChangingPage)
+            return;
+
+        isChangingPage = true;
+        try
         {
-            case "paths":
-                PathsNav.IsChecked = true;
-                break;
-            case "shortcuts":
-                ShortcutsNav.IsChecked = true;
-                break;
-            case "about":
-                AboutNav.IsChecked = true;
-                break;
-            default:
-                AppearanceNav.IsChecked = true;
-                break;
+            page = page is "paths" or "shortcuts" or "about" ? page : "appearance";
+            currentPage = page;
+            AppearancePanel.Visibility = page == "appearance" ? Visibility.Visible : Visibility.Collapsed;
+            PathsPanel.Visibility = page == "paths" ? Visibility.Visible : Visibility.Collapsed;
+            ShortcutsPanel.Visibility = page == "shortcuts" ? Visibility.Visible : Visibility.Collapsed;
+            AboutPanel.Visibility = page == "about" ? Visibility.Visible : Visibility.Collapsed;
+            isInitializing = true;
+            switch (page)
+            {
+                case "paths":
+                    PathsNav.IsChecked = true;
+                    break;
+                case "shortcuts":
+                    ShortcutsNav.IsChecked = true;
+                    break;
+                case "about":
+                    AboutNav.IsChecked = true;
+                    break;
+                default:
+                    AppearanceNav.IsChecked = true;
+                    break;
+            }
         }
-        isInitializing = false;
+        finally
+        {
+            isInitializing = false;
+            isChangingPage = false;
+        }
     }
 
     private void SettingsNav_Checked(object sender, RoutedEventArgs e)
     {
-        if (isInitializing || sender is not FrameworkElement element)
+        if (isInitializing || isChangingPage || sender is not FrameworkElement element)
             return;
         if ((element.Tag?.ToString() ?? "appearance") == currentPage)
             return;
@@ -138,27 +208,13 @@ public partial class SettingsView : System.Windows.Controls.UserControl
             "system" => AppearanceMode.System,
             _ => AppearanceMode.Dark
         };
-        ThemeCombo.SelectedIndex = settings.AppearanceMode switch
-        {
-            AppearanceMode.Light => 0,
-            AppearanceMode.Dark => 1,
-            _ => 2
-        };
         ThemeManager.Apply(settings);
+        PersistSettings();
     }
 
     private void ThemeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (isInitializing)
-            return;
-        settings.AppearanceMode = ThemeCombo.SelectedIndex switch
-        {
-            0 => AppearanceMode.Light,
-            1 => AppearanceMode.Dark,
-            _ => AppearanceMode.System
-        };
-        SetPreviewSelection(settings.AppearanceMode);
-        ThemeManager.Apply(settings);
+        // 主题已由页面模式单选按钮控制，保留事件入口以兼容旧配置文件与旧 XAML。
     }
 
     private void FontCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -172,6 +228,7 @@ public partial class SettingsView : System.Windows.Controls.UserControl
             _ => "Noto Sans SC"
         };
         ThemeManager.Apply(settings);
+        PersistSettings();
     }
 
     private void FontSizeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -186,6 +243,7 @@ public partial class SettingsView : System.Windows.Controls.UserControl
             _ => 13
         };
         ThemeManager.Apply(settings);
+        PersistSettings();
     }
 
     private void ZoomCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -200,7 +258,42 @@ public partial class SettingsView : System.Windows.Controls.UserControl
             _ => 100
         };
         ThemeManager.Apply(settings);
+        PersistSettings();
     }
+
+    private void WheelStepSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (isInitializing)
+            return;
+        settings.VerticalWheelScrollStep = SnapWheelStep(VerticalWheelStepSlider.Value);
+        settings.HorizontalWheelScrollStep = SnapWheelStep(HorizontalWheelStepSlider.Value);
+        UpdateWheelStepLabels();
+        PersistSettings();
+    }
+
+    private void UpdateWheelStepLabels()
+    {
+        if (VerticalWheelStepValueText is not null)
+            VerticalWheelStepValueText.Text = $"{SnapWheelStep(VerticalWheelStepSlider.Value)} px";
+        if (HorizontalWheelStepValueText is not null)
+            HorizontalWheelStepValueText.Text = $"{SnapWheelStep(HorizontalWheelStepSlider.Value)} px";
+    }
+
+    private static double NormalizeWheelStep(int value) => value switch
+    {
+        6 => 6,
+        18 => 18,
+        24 => 24,
+        _ => 12
+    };
+
+    private static int SnapWheelStep(double value) => value switch
+    {
+        <= 9 => 6,
+        <= 15 => 12,
+        <= 21 => 18,
+        _ => 24
+    };
 
     private void AccentSwatch_Click(object sender, RoutedEventArgs e)
     {
@@ -209,6 +302,7 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         settings.AccentColor = color;
         AccentTextBox.Text = color.ToUpperInvariant();
         ThemeManager.Apply(settings);
+        PersistSettings();
     }
 
     private void PickColor_Click(object sender, RoutedEventArgs e)
@@ -252,6 +346,7 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         }
 
         ThemeManager.Apply(settings);
+        PersistSettings();
     }
 
     private void BrowseFolder_Click(object sender, RoutedEventArgs e)
@@ -318,8 +413,14 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         settings.FontFamilyName = defaults.FontFamilyName;
         settings.FontSize = defaults.FontSize;
         settings.Zoom = defaults.Zoom;
+        settings.SearchShortcut = defaults.SearchShortcut;
+        settings.BuildShortcut = defaults.BuildShortcut;
+        settings.RefreshShortcut = defaults.RefreshShortcut;
+        settings.VerticalWheelScrollStep = defaults.VerticalWheelScrollStep;
+        settings.HorizontalWheelScrollStep = defaults.HorizontalWheelScrollStep;
         LoadControls();
         ThemeManager.Apply(settings);
+        PersistSettings();
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)
@@ -329,6 +430,9 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         settings.ClientOutputDirectory = ClientOutputBox.Text.Trim();
         settings.ServerOutputDirectory = ServerOutputBox.Text.Trim();
         settings.BuildScriptPath = BuildScriptBox.Text.Trim();
+        settings.SearchShortcut = string.IsNullOrWhiteSpace(SearchShortcutBox.Text) ? "Ctrl+K" : SearchShortcutBox.Text.Trim();
+        settings.BuildShortcut = string.IsNullOrWhiteSpace(BuildShortcutBox.Text) ? "Ctrl+B" : BuildShortcutBox.Text.Trim();
+        settings.RefreshShortcut = string.IsNullOrWhiteSpace(RefreshShortcutBox.Text) ? "Ctrl+R" : RefreshShortcutBox.Text.Trim();
         settings.AccentColor = NormalizeColor(AccentTextBox.Text, settings.AccentColor);
         settings.BackgroundColor = NormalizeColor(BackgroundTextBox.Text, settings.BackgroundColor);
         settings.ForegroundColor = NormalizeColor(ForegroundTextBox.Text, settings.ForegroundColor);
@@ -386,5 +490,41 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         {
             return fallback;
         }
+    }
+
+    private void PersistSettings()
+    {
+        try
+        {
+            SettingsStore.Save(settings);
+        }
+        catch
+        {
+            // 保存失败时仍保留当前页面状态，点击“保存设置”可以再次尝试。
+        }
+    }
+
+    private void SettingsView_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        var source = e.OriginalSource as DependencyObject;
+        var scrollViewer = FindVisualParent<ScrollViewer>(source);
+        if (scrollViewer is null)
+            return;
+
+        var step = Math.Clamp((double)settings.VerticalWheelScrollStep, 4d, 60d);
+        scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset - Math.Sign(e.Delta) * step);
+        e.Handled = true;
+    }
+
+    private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
+    {
+        while (child is not null)
+        {
+            if (child is T result)
+                return result;
+            child = VisualTreeHelper.GetParent(child);
+        }
+
+        return null;
     }
 }

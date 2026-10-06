@@ -1,5 +1,6 @@
-// 用途：实现配置表搜索、筛选、预览、校验和纯 JSON 打表交互。
+// 用途：实现配置表搜索、筛选、预览、校验和 JSON/C# 打表交互。
 // 最近修改日期：2026-10-06
+// 作者：Codex（按用户需求修改）
 
 using System.ComponentModel;
 using System.Data;
@@ -8,6 +9,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Media;
 using TableTool.Core.Models;
 using TableTool.Gui.Models;
@@ -23,30 +25,67 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
     private readonly BuildService buildService = new();
     private IReadOnlyList<TableModel> tables = Array.Empty<TableModel>();
     private IReadOnlyList<TableModel> visibleTables = Array.Empty<TableModel>();
+    private IReadOnlyList<string> catalogErrors = Array.Empty<string>();
     private string activeFilter = "all";
+    private DateTime lastSyncTime = DateTime.Now;
+    private bool isInitializing = true;
 
     public event EventHandler<string>? StatusChanged;
 
     public WorkbenchView(AppSettings settings)
     {
-        InitializeComponent();
         this.settings = settings;
-        Loaded += (_, _) => RefreshTables(selectAll: true);
+        InitializeComponent();
+        ClientCheckBox.IsChecked = settings.OutputTargets.HasFlag(ExportTarget.Client);
+        ServerCheckBox.IsChecked = settings.OutputTargets.HasFlag(ExportTarget.Server);
+        Loaded += (_, _) => RefreshTables(selectAll: false);
+        ThemeManager.ThemeChanged += (_, _) => Dispatcher.BeginInvoke(UpdateFilterButtons);
+        isInitializing = false;
     }
 
     public void RefreshTables(bool selectAll)
     {
-        var selectedNames = tables.Where(table => table.IsSelected).Select(table => table.SchemaName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var selectedKeys = tables.Where(table => table.IsSelected)
+            .Select(table => table.FavoriteKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var previousTables = tables;
+        var previousSheets = previousTables.ToDictionary(
+            table => table.FileKey,
+            table => table.CurrentSheet.SheetName,
+            StringComparer.OrdinalIgnoreCase);
         var result = catalogService.Load(settings);
-        tables = result.Tables;
+        catalogErrors = result.Errors;
+        if (result.Tables.Count == 0 && previousTables.Count > 0)
+        {
+            StatusChanged?.Invoke(this, result.Errors.Count > 0
+                ? string.Join("；", result.Errors)
+                : "未找到可读取的配置表，已保留当前列表。");
+            catalogErrors = result.Errors;
+            UpdateSelectionUi();
+            return;
+        }
+        var loadedKeys = result.Tables
+            .Select(table => table.FileKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var retainedTables = previousTables
+            .Where(table => !loadedKeys.Contains(table.FileKey) && File.Exists(table.SourcePath))
+            .ToArray();
+        tables = result.Tables.Concat(retainedTables)
+            .OrderBy(table => table.FileKey, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
         foreach (var table in tables)
         {
-            table.IsSelected = selectAll || selectedNames.Contains(table.SchemaName);
+            table.IsSelected = selectAll || selectedKeys.Contains(table.FavoriteKey);
+            if (previousSheets.TryGetValue(table.FileKey, out var sheetName)
+                && table.Sheets.FirstOrDefault(sheet => string.Equals(sheet.SheetName, sheetName, StringComparison.OrdinalIgnoreCase)) is { } sheet)
+                table.SelectSheet(sheet);
+            table.PropertyChanged -= Table_PropertyChanged;
             table.PropertyChanged += Table_PropertyChanged;
         }
 
         ApplyFilter();
-        SyncText.Text = $"已同步 {DateTime.Now:HH:mm}";
+        lastSyncTime = DateTime.Now;
+        SyncText.Text = LanguageManager.Format("已同步 {0}", lastSyncTime.ToString("HH:mm"));
         if (result.Errors.Count > 0)
             StatusChanged?.Invoke(this, string.Join("；", result.Errors));
         else
@@ -97,9 +136,9 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             .ToArray();
 
         TableList.ItemsSource = visibleTables;
-        FavoritesFilterText.Text = $"收藏表 {tables.Count(table => table.IsFavorite)}";
-        RecentFilterText.Text = $"最近表 {tables.Count(table => table.IsRecent)}";
-        AllFilterText.Text = $"所有表 {tables.Count}";
+        FavoritesFilterText.Text = LanguageManager.Format("收藏表 {0}", tables.Count(table => table.IsFavorite));
+        RecentFilterText.Text = LanguageManager.Format("最近表 {0}", tables.Count(table => table.IsRecent));
+        AllFilterText.Text = LanguageManager.Format("所有表 {0}", tables.Count);
         UpdateFilterButtons();
     }
 
@@ -108,17 +147,16 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         foreach (var (button, tag) in new[] { (FavoritesFilterButton, "favorites"), (RecentFilterButton, "recent"), (AllFilterButton, "all") })
         {
             var active = activeFilter == tag;
-            button.Background = (Brush)FindResource(active ? "Brush.AccentSoft" : "Brush.Window");
-            button.Foreground = (Brush)FindResource(active ? "Brush.Accent" : "Brush.TextSecondary");
+            button.SetResourceReference(Control.BackgroundProperty, active ? "Brush.AccentSoft" : "Brush.Window");
+            button.SetResourceReference(Control.ForegroundProperty, active ? "Brush.Accent" : "Brush.TextSecondary");
         }
     }
 
     private void UpdateSelectionUi()
     {
         var selectedCount = tables.Count(table => table.IsSelected);
-        SelectionCountText.Text = $"已勾选 {selectedCount} / {tables.Count}";
-        BuildSelectionText.Text = $"已勾选 {selectedCount} 张表";
-        BuildButtonText.Text = $"打表 ({selectedCount})";
+        SelectionCountText.Text = LanguageManager.Format("已勾选 {0} / {1}", selectedCount, tables.Count);
+        BuildButtonText.Text = LanguageManager.Text("开始打表");
         BuildButton.IsEnabled = selectedCount > 0 && (ClientCheckBox.IsChecked == true || ServerCheckBox.IsChecked == true);
 
         var allVisibleSelected = visibleTables.Count > 0 && visibleTables.All(table => table.IsSelected);
@@ -135,20 +173,29 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         PreviewTitleText.Text = preview.Title;
         ModifiedText.Text = preview.ModifiedText;
         SourceText.Text = preview.SourceText;
-        SheetTabs.ItemsSource = preview.SheetNames;
-        ReadOnlyText.Text = $"只读预览 · {preview.Fields.Count} 个字段";
-        IssueSummaryText.Text = preview.IssueSummary;
-        IssueRangeText.Text = $"范围：已勾选的 {tables.Count(item => item.IsSelected)} 张表";
+        SheetTabs.ItemsSource = table.Sheets;
+        ReadOnlyText.Text = LanguageManager.Format("只读预览 · {0} 个字段", preview.Fields.Count);
+        var errorCount = preview.Issues.Count(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal);
         var warningCount = preview.Issues.Count(issue => issue.Severity == ValidationSeverity.Warning);
-        BuildHintText.Text = warningCount > 0 ? $"{warningCount} 条警告不阻断输出" : "校验通过，可直接输出";
+        ErrorSummaryText.Text = LanguageManager.Format("{0} 错误", errorCount);
+        WarningSummaryText.Text = LanguageManager.Format("{0} 警告", warningCount);
+        IssueRangeText.Text = string.Empty;
+        BuildHintText.Text = warningCount > 0
+            ? LanguageManager.Format("{0} 条警告不阻断输出", warningCount)
+            : LanguageManager.Text("校验通过，可直接输出");
 
         BuildPreviewColumns(preview);
         PreviewGrid.ItemsSource = preview.Data.DefaultView;
         IssuesList.ItemsSource = preview.Issues
             .OrderBy(issue => issue.Severity)
             .Select(issue => new IssueDisplayItem(
-                $"{issue.SourceName}:{issue.SourceRow} · {issue.Code}",
-                issue.Suggestion is null ? issue.Message : $"{issue.Message} {issue.Suggestion}"))
+                ValidationIssueFormatter.Headline(issue),
+                ValidationIssueFormatter.Detail(issue),
+                issue.Severity))
+            .Concat(catalogErrors.Select(error => new IssueDisplayItem(
+                LanguageManager.Text("表读取失败"),
+                error,
+                ValidationSeverity.Error)))
             .ToArray();
     }
 
@@ -157,20 +204,28 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         PreviewGrid.Columns.Clear();
         foreach (var field in preview.Fields)
         {
-            var header = new StackPanel { Margin = new Thickness(0, 1, 0, 1) };
+            var header = new StackPanel
+            {
+                Margin = new Thickness(0, 1, 0, 1),
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
             header.Children.Add(new TextBlock
             {
                 Text = field.Header,
                 FontFamily = (FontFamily)FindResource("Font.Mono"),
                 FontSize = 11,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = (Brush)FindResource("Brush.Text")
+                Foreground = (Brush)FindResource("Brush.Text"),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                TextAlignment = TextAlignment.Center
             });
             header.Children.Add(new TextBlock
             {
                 Text = field.TypeLabel,
                 FontSize = 9,
-                Foreground = (Brush)FindResource("Brush.TextMuted")
+                Foreground = (Brush)FindResource("Brush.TextMuted"),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                TextAlignment = TextAlignment.Center
             });
 
             PreviewGrid.Columns.Add(new DataGridTextColumn
@@ -178,7 +233,17 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
                 Header = header,
                 Binding = new Binding($"[{field.Name}]"),
                 Width = GetColumnWidth(field.Name),
-                CanUserSort = false
+                CanUserSort = false,
+                ElementStyle = new Style(typeof(TextBlock))
+                {
+                    Setters =
+                    {
+                        new Setter(TextBlock.HorizontalAlignmentProperty, HorizontalAlignment.Center),
+                        new Setter(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center),
+                        new Setter(TextBlock.TextAlignmentProperty, TextAlignment.Center),
+                        new Setter(TextBlock.TextWrappingProperty, TextWrapping.NoWrap)
+                    }
+                }
             });
         }
     }
@@ -200,12 +265,15 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         PreviewTitleText.Text = "配置表预览";
         ModifiedText.Text = string.Empty;
         SourceText.Text = string.Empty;
-        SheetTabs.ItemsSource = Array.Empty<string>();
+        SheetTabs.ItemsSource = Array.Empty<TableSheetModel>();
         ReadOnlyText.Text = "只读预览 · 0 个字段";
         PreviewGrid.ItemsSource = null;
         PreviewGrid.Columns.Clear();
-        IssuesList.ItemsSource = Array.Empty<IssueDisplayItem>();
-        IssueSummaryText.Text = "0 错误 / 0 警告";
+        IssuesList.ItemsSource = catalogErrors
+            .Select(error => new IssueDisplayItem(LanguageManager.Text("表读取失败"), error, ValidationSeverity.Error))
+            .ToArray();
+        ErrorSummaryText.Text = LanguageManager.Text("0 错误");
+        WarningSummaryText.Text = LanguageManager.Text("0 警告");
     }
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -215,6 +283,68 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             return;
         ApplyFilter();
         UpdateSelectionUi();
+    }
+
+    public void FocusSearch()
+    {
+        SearchBox.Focus();
+        SearchBox.SelectAll();
+    }
+
+    public void ApplyLanguage()
+    {
+        SyncText.Text = LanguageManager.Format("已同步 {0}", lastSyncTime.ToString("HH:mm"));
+        ToggleLogsButton.Content = LogsScrollViewer.Visibility == Visibility.Visible
+            ? LanguageManager.Text("收起")
+            : LanguageManager.Text("展开");
+        ApplyFilter();
+        UpdateSelectionUi();
+        if (TableList.SelectedItem is TableModel selected)
+            UpdatePreview(selected);
+    }
+
+    private void WorkbenchView_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        var source = e.OriginalSource as DependencyObject;
+        var scrollViewer = source is null ? null : FindVisualParent<ScrollViewer>(source);
+        scrollViewer ??= FindVisualChild<ScrollViewer>(PreviewGrid);
+        if (scrollViewer is null)
+            return;
+
+        var step = Math.Clamp((double)settings.VerticalWheelScrollStep, 4d, 60d);
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+            scrollViewer.ScrollToHorizontalOffset(scrollViewer.HorizontalOffset - Math.Sign(e.Delta) * Math.Clamp((double)settings.HorizontalWheelScrollStep, 4d, 60d));
+        else
+            scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset - Math.Sign(e.Delta) * step);
+
+        e.Handled = true;
+    }
+
+    private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
+    {
+        while (child is not null)
+        {
+            if (child is T result)
+                return result;
+            child = VisualTreeHelper.GetParent(child);
+        }
+
+        return null;
+    }
+
+    private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(parent); index++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, index);
+            if (child is T result)
+                return result;
+            var nested = FindVisualChild<T>(child);
+            if (nested is not null)
+                return nested;
+        }
+
+        return null;
     }
 
     private void Filter_Click(object sender, RoutedEventArgs e)
@@ -251,6 +381,16 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             UpdatePreview(table);
     }
 
+    private void SheetTab_Click(object sender, RoutedEventArgs e)
+    {
+        if (TableList.SelectedItem is not TableModel table
+            || (sender as FrameworkElement)?.Tag is not TableSheetModel sheet)
+            return;
+
+        table.SelectSheet(sheet);
+        UpdatePreview(table);
+    }
+
     private void OpenTable_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.Tag is TableModel table)
@@ -263,12 +403,35 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             OpenPath(table.SourcePath);
     }
 
+    private void RefreshCurrentTable_Click(object sender, RoutedEventArgs e)
+    {
+        if (TableList.SelectedItem is not TableModel current)
+        {
+            StatusChanged?.Invoke(this, LanguageManager.Text("请先选择需要刷新的表文件。"));
+            return;
+        }
+
+        var fileKey = current.FileKey;
+        var sheetName = current.CurrentSheet.SheetName;
+        RefreshTables(selectAll: false);
+        var refreshed = tables.FirstOrDefault(table =>
+            string.Equals(table.FileKey, fileKey, StringComparison.OrdinalIgnoreCase));
+        if (refreshed is null)
+            return;
+
+        TableList.SelectedItem = refreshed;
+        if (refreshed.Sheets.FirstOrDefault(sheet =>
+                string.Equals(sheet.SheetName, sheetName, StringComparison.OrdinalIgnoreCase)) is { } sheet)
+            refreshed.SelectSheet(sheet);
+        UpdatePreview(refreshed);
+    }
+
     private void Favorite_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.Tag is not TableModel table)
             return;
         table.IsFavorite = !table.IsFavorite;
-        settings.Favorites = tables.Where(item => item.IsFavorite).Select(item => item.SchemaName).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        settings.Favorites = tables.Where(item => item.IsFavorite).Select(item => item.FavoriteKey).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         SettingsStore.Save(settings);
         ApplyFilter();
         UpdateSelectionUi();
@@ -280,39 +443,93 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
 
     private void OutputTarget_Changed(object sender, RoutedEventArgs e)
     {
+        // XAML 加载阶段会先触发复选框事件，此时两个命名控件可能尚未完成赋值。
+        // 等构造完成后再读取并保存输出范围，避免工作台初始化空引用。
+        if (isInitializing || !IsInitialized || ClientCheckBox is null || ServerCheckBox is null)
+            return;
+
+        settings.OutputTargets = (ClientCheckBox.IsChecked == true ? ExportTarget.Client : ExportTarget.None)
+            | (ServerCheckBox.IsChecked == true ? ExportTarget.Server : ExportTarget.None);
+        SettingsStore.Save(settings);
         if (IsLoaded)
             UpdateSelectionUi();
     }
 
-    private void Build_Click(object sender, RoutedEventArgs e)
+    public void BuildTables()
     {
+        if (catalogErrors.Count > 0 && tables.Count == 0)
+        {
+            IssuesList.ItemsSource = catalogErrors
+                .Select(error => new IssueDisplayItem(LanguageManager.Text("表读取失败"), error, ValidationSeverity.Error))
+                .ToArray();
+            LogsList.ItemsSource = new[]
+            {
+                new LogDisplayItem(DateTime.Now, "FAIL", LanguageManager.Text("打表失败，请展开日志查看详细信息。"))
+            };
+            SetLogsExpanded(true);
+            ShowBuildResultDialog(success: false);
+            StatusChanged?.Invoke(this, LanguageManager.Text("存在无法读取的表，已停止打表"));
+            return;
+        }
+
         var target = (ClientCheckBox.IsChecked == true ? ExportTarget.Client : ExportTarget.None)
             | (ServerCheckBox.IsChecked == true ? ExportTarget.Server : ExportTarget.None);
-        var result = buildService.Build(settings, tables, tables.Where(table => table.IsSelected).Select(table => table.Document.SourceName), target);
-        LogsList.ItemsSource = result.Logs.Select(log => new LogDisplayItem(log.Time, log.Level, log.Message)).ToArray();
+        var selectedSources = tables
+            .Where(table => table.IsSelected)
+            .SelectMany(table => table.Sheets.Select(sheet => sheet.Document.SourceName));
+        var result = buildService.Build(settings, tables, selectedSources, target);
+        var buildLogs = result.Logs.Select(log => new LogDisplayItem(log.Time, log.Level, log.Message));
+        if (catalogErrors.Count > 0)
+            buildLogs = new[]
+            {
+                new LogDisplayItem(DateTime.Now, "WARN", LanguageManager.Text("部分文件读取失败，本次打表使用已保留的内存数据。"))
+            }.Concat(buildLogs);
+        LogsList.ItemsSource = buildLogs.ToArray();
         IssuesList.ItemsSource = result.Issues
             .OrderBy(issue => issue.Severity)
             .Select(issue => new IssueDisplayItem(
-                $"{issue.SourceName}:{issue.SourceRow} · {issue.Code}",
-                issue.Suggestion is null ? issue.Message : $"{issue.Message} {issue.Suggestion}"))
+                ValidationIssueFormatter.Headline(issue),
+                ValidationIssueFormatter.Detail(issue),
+                issue.Severity))
+            .Concat(catalogErrors.Select(error => new IssueDisplayItem(
+                LanguageManager.Text("表读取失败"),
+                error,
+                ValidationSeverity.Warning)))
             .ToArray();
 
         if (result.Success)
         {
             settings.RecentTables = tables
                 .Where(table => table.IsSelected)
-                .Select(table => table.SchemaName)
+                .Select(table => table.FavoriteKey)
                 .Concat(settings.RecentTables)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Take(10)
                 .ToList();
             SettingsStore.Save(settings);
-            StatusChanged?.Invoke(this, $"打表完成：{result.FileCount} 个 JSON 文件");
+            StatusChanged?.Invoke(this, LanguageManager.Format("打表完成：{0} 个输出文件", result.FileCount));
+            foreach (var table in tables)
+                table.IsSelected = false;
+            UpdateSelectionUi();
+            ShowBuildResultDialog(success: true);
         }
         else
         {
-            StatusChanged?.Invoke(this, "打表未完成，请检查日志");
+            SetLogsExpanded(true);
+            ShowBuildResultDialog(success: false);
+            StatusChanged?.Invoke(this, LanguageManager.Text("打表未完成，请检查日志"));
         }
+    }
+
+    private void Build_Click(object sender, RoutedEventArgs e) => BuildTables();
+
+    private void ShowBuildResultDialog(bool success)
+    {
+        var dialog = new BuildResultDialog(success)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        dialog.ShowDialog();
     }
 
     private void CopyLogs_Click(object sender, RoutedEventArgs e)
@@ -325,10 +542,28 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
 
     private void ClearLogs_Click(object sender, RoutedEventArgs e) => LogsList.ItemsSource = Array.Empty<LogDisplayItem>();
 
+    private void ToggleLogs_Click(object sender, RoutedEventArgs e)
+    {
+        var collapsed = LogsScrollViewer.Visibility == Visibility.Collapsed;
+        SetLogsExpanded(collapsed);
+    }
+
+    private void SetLogsExpanded(bool expanded)
+    {
+        LogsScrollViewer.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
+        LogsRow.Height = expanded ? new GridLength(170) : new GridLength(38);
+        ToggleLogsButton.Content = LanguageManager.Text(expanded ? "收起" : "展开");
+    }
+
     private static void OpenPath(string path)
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+            path = Path.GetFullPath(path);
+            if (!File.Exists(path) && !Directory.Exists(path))
+                return;
             if (string.IsNullOrWhiteSpace(Path.GetExtension(path)))
                 Directory.CreateDirectory(path);
             Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });

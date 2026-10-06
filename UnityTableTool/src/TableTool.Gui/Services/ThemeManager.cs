@@ -1,5 +1,6 @@
 // 用途：根据设置更新应用颜色、字体和缩放资源。
 // 最近修改日期：2026-10-06
+// 作者：Codex（按用户需求修改）
 
 using System.Windows;
 using System.Windows.Media;
@@ -28,34 +29,54 @@ public static class ThemeManager
 
         if (dark)
         {
-            SetBrush("Brush.Window", ParseColor(settings.BackgroundColor, "#17191D"));
-            SetBrush("Brush.Chrome", "#1B1E23");
-            SetBrush("Brush.Panel", "#1B1E23");
+            var background = (string.Equals(settings.BackgroundColor, "#F5F7FA", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(settings.BackgroundColor, "#17191D", StringComparison.OrdinalIgnoreCase))
+                ? "#000000"
+                : settings.BackgroundColor;
+            var foreground = (string.Equals(settings.ForegroundColor, "#17191D", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(settings.ForegroundColor, "#E2E6ED", StringComparison.OrdinalIgnoreCase))
+                ? "#FFFFFF"
+                : settings.ForegroundColor;
+            SetBrush("Brush.Window", ParseColor(background, "#000000"));
+            SetBrush("Brush.Chrome", "#101010");
+            SetBrush("Brush.Panel", "#111111");
             SetBrush("Brush.Surface", "#202329");
             SetBrush("Brush.SurfaceAlt", "#2D323B");
             SetBrush("Brush.SurfaceHover", "#272B32");
             SetBrush("Brush.Border", "#353A43");
-            SetBrush("Brush.Text", ParseColor(settings.ForegroundColor, "#E2E6ED"));
-            SetBrush("Brush.TextSecondary", "#939DAD");
-            SetBrush("Brush.TextMuted", "#667181");
+            var darkForeground = ParseColor(foreground, "#FFFFFF");
+            SetBrush("Brush.Text", darkForeground);
+            SetBrush("Brush.TextSecondary", Blend(darkForeground, background, 0.68));
+            SetBrush("Brush.TextMuted", Blend(darkForeground, background, 0.45));
             SetBrush("Brush.RowSelected", "#3A3321");
             SetBrush("Brush.Overlay", "#111317");
         }
         else
         {
-            SetBrush("Brush.Window", ParseColor(settings.BackgroundColor, "#F5F7FA"));
+            var background = (string.Equals(settings.BackgroundColor, "#17191D", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(settings.BackgroundColor, "#F5F7FA", StringComparison.OrdinalIgnoreCase))
+                ? "#FFFFFF"
+                : settings.BackgroundColor;
+            var foreground = (string.Equals(settings.ForegroundColor, "#E2E6ED", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(settings.ForegroundColor, "#17191D", StringComparison.OrdinalIgnoreCase))
+                ? "#000000"
+                : settings.ForegroundColor;
+            SetBrush("Brush.Window", ParseColor(background, "#FFFFFF"));
             SetBrush("Brush.Chrome", "#FFFFFF");
             SetBrush("Brush.Panel", "#FFFFFF");
             SetBrush("Brush.Surface", "#F8FAFC");
             SetBrush("Brush.SurfaceAlt", "#E9EDF3");
             SetBrush("Brush.SurfaceHover", "#EDF2F7");
             SetBrush("Brush.Border", "#D5DAE2");
-            SetBrush("Brush.Text", ParseColor(settings.ForegroundColor, "#17191D"));
-            SetBrush("Brush.TextSecondary", "#5E6878");
-            SetBrush("Brush.TextMuted", "#7C8798");
+            var lightForeground = ParseColor(foreground, "#000000");
+            SetBrush("Brush.Text", lightForeground);
+            SetBrush("Brush.TextSecondary", Blend(lightForeground, background, 0.68));
+            SetBrush("Brush.TextMuted", Blend(lightForeground, background, 0.45));
             SetBrush("Brush.RowSelected", "#FFF1C9");
             SetBrush("Brush.Overlay", "#E8ECF2");
         }
+
+        ApplySystemMenuBrushes(dark);
 
         SetBrush("Brush.Success", dark ? "#54D6A0" : "#16845B");
         SetBrush("Brush.Warning", dark ? "#E7B95E" : "#A36B00");
@@ -85,6 +106,19 @@ public static class ThemeManager
 
     private static void SetBrush(string key, System.Windows.Media.Color color) =>
         Application.Current.Resources[key] = new SolidColorBrush(color);
+
+    private static void ApplySystemMenuBrushes(bool dark)
+    {
+        // 顶部菜单弹出项使用透明底，直接显示为主题按钮，避免 WPF 默认白色菜单边框。
+        SetSystemBrush(SystemColors.MenuBrushKey, dark ? "#111111" : "#FFFFFF");
+        SetSystemBrush(SystemColors.MenuTextBrushKey, dark ? "#FFFFFF" : "#000000");
+        SetSystemBrush(SystemColors.MenuHighlightBrushKey, dark ? "#272B32" : "#EDF2F7");
+        SetSystemBrush(SystemColors.MenuBarBrushKey, dark ? "#101010" : "#FFFFFF");
+        SetSystemBrush(SystemColors.ActiveBorderBrushKey, dark ? "#353A43" : "#D5DAE2");
+    }
+
+    private static void SetSystemBrush(object key, string color) =>
+        Application.Current.Resources[key] = new SolidColorBrush(ParseColor(color, "#000000"));
 
     private static System.Windows.Media.Color ParseColor(string value, string fallback)
     {

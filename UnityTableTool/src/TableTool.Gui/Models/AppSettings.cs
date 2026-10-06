@@ -1,5 +1,8 @@
 // 用途：保存工具路径、界面主题和字体缩放配置。
 // 最近修改日期：2026-10-06
+// 作者：Codex（按用户需求修改）
+
+using TableTool.Core.Models;
 
 namespace TableTool.Gui.Models;
 
@@ -24,6 +27,13 @@ public sealed class AppSettings
     public string FontFamilyName { get; set; } = "Noto Sans SC";
     public double FontSize { get; set; } = 13;
     public double Zoom { get; set; } = 100;
+    public string Language { get; set; } = "zh-CN";
+    public string SearchShortcut { get; set; } = "Ctrl+K";
+    public string BuildShortcut { get; set; } = "Ctrl+B";
+    public string RefreshShortcut { get; set; } = "Ctrl+R";
+    public int VerticalWheelScrollStep { get; set; } = 12;
+    public int HorizontalWheelScrollStep { get; set; } = 12;
+    public ExportTarget OutputTargets { get; set; } = ExportTarget.Both;
     public List<string> Favorites { get; set; } = [];
     public List<string> RecentTables { get; set; } = [];
 
@@ -41,6 +51,13 @@ public sealed class AppSettings
         FontFamilyName = FontFamilyName,
         FontSize = FontSize,
         Zoom = Zoom,
+        Language = Language,
+        SearchShortcut = SearchShortcut,
+        BuildShortcut = BuildShortcut,
+        RefreshShortcut = RefreshShortcut,
+        VerticalWheelScrollStep = VerticalWheelScrollStep,
+        HorizontalWheelScrollStep = HorizontalWheelScrollStep,
+        OutputTargets = OutputTargets,
         Favorites = [.. Favorites],
         RecentTables = [.. RecentTables]
     };

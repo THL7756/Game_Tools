@@ -16,7 +16,7 @@
 - 客户端、服务器可以分别或同时导出。
 - 数据输出目录分别为 `Data_c`、`Data_s`。
 - 同时导出时，代码目录分别为 `Code/Client`、`Code/Server`。
-- GUI 打表只输出 JSON，客户端与服务器可独立或同时选择。
+- GUI 打表输出 JSON 和 C# 数据文件，客户端与服务器可独立或同时选择。
 - 导出前执行扫描、关联表检查、schema 合并和字段校验。
 - 校验结果只显示在 GUI 中，不写入代码目录。
 - 导出成功后自动取消表勾选并更新最近列表。
@@ -28,7 +28,8 @@
 - 客户端/服务器重复声明的同名单例字段会合并端别。
 - JSON 单例使用 `data` 对象；Runtime 同时兼容旧的 `rows` 数组。
 - `schemaHash` 用于识别结构变化，`formatVersion` 用于识别格式版本，当前保留。
-- GUI 只生成 JSON；Runtime Package 仍可兼容 JSON 与 UTB1 bytes。
+- GUI 生成 JSON 和 C#；Runtime Package 仍可兼容 JSON 与 UTB1 bytes。
+- 工具首次启动会在程序目录创建 `ToolData/settings.json` 和 `Languages` 目录，用于保存界面、路径、输出范围和快捷键配置；目录不可写时回退到用户本地数据目录。
 
 ### GUI
 
@@ -64,3 +65,12 @@ release/UnityTableTool/UnityTableTool.exe
 当前验证结果：`35/35` 测试通过，GUI Release 构建通过。发布包为 Windows x64 自包含版本。
 
 构建缓存位于 `%TEMP%\UnityTableTool-build`，`.build`、`.nuget`、`.dotnet-home` 等目录不是发布包必需内容。网络不可用时，脚本会在存在既有 Release 构建的情况下直接打包该构建，并明确输出提示。
+# UnityTableTool 文档索引
+
+- [项目实施与验收计划](ProjectPlan.md)
+- [字段规则](FieldRules.md)
+- [表结构](TableFormat.md)
+- [排错](Troubleshooting.md)
+- [运行时集成](RuntimeIntegration.md)
+- [导出格式](ExportFormats.md)
+- [扩展点](ExtensionPoints.md)

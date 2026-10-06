@@ -1,3 +1,7 @@
+// 用途：在打表导出阶段合并同名、同结构的表文档。
+// 编写日期：2026-10-06
+// 作者：Codex（按用户需求修改）
+
 using TableTool.Core.Models;
 
 namespace TableTool.Core.Parsing;

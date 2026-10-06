@@ -1,3 +1,7 @@
+// 用途：验证字段类型、默认值、主键和表引用前提。
+// 编写日期：2026-10-06
+// 作者：Codex（按用户需求修改）
+
 using TableTool.Core.Models;
 using TableTool.Core.Parsing;
 
@@ -20,17 +24,35 @@ public sealed class TableValidator
                 Suggestion: "删除多余数据行，或去掉 type:single 元数据。"));
         }
 
-        if (document.Schema.IsSingleton)
-            return issues;
-
-        if (!fields.Any(field => field.Name == document.Schema.PrimaryKey))
+        var primaryKeyField = fields.FirstOrDefault(field => field.Name == document.Schema.PrimaryKey);
+        if (!document.Schema.IsSingleton && primaryKeyField is null)
         {
             issues.Add(new ValidationIssue(
                 ErrorCodes.PrimaryKeyMissing,
                 ValidationSeverity.Error,
                 $"Primary key '{document.Schema.PrimaryKey}' is missing.",
                 document.SourceName));
-            return issues;
+        }
+
+        var invalidDefaults = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var field in document.Schema.AllFields.Where(field => !string.IsNullOrWhiteSpace(field.DefaultValue)))
+        {
+            try
+            {
+                ValueParser.Parse(field.DefaultValue!, field.Type);
+            }
+            catch (FormatException error)
+            {
+                invalidDefaults.Add(field.Name);
+                issues.Add(new ValidationIssue(
+                    ErrorCodes.FieldDefaultInvalid,
+                    ValidationSeverity.Error,
+                    error.Message,
+                    document.SourceName,
+                    FieldName: field.Name,
+                    SourceColumn: field.SourceColumn + 1,
+                    Suggestion: "检查默认值是否符合字段类型。"));
+            }
         }
 
         var keys = new HashSet<string>(StringComparer.Ordinal);
@@ -49,6 +71,9 @@ public sealed class TableValidator
                 }
                 catch (FormatException error)
                 {
+                    if (string.IsNullOrWhiteSpace(raw) && invalidDefaults.Contains(field.Name))
+                        continue;
+
                     issues.Add(new ValidationIssue(
                         field.Type.Dimensions > 0 && error.Message.Contains("separator", StringComparison.OrdinalIgnoreCase)
                             ? ErrorCodes.FieldArraySeparatorInvalid
@@ -64,7 +89,12 @@ public sealed class TableValidator
                 }
             }
 
-            var primaryKeyField = fields.First(field => field.Name == document.Schema.PrimaryKey);
+            if (document.Schema.IsSingleton)
+                continue;
+
+            if (primaryKeyField is null)
+                continue;
+
             var rawKey = row.RawValues.TryGetValue(document.Schema.PrimaryKey, out var suppliedKey) ? suppliedKey : null;
             var key = string.IsNullOrWhiteSpace(rawKey) ? primaryKeyField.DefaultValue : rawKey;
             if (string.IsNullOrWhiteSpace(key))

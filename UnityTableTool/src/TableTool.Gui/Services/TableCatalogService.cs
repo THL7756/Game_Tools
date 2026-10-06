@@ -1,6 +1,8 @@
-// 用途：扫描配置表并构建工作台表列表。
-// 最近修改日期：2026-10-06
+// 用途：扫描配置表文件，按文件聚合真实 Sheet，并构建工作台列表模型。
+// 编写日期：2026-10-06
+// 作者：Codex（按用户需求修改）
 
+using System.ComponentModel;
 using System.IO;
 using TableTool.Core.Models;
 using TableTool.Core.Parsing;
@@ -21,7 +23,9 @@ public sealed class TableCatalogService
         var documents = new List<TableDocument>();
         try
         {
-            var grids = TableFileReader.ReadDirectory(settings.TableDirectory);
+            var grids = TableFileReader.ReadDirectory(
+                settings.TableDirectory,
+                (path, error) => errors.Add($"{Path.GetRelativePath(settings.TableDirectory, path)}：{error.Message}"));
             var parser = new TableSchemaParser();
             foreach (var grid in grids)
             {
@@ -34,8 +38,6 @@ public sealed class TableCatalogService
                     errors.Add($"{grid.SourceName}：{error.Message}");
                 }
             }
-
-            documents = [.. TableDocumentMerger.Merge(documents)];
         }
         catch (Exception error)
         {
@@ -45,57 +47,132 @@ public sealed class TableCatalogService
         var favorites = settings.Favorites.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var recent = settings.RecentTables.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var tables = documents
-            .OrderBy(document => document.Schema.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(document => new TableModel(
-                document,
-                GetDisplayName(document.Schema.Name),
-                GetSourcePath(settings.TableDirectory, document.SourceName),
-                favorites.Contains(document.Schema.Name),
-                recent.Contains(document.Schema.Name)))
+            .GroupBy(document => GetFileKey(document.SourceName), StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(group => CreateTableModel(settings.TableDirectory, group, favorites, recent))
             .ToArray();
 
         return new CatalogResult(tables, errors);
     }
 
-    private static string GetDisplayName(string schemaName) => schemaName switch
+    private static TableModel CreateTableModel(
+        string tableDirectory,
+        IGrouping<string, TableDocument> group,
+        IReadOnlySet<string> favorites,
+        IReadOnlySet<string> recent)
     {
-        "Skill" => "技能配置",
-        "Item" => "道具配置",
-        "GlobalConfig" => "全局配置",
-        _ => schemaName
-    };
+        var fileKey = group.Key.Replace('\\', '/');
+        var sourcePath = Path.GetFullPath(Path.Combine(tableDirectory, fileKey.Replace('/', Path.DirectorySeparatorChar)));
+        var sheets = group
+            .OrderBy(document => GetSheetName(document.SourceName), StringComparer.OrdinalIgnoreCase)
+            .Select(document => new TableSheetModel(document, GetSheetName(document.SourceName)))
+            .ToArray();
+        var isFavorite = ContainsFileKey(favorites, fileKey, sourcePath, group);
+        var isRecent = ContainsFileKey(recent, fileKey, sourcePath, group);
+        return new TableModel(
+            fileKey,
+            Path.GetFileName(fileKey),
+            sourcePath,
+            sheets,
+            isFavorite,
+            isRecent);
+    }
 
-    private static string GetSourcePath(string tableDirectory, string sourceName)
+    private static bool ContainsFileKey(
+        IReadOnlySet<string> keys,
+        string fileKey,
+        string sourcePath,
+        IEnumerable<TableDocument> documents)
     {
-        var fileName = sourceName.Split(" + ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(part => part.Split("::", 2)[0])
-            .FirstOrDefault();
-        return string.IsNullOrWhiteSpace(fileName)
-            ? tableDirectory
-            : Path.GetFullPath(Path.Combine(tableDirectory, fileName));
+        if (keys.Contains(fileKey) || keys.Contains(sourcePath) || keys.Contains(Path.GetFileName(fileKey)))
+            return true;
+
+        return documents.Any(document =>
+            keys.Contains(document.SourceName)
+            || keys.Contains(document.Schema.Name));
+    }
+
+    private static string GetFileKey(string sourceName)
+    {
+        var separator = sourceName.IndexOf("::", StringComparison.Ordinal);
+        return separator >= 0 ? sourceName[..separator] : sourceName;
+    }
+
+    private static string GetSheetName(string sourceName)
+    {
+        var separator = sourceName.IndexOf("::", StringComparison.Ordinal);
+        return separator >= 0
+            ? sourceName[(separator + 2)..]
+            : Path.GetFileNameWithoutExtension(sourceName);
     }
 }
 
-public sealed class TableModel : System.ComponentModel.INotifyPropertyChanged
+public sealed class TableSheetModel : INotifyPropertyChanged
+{
+    private bool isCurrent;
+
+    public TableSheetModel(TableDocument document, string sheetName)
+    {
+        Document = document;
+        SheetName = sheetName;
+    }
+
+    public TableDocument Document { get; }
+    public string SheetName { get; }
+    public string LogicalTableName => Document.Schema.Name;
+
+    public bool IsCurrent
+    {
+        get => isCurrent;
+        set
+        {
+            if (isCurrent == value)
+                return;
+            isCurrent = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsCurrent)));
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+}
+
+public sealed class TableModel : INotifyPropertyChanged
 {
     private bool isSelected;
     private bool isFavorite;
+    private TableSheetModel currentSheet;
 
-    public TableModel(TableDocument document, string displayName, string sourcePath, bool isFavorite, bool isRecent)
+    public TableModel(
+        string fileKey,
+        string displayName,
+        string sourcePath,
+        IReadOnlyList<TableSheetModel> sheets,
+        bool isFavorite,
+        bool isRecent)
     {
-        Document = document;
+        if (sheets.Count == 0)
+            throw new ArgumentException("A table file must contain at least one sheet.", nameof(sheets));
+
+        FileKey = fileKey;
         DisplayName = displayName;
         SourcePath = sourcePath;
+        Sheets = sheets;
+        currentSheet = sheets[0];
+        currentSheet.IsCurrent = true;
         this.isFavorite = isFavorite;
         IsRecent = isRecent;
     }
 
-    public TableDocument Document { get; }
-    public string SchemaName => Document.Schema.Name;
+    public string FileKey { get; }
+    public string FavoriteKey => FileKey;
     public string DisplayName { get; }
+    public string DisplayLabel => DisplayName;
     public string SourcePath { get; }
     public bool IsRecent { get; }
-    public string DisplayLabel => IsRecent ? $"最近 · {DisplayName}" : DisplayName;
+    public IReadOnlyList<TableSheetModel> Sheets { get; }
+    public TableSheetModel CurrentSheet => currentSheet;
+    public TableDocument Document => currentSheet.Document;
+    public string SchemaName => currentSheet.LogicalTableName;
 
     public bool IsSelected
     {
@@ -105,7 +182,7 @@ public sealed class TableModel : System.ComponentModel.INotifyPropertyChanged
             if (isSelected == value)
                 return;
             isSelected = value;
-            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IsSelected)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
         }
     }
 
@@ -117,9 +194,22 @@ public sealed class TableModel : System.ComponentModel.INotifyPropertyChanged
             if (isFavorite == value)
                 return;
             isFavorite = value;
-            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IsFavorite)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsFavorite)));
         }
     }
 
-    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    public void SelectSheet(TableSheetModel sheet)
+    {
+        if (!Sheets.Contains(sheet) || ReferenceEquals(currentSheet, sheet))
+            return;
+
+        currentSheet.IsCurrent = false;
+        currentSheet = sheet;
+        currentSheet.IsCurrent = true;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentSheet)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Document)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SchemaName)));
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 }

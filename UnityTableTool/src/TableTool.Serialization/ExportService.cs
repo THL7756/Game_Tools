@@ -1,3 +1,7 @@
+// 用途：按客户端、服务器和代码目录输出配置表文件，并以暂存目录安全替换旧输出。
+// 编写日期：2026-10-06
+// 作者：Codex（按用户需求修改）
+
 using TableTool.Core.Models;
 using TableTool.Core.Parsing;
 

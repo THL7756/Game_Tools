@@ -1,5 +1,7 @@
 # 排错
 
+问题列表按严重级别显示颜色：错误和致命问题为红色，警告为黄色。详情项会显示来源文件、Sheet、行号、列号和字段名。
+
 | 现象或错误 | 处理方式 |
 | --- | --- |
 | `FIELD_TYPE_UNKNOWN` | 检查字段类型是否为 `int`、`long`、`float`、`double`、`bool`、`string`、`Vector2`、`Vector3`、`Vector4`、`Color` 或 `Quaternion`。 |
@@ -8,6 +10,9 @@
 | `TABLE_REFERENCE_MISSING` | 检查 `<逻辑表名>_id` 字段名称，或补充关联表。 |
 | `SINGLETON_ROW_COUNT_INVALID` | 单例源表的字段应聚合成一个对象；检查 `id`、`type`、`data` 语义列和字段内容。 |
 | 表列表没有结果 | 点击扫描，检查设置中的表根目录和搜索关键字；启动时会自动扫描项目 `Data` 目录。 |
+| 刷新后表列表为空 | 先检查设置中的表目录是否存在；读取失败的文件会出现在问题列表。刷新不会用空结果覆盖已有列表。 |
+| 详情 Sheet 名称不正确 | Sheet 标签来自真实文件读取结果；打开中的 Excel 允许共享读取，仍异常时在详情点击“刷新内容”。 |
+| 打开文件无效 | 表列表和详情按钮都按文件绝对路径工作；确认文件仍存在，或重新扫描目录。 |
 | 最近列表没有记录 | 只有成功导出后才会记录，最近列表最多显示 10 张。 |
 | 收藏列表为空 | 在表列表每项右侧点击“收藏”，再切换筛选为“收藏”。 |
 | 勾选分表后导出更多文件 | 这是预期行为，同一个 `table:` 逻辑表的分表会自动合并；关联表也会自动加入。 |
@@ -15,6 +20,11 @@
 | `RUNTIME_FORMAT_UNKNOWN` | 确认文件是有效 JSON 或以 `UTB1` 开头的 bytes。 |
 | `RUNTIME_SCHEMA_MISMATCH` | 重新导出当前端的数据和代码，确认客户端读取 `Data_c`、服务器读取 `Data_s`。 |
 | 字体大小看起来没有变化 | 在“设置”页调整字体大小；新版本已移除固定字号样式。 |
+| 切换语言后界面没有变化或关闭 | 语言包放在程序目录的 `Languages` 文件夹中；切换和设置页签都有异常保护，仍异常时查看 `%LOCALAPPDATA%\UnityTableTool\ui-errors.log`，并检查 `zh-CN.json` 和 `en-US.json` 是否为有效 JSON。 |
+| 语言下拉框显示异常 | 当前选项显示语言包的 `DisplayName`；首次启动会自动创建 `Languages\zh-CN.json` 和 `Languages\en-US.json`。如果程序目录不可写，会使用内置中英文回退。 |
+| 设置没有记住 | 配置默认保存在程序目录的 `ToolData\settings.json`，包括输出范围、语言、项目路径、主题、字体、缩放和快捷键；安装目录不可写时查看 `%LOCALAPPDATA%\UnityTableTool\settings.json`。 |
+| 点击项目助手、素材工具、音频工具或提示词仓库崩溃 | 这些页面是安全占位页面，不依赖外部图片资源；若仍崩溃，检查发布目录是否完整并保留 `Assets/Icons`。 |
+| 快捷键无法录入 | 在设置中直接按组合键，先按 Ctrl/Shift/Alt/Win，再按主键；Backspace 或 Delete 清空输入。 |
 | 发布脚本无法运行 | 确认安装 .NET 8 SDK 或 Desktop Runtime，再运行 `publish.cmd`。 |
 
-校验只在导出流程执行，错误会显示在 GUI 的“检测结果”页，不会写入 `Code`、`Data_c` 或 `Data_s`。
+校验只在导出流程执行，错误会显示在 GUI 的“表问题”区域；有错误时不会替换原输出目录，也不会写入 `Code`、`Data_c` 或 `Data_s`。
