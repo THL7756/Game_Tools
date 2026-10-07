@@ -1,3 +1,8 @@
+# 用途：校验主键、引用关系和逻辑表选择范围，决定是否允许导出。
+# 最近修改日期：2026-10-07
+# 作者：Codex
+
+import os
 from pathlib import Path
 from typing import Any
 
@@ -12,10 +17,11 @@ def ResolveLogicalTables(
     SelectedFiles: set[Path],
     LogicalTables: dict[str, LogicalTable],
 ) -> dict[str, LogicalTable]:
+    NormalizedSelectedFiles = {NormalizePath(FilePath) for FilePath in SelectedFiles}
     SelectedNames = {
         TableName
         for TableName, Table in LogicalTables.items()
-        if any(str(SourceFile) in SelectedFiles for SourceFile in Table.SourceFiles)
+        if any(NormalizePath(SourceFile) in NormalizedSelectedFiles for SourceFile in Table.SourceFiles)
     }
     ReferenceMap = BuildReferenceMap(LogicalTables)
     ResolvedNames: set[str] = set()
@@ -33,6 +39,14 @@ def ResolveLogicalTables(
             if TargetName and TargetName not in ResolvedNames:
                 Pending.append(TargetName)
     return {Name: LogicalTables[Name] for Name in ResolvedNames if Name in LogicalTables}
+
+
+def NormalizePath(Value: Path | str) -> str:
+    """Compare source paths consistently across cached and freshly scanned projects."""
+    try:
+        return os.path.normcase(str(Path(Value).expanduser().resolve(strict=False)))
+    except OSError:
+        return os.path.normcase(str(Path(Value)))
 
 
 def BuildReferenceMap(LogicalTables: dict[str, LogicalTable]) -> dict[str, str]:

@@ -1,3 +1,7 @@
+# 用途：根据逻辑表生成客户端 C# 数据模型和 Unity JsonUtility 读取包装。
+# 最近修改日期：2026-10-07
+# 作者：Codex
+
 import re
 from datetime import date
 

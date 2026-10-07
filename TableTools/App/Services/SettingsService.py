@@ -1,5 +1,10 @@
+# 用途：加载、合并、保存应用设置，并解析源表和输出目录。
+# 最近修改日期：2026-10-07
+# 作者：Codex
+
 import json
 import os
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +25,7 @@ DefaultSettings: dict[str, Any] = {
         "WindowWidth": 1440,
         "WindowHeight": 960,
         "WindowMaximized": False,
+        "AccentColor": "#4D8DF7",
     },
     "TableList": {
         "FilterMode": "All",
@@ -60,8 +66,10 @@ def LoadSettings(ProjectRoot: Path) -> dict[str, Any]:
 
 
 def MergeSettings(Base: Any, Override: Any) -> Any:
-    if isinstance(Base, dict) and isinstance(Override, dict):
-        Result = dict(Base)
+    if isinstance(Base, dict):
+        if not isinstance(Override, dict):
+            return deepcopy(Base)
+        Result = deepcopy(Base)
         for Key, Value in Override.items():
             Result[Key] = MergeSettings(Base.get(Key), Value) if Key in Base else Value
         return Result

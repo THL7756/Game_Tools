@@ -1,3 +1,7 @@
+# 用途：定义表格解析、预览、校验和导出共用的数据模型。
+# 最近修改日期：2026-10-07
+# 作者：Codex
+
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -16,6 +20,14 @@ class SourceLocation:
     SheetName: str
     Row: int = 0
     Column: int = 0
+
+
+@dataclass(frozen=True)
+class ArraySyntaxConfig:
+    Level1Delimiter: str = "#"
+    Level2Delimiter: str = "|"
+    Level3Delimiter: str = ";"
+    EscapeCharacter: str = "\\"
 
 
 @dataclass
@@ -66,6 +78,10 @@ class TableSlice:
     Fields: list[FieldDefinition]
     Rows: list[TableRow]
     Location: SourceLocation
+    PreviewRows: list[list[str]] = field(default_factory=list)
+    PreviewRowNumbers: list[int] = field(default_factory=list)
+    PreviewIssues: dict[tuple[int, int], ValidationIssue] = field(default_factory=dict)
+    PreviewParsedRows: list[list[str]] = field(default_factory=list)
 
 
 @dataclass
@@ -89,6 +105,11 @@ class SheetPreview:
     Headers: list[str]
     Rows: list[list[str]]
     Fields: list[FieldDefinition]
+    TypeLabels: list[str] = field(default_factory=list)
+    ScopeLabels: list[str] = field(default_factory=list)
+    RowNumbers: list[int] = field(default_factory=list)
+    CellIssues: dict[tuple[int, int], ValidationIssue] = field(default_factory=dict)
+    ParsedRows: list[list[str]] = field(default_factory=list)
 
 
 @dataclass

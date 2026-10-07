@@ -1,9 +1,15 @@
+# 用途：扫描 Excel 源文件，解析表结构并生成逻辑表与完整预览数据。
+# 最近修改日期：2026-10-07
+# 作者：Codex
+
 from pathlib import Path
 from typing import Any
 
 from App.Core.Models import (
+    ArraySyntaxConfig,
     FieldDefinition,
     LogicalTable,
+    ParsedType as ParsedFieldType,
     ParsedProject,
     SeverityLevel,
     SheetPreview,
@@ -16,7 +22,11 @@ from App.Core.Models import (
 from App.Core.TypeParser import ParseFieldType, ParseValue, TypeParseError
 
 
-def ScanProject(RootDirectory: Path, EscapeCharacter: str = "\\") -> ParsedProject:
+def ScanProject(
+    RootDirectory: Path,
+    Syntax: ArraySyntaxConfig | str = ArraySyntaxConfig(),
+) -> ParsedProject:
+    SyntaxConfig = Syntax if isinstance(Syntax, ArraySyntaxConfig) else ArraySyntaxConfig(EscapeCharacter=Syntax)
     Issues: list[ValidationIssue] = []
     SourceFiles: list[SourceFileModel] = []
     LogicalTables: dict[str, LogicalTable] = {}
@@ -44,7 +54,7 @@ def ScanProject(RootDirectory: Path, EscapeCharacter: str = "\\") -> ParsedProje
         FileSlices: list[TableSlice] = []
         Previews: list[SheetPreview] = []
         for SheetName, Matrix in Sheets:
-            Slice, SheetIssues = ParseTableSlice(FilePath, SheetName, Matrix, EscapeCharacter)
+            Slice, SheetIssues = ParseTableSlice(FilePath, SheetName, Matrix, SyntaxConfig)
             Issues.extend(SheetIssues)
             if Slice is not None:
                 FileSlices.append(Slice)
@@ -124,7 +134,7 @@ def ParseTableSlice(
     FilePath: Path,
     SheetName: str,
     Matrix: list[list[Any]],
-    EscapeCharacter: str,
+    Syntax: ArraySyntaxConfig,
 ) -> tuple[TableSlice | None, list[ValidationIssue]]:
     Location = SourceLocation(FilePath, SheetName)
     Issues: list[ValidationIssue] = []
@@ -147,8 +157,8 @@ def ParseTableSlice(
         return None, Issues
 
     if IsSingle:
-        return ParseSingleSlice(FilePath, SheetName, TableName, Matrix, EscapeCharacter)
-    return ParseNormalSlice(FilePath, SheetName, TableName, Matrix, EscapeCharacter)
+        return ParseSingleSlice(FilePath, SheetName, TableName, Matrix, Syntax)
+    return ParseNormalSlice(FilePath, SheetName, TableName, Matrix, Syntax)
 
 
 def ParseNormalSlice(
@@ -156,7 +166,7 @@ def ParseNormalSlice(
     SheetName: str,
     TableName: str,
     Matrix: list[list[Any]],
-    EscapeCharacter: str,
+    Syntax: ArraySyntaxConfig,
 ) -> tuple[TableSlice | None, list[ValidationIssue]]:
     Location = SourceLocation(FilePath, SheetName)
     Issues: list[ValidationIssue] = []
@@ -168,7 +178,7 @@ def ParseNormalSlice(
     MaxColumn = max(len(Row) for Row in Matrix[:6])
     for ColumnIndex in range(2, MaxColumn + 1):
         Name = CellText(Matrix, 4, ColumnIndex)
-        if not Name or Name.startswith("##"):
+        if IsIgnoredFieldName(Name) or IsCommentedColumn(Matrix, ColumnIndex):
             continue
         TypeText = CellText(Matrix, 3, ColumnIndex)
         try:
@@ -182,7 +192,7 @@ def ParseNormalSlice(
                     Name,
                 )
             )
-            continue
+            ParsedType = ParsedFieldType(TypeText, "__invalid__")
 
         Scope = NormalizeScope(CellText(Matrix, 5, ColumnIndex), FilePath, SheetName, ColumnIndex, Name, Issues)
         Fields.append(
@@ -202,6 +212,10 @@ def ParseNormalSlice(
         return None, Issues
 
     Rows: list[TableRow] = []
+    PreviewRows: list[list[str]] = []
+    PreviewRowNumbers: list[int] = []
+    PreviewIssues: dict[tuple[int, int], ValidationIssue] = {}
+    PreviewParsedRows: list[list[str]] = []
     for RowOffset in range(6, len(Matrix)):
         SourceRow = RowOffset + 1
         RowLabel = CellText(Matrix, SourceRow, 1)
@@ -210,28 +224,47 @@ def ParseNormalSlice(
         if IsEmptyRow(Matrix[RowOffset]):
             continue
         Values: dict[str, Any] = {}
+        PreviewValues: list[str] = []
+        PreviewParsedValues: list[str] = []
         RowHasError = False
-        for Field in Fields:
+        for FieldIndex, Field in enumerate(Fields):
             RawValue = GetCell(Matrix, SourceRow, Field.ColumnIndex)
             ValueText = "" if RawValue is None else str(RawValue).strip()
             if ValueText == "":
                 ValueText = Field.DefaultText
+            PreviewValues.append(ValueText)
             try:
-                Values[Field.Name] = ParseValue(ValueText, Field.ParsedType, EscapeCharacter)
+                ParsedValue = ParseValue(ValueText, Field.ParsedType, Syntax)
+                Values[Field.Name] = ParsedValue
+                PreviewParsedValues.append(FormatPreviewValue(ParsedValue))
             except TypeParseError as Error:
                 RowHasError = True
-                Issues.append(
-                    ValidationIssue(
-                        SeverityLevel.Error,
-                        str(Error),
-                        SourceLocation(FilePath, SheetName, SourceRow, Field.ColumnIndex),
-                        Field.Name,
-                    )
+                PreviewParsedValues.append("")
+                Issue = ValidationIssue(
+                    SeverityLevel.Error,
+                    str(Error),
+                    SourceLocation(FilePath, SheetName, SourceRow, Field.ColumnIndex),
+                    Field.Name,
                 )
+                Issues.append(Issue)
+                PreviewIssues[(len(PreviewRows), FieldIndex)] = Issue
+        PreviewRows.append(PreviewValues)
+        PreviewParsedRows.append(PreviewParsedValues)
+        PreviewRowNumbers.append(SourceRow)
         if not RowHasError:
             Rows.append(TableRow(Values, SourceLocation(FilePath, SheetName, SourceRow)))
 
-    return TableSlice(TableName, False, Fields, Rows, Location), Issues
+    return TableSlice(
+        TableName,
+        False,
+        Fields,
+        Rows,
+        Location,
+        PreviewRows,
+        PreviewRowNumbers,
+        PreviewIssues,
+        PreviewParsedRows,
+    ), Issues
 
 
 def ParseSingleSlice(
@@ -239,7 +272,7 @@ def ParseSingleSlice(
     SheetName: str,
     TableName: str,
     Matrix: list[list[Any]],
-    EscapeCharacter: str,
+    Syntax: ArraySyntaxConfig,
 ) -> tuple[TableSlice | None, list[ValidationIssue]]:
     Location = SourceLocation(FilePath, SheetName)
     Issues: list[ValidationIssue] = []
@@ -270,6 +303,10 @@ def ParseSingleSlice(
 
     Fields: list[FieldDefinition] = []
     Rows: list[TableRow] = []
+    PreviewRows: list[list[str]] = []
+    PreviewRowNumbers: list[int] = []
+    PreviewIssues: dict[tuple[int, int], ValidationIssue] = {}
+    PreviewParsedRows: list[list[str]] = []
     SeenNames: set[str] = set()
     for RowOffset in range(5, len(Matrix)):
         SourceRow = RowOffset + 1
@@ -278,7 +315,7 @@ def ParseSingleSlice(
             continue
 
         Name = CellText(Matrix, SourceRow, SemanticColumns["id"])
-        if not Name or Name.startswith("##"):
+        if IsIgnoredFieldName(Name):
             continue
         if Name in SeenNames:
             Issues.append(
@@ -292,17 +329,23 @@ def ParseSingleSlice(
             continue
 
         TypeText = CellText(Matrix, SourceRow, SemanticColumns["type"])
+        RawValue = GetCell(Matrix, SourceRow, SemanticColumns["data"])
+        PreviewRows.append([Name, TypeText, "" if RawValue is None else str(RawValue).strip()])
+        PreviewParsedValues = [Name, TypeText, ""]
+        PreviewRowNumbers.append(SourceRow)
+        PreviewIndex = len(PreviewRows) - 1
         try:
             ParsedType = ParseFieldType(TypeText)
         except TypeParseError as Error:
-            Issues.append(
-                ValidationIssue(
-                    SeverityLevel.Error,
-                    str(Error),
-                    SourceLocation(FilePath, SheetName, SourceRow, SemanticColumns["type"]),
-                    Name,
-                )
+            Issue = ValidationIssue(
+                SeverityLevel.Error,
+                str(Error),
+                SourceLocation(FilePath, SheetName, SourceRow, SemanticColumns["type"]),
+                Name,
             )
+            Issues.append(Issue)
+            PreviewIssues[(PreviewIndex, 1)] = Issue
+            PreviewParsedRows.append(PreviewParsedValues)
             continue
 
         Scope = NormalizeScope(
@@ -313,19 +356,21 @@ def ParseSingleSlice(
             Name,
             Issues,
         )
-        RawValue = GetCell(Matrix, SourceRow, SemanticColumns["data"])
         try:
-            Value = ParseValue(RawValue, ParsedType, EscapeCharacter)
+            Value = ParseValue(RawValue, ParsedType, Syntax)
+            PreviewParsedValues[2] = FormatPreviewValue(Value)
         except TypeParseError as Error:
-            Issues.append(
-                ValidationIssue(
-                    SeverityLevel.Error,
-                    str(Error),
-                    SourceLocation(FilePath, SheetName, SourceRow, SemanticColumns["data"]),
-                    Name,
-                )
+            Issue = ValidationIssue(
+                SeverityLevel.Error,
+                str(Error),
+                SourceLocation(FilePath, SheetName, SourceRow, SemanticColumns["data"]),
+                Name,
             )
+            Issues.append(Issue)
+            PreviewIssues[(PreviewIndex, 2)] = Issue
             continue
+
+        PreviewParsedRows.append(PreviewParsedValues)
 
         Description = ""
         if DescriptionColumn > 0:
@@ -352,7 +397,17 @@ def ParseSingleSlice(
     if not Fields:
         Issues.append(ValidationIssue(SeverityLevel.Error, "单例表没有有效字段", Location))
         return None, Issues
-    return TableSlice(TableName, True, Fields, Rows, Location), Issues
+    return TableSlice(
+        TableName,
+        True,
+        Fields,
+        Rows,
+        Location,
+        PreviewRows,
+        PreviewRowNumbers,
+        PreviewIssues,
+        PreviewParsedRows,
+    ), Issues
 
 
 def NormalizeScope(
@@ -383,7 +438,7 @@ def MergeTableSlice(
     Issues: list[ValidationIssue],
 ) -> None:
     Existing = LogicalTables.get(Slice.Name)
-    NewSignature = [(Field.Name, Field.TypeText, Field.Scope) for Field in Slice.Fields]
+    NewSignature = BuildSchemaSignature(Slice.Fields)
     if Existing is None:
         LogicalTables[Slice.Name] = LogicalTable(
             Slice.Name,
@@ -394,12 +449,19 @@ def MergeTableSlice(
         )
         return
 
-    ExistingSignature = [(Field.Name, Field.TypeText, Field.Scope) for Field in Existing.Fields]
+    ExistingSignature = BuildSchemaSignature(Existing.Fields)
     if Existing.IsSingle != Slice.IsSingle or ExistingSignature != NewSignature:
+        Existing.SourceFiles.add(Slice.Location.FilePath)
+        ExistingDescription = FormatSchemaSignature(ExistingSignature)
+        NewDescription = FormatSchemaSignature(NewSignature)
         Issues.append(
             ValidationIssue(
                 SeverityLevel.Error,
-                "同名逻辑表 schema 不一致，禁止合并",
+                (
+                    f"同名逻辑表 {Slice.Name} 的 schema 不一致，禁止合并；"
+                    f"已有定义：{ExistingDescription}；当前定义：{NewDescription}。"
+                    "字段名、类型和客户端/服务器范围必须完全一致。"
+                ),
                 Slice.Location,
                 Slice.Name,
             )
@@ -410,11 +472,50 @@ def MergeTableSlice(
     Existing.SourceFiles.add(Slice.Location.FilePath)
 
 
+def IsIgnoredFieldName(Name: str) -> bool:
+    """支持用 # 或 ## 标记不参与导出的字段列。"""
+    return not Name or Name.startswith("#")
+
+
+def IsCommentedColumn(Matrix: list[list[Any]], ColumnIndex: int) -> bool:
+    """兼容示例表在第一行用 ## 标记整列注释的写法。"""
+    return CellText(Matrix, 1, ColumnIndex).startswith("##")
+
+
+def BuildSchemaSignature(Fields: list[FieldDefinition]) -> list[tuple[str, str, int, tuple[str, ...], str]]:
+    return [
+        (
+            Field.Name,
+            Field.ParsedType.BaseName,
+            Field.ParsedType.Dimensions,
+            Field.ParsedType.EnumValues,
+            Field.Scope,
+        )
+        for Field in Fields
+    ]
+
+
+def FormatSchemaSignature(Signature: list[tuple[str, str, int, tuple[str, ...], str]]) -> str:
+    if not Signature:
+        return "无字段"
+    Parts: list[str] = []
+    for Name, BaseName, Dimensions, EnumValues, Scope in Signature:
+        TypeName = BaseName + "()" * Dimensions
+        if EnumValues:
+            TypeName = f"enum({'|'.join(EnumValues)})" + "()" * Dimensions
+        Parts.append(f"{Name}:{TypeName}[{Scope}]")
+    return ", ".join(Parts)
+
+
 def BuildSheetPreview(Slice: TableSlice, Matrix: list[list[Any]]) -> SheetPreview:
     Headers = [Field.Name for Field in Slice.Fields]
-    PreviewRows: list[list[str]] = []
-    for Row in Slice.Rows[:200]:
-        PreviewRows.append([FormatPreviewValue(Row.Values.get(Field.Name)) for Field in Slice.Fields])
+    TypeLabels = [Field.TypeText for Field in Slice.Fields]
+    ScopeLabels = [Field.Scope for Field in Slice.Fields]
+    PreviewRows = list(Slice.PreviewRows)
+    if Slice.IsSingle:
+        Headers = ["id", "type", "data"]
+        TypeLabels = ["字段", "类型", "值"]
+        ScopeLabels = ["", "", ""]
     return SheetPreview(
         Slice.Location.SheetName,
         Slice.Name,
@@ -422,6 +523,11 @@ def BuildSheetPreview(Slice: TableSlice, Matrix: list[list[Any]]) -> SheetPrevie
         Headers,
         PreviewRows,
         list(Slice.Fields),
+        TypeLabels,
+        ScopeLabels,
+        list(Slice.PreviewRowNumbers),
+        dict(Slice.PreviewIssues),
+        list(Slice.PreviewParsedRows),
     )
 
 

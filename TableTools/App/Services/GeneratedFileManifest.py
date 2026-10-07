@@ -1,3 +1,7 @@
+# 用途：记录生成文件清单，只清理由 TableTools 自己生成且内容未被用户修改的文件。
+# 最近修改日期：2026-10-07
+# 作者：Codex
+
 import hashlib
 import json
 import os

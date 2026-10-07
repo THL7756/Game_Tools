@@ -1,8 +1,12 @@
+# 用途：解析字段类型、数组语法、结构值和枚举值，并返回统一解析结果。
+# 最近修改日期：2026-10-07
+# 作者：Codex
+
 import math
 import re
 from typing import Any
 
-from App.Core.Models import ParsedType
+from App.Core.Models import ArraySyntaxConfig, ParsedType
 
 
 class TypeParseError(ValueError):
@@ -57,11 +61,19 @@ def ParseFieldType(TypeText: str) -> ParsedType:
     raise TypeParseError(f"未知字段类型 {BaseName}")
 
 
-def ParseValue(RawValue: Any, FieldType: ParsedType, EscapeCharacter: str = "\\") -> Any:
+def ParseValue(
+    RawValue: Any,
+    FieldType: ParsedType,
+    Syntax: ArraySyntaxConfig | str = ArraySyntaxConfig(),
+    EscapeCharacter: str | None = None,
+) -> Any:
     Text = "" if RawValue is None else str(RawValue).strip()
     if FieldType.Dimensions == 0:
         return ParseScalar(Text, FieldType)
-    return ParseArray(Text, FieldType, 1, EscapeCharacter)
+    if EscapeCharacter is not None:
+        Syntax = EscapeCharacter
+    Config = Syntax if isinstance(Syntax, ArraySyntaxConfig) else ArraySyntaxConfig(EscapeCharacter=Syntax)
+    return ParseArray(Text, FieldType, 1, Config)
 
 
 def ParseScalar(Text: str, FieldType: ParsedType) -> Any:
@@ -127,17 +139,26 @@ def ParseStruct(Text: str, BaseName: str) -> dict[str, float]:
     return {"x": Values[0], "y": Values[1], "z": Values[2], "w": Values[3]} if BaseName == "Vector4" else {"x": Values[0], "y": Values[1], "z": Values[2]} if BaseName == "Vector3" else {"x": Values[0], "y": Values[1]}
 
 
-def ParseArray(Text: str, FieldType: ParsedType, Level: int, EscapeCharacter: str) -> list[Any]:
-    Separators = {1: ["#"], 2: ["|", "#"], 3: [";", "|", "#"]}[FieldType.Dimensions]
+def ParseArray(
+    Text: str,
+    FieldType: ParsedType,
+    Level: int,
+    Syntax: ArraySyntaxConfig,
+) -> list[Any]:
+    Separators = {
+        1: [Syntax.Level1Delimiter],
+        2: [Syntax.Level2Delimiter, Syntax.Level1Delimiter],
+        3: [Syntax.Level3Delimiter, Syntax.Level2Delimiter, Syntax.Level1Delimiter],
+    }[FieldType.Dimensions]
     Separator = Separators[Level - 1]
-    Pieces = SplitEscaped(Text, Separator, EscapeCharacter)
+    Pieces = SplitEscaped(Text, Separator, Syntax.EscapeCharacter)
     if not Pieces:
         raise TypeParseError("数组不能为空")
     if any(Piece == "" for Piece in Pieces):
         raise TypeParseError("数组元素不能为空")
     if Level == FieldType.Dimensions:
         return [ParseScalar(Piece, FieldType) for Piece in Pieces]
-    return [ParseArray(Piece, FieldType, Level + 1, EscapeCharacter) for Piece in Pieces]
+    return [ParseArray(Piece, FieldType, Level + 1, Syntax) for Piece in Pieces]
 
 
 def SplitEscaped(Text: str, Separator: str, EscapeCharacter: str) -> list[str]:

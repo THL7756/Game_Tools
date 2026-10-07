@@ -1,3 +1,7 @@
+# 用途：根据校验结果导出客户端/服务器 JSON 和客户端 C# 文件。
+# 最近修改日期：2026-10-07
+# 作者：Codex
+
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -8,7 +12,7 @@ from App.Core.Models import (
     LogicalTable,
     ParsedProject,
 )
-from App.Core.TableValidator import HasBlockingIssue, ResolveLogicalTables, ValidateLogicalTables
+from App.Core.TableValidator import HasBlockingIssue, NormalizePath, ResolveLogicalTables, ValidateLogicalTables
 from App.Services.CSharpGenerator import GenerateClientCSharp
 from App.Services.GeneratedFileManifest import GeneratedFileManifest
 
@@ -28,10 +32,11 @@ def ExportProject(
         for Table in SelectedTables.values()
         for SourceFile in Table.SourceFiles
     }
+    RelevantKeys = {NormalizePath(FilePath) for FilePath in RelevantFiles}
     Issues = [
         Issue
         for Issue in Project.Issues
-        if Issue.Location.FilePath in RelevantFiles
+        if NormalizePath(Issue.Location.FilePath) in RelevantKeys
     ]
     Issues.extend(ValidateLogicalTables(SelectedTables, Project.LogicalTables))
     if HasBlockingIssue(Issues):
