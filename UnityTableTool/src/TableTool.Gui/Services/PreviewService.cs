@@ -77,7 +77,7 @@ public sealed class PreviewService
 
         return new PreviewViewModel(
             table.DisplayName,
-            LanguageManager.Format("修改于 {0}", GetModifiedTime(table.SourcePath).ToString("HH:mm")),
+            string.Format("修改于 {0}", GetModifiedTime(table.SourcePath).ToString("HH:mm")),
             $"{GetRelativeSource(table.SourcePath)} · {table.CurrentSheet.SheetName}",
             sheetNames,
             fields,

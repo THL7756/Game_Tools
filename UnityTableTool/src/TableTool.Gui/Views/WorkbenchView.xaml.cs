@@ -85,7 +85,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
 
         ApplyFilter();
         lastSyncTime = DateTime.Now;
-        SyncText.Text = LanguageManager.Format("已同步 {0}", lastSyncTime.ToString("HH:mm"));
+        SyncText.Text = string.Format("已同步 {0}", lastSyncTime.ToString("HH:mm"));
         if (result.Errors.Count > 0)
             StatusChanged?.Invoke(this, string.Join("；", result.Errors));
         else
@@ -136,9 +136,9 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             .ToArray();
 
         TableList.ItemsSource = visibleTables;
-        FavoritesFilterText.Text = LanguageManager.Format("收藏表 {0}", tables.Count(table => table.IsFavorite));
-        RecentFilterText.Text = LanguageManager.Format("最近表 {0}", tables.Count(table => table.IsRecent));
-        AllFilterText.Text = LanguageManager.Format("所有表 {0}", tables.Count);
+        AllFilterText.Text = string.Format("所有 {0}", tables.Count);
+        RecentFilterText.Text = string.Format("最近 {0}", tables.Count(table => table.IsRecent));
+        FavoritesFilterText.Text = string.Format("收藏 {0}", tables.Count(table => table.IsFavorite));
         UpdateFilterButtons();
     }
 
@@ -155,8 +155,8 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
     private void UpdateSelectionUi()
     {
         var selectedCount = tables.Count(table => table.IsSelected);
-        SelectionCountText.Text = LanguageManager.Format("已勾选 {0} / {1}", selectedCount, tables.Count);
-        BuildButtonText.Text = LanguageManager.Text("开始打表");
+        SelectionCountText.Text = string.Format("已勾选 {0} / {1}", selectedCount, tables.Count);
+        BuildButtonText.Text = "开始打表";
         BuildButton.IsEnabled = selectedCount > 0 && (ClientCheckBox.IsChecked == true || ServerCheckBox.IsChecked == true);
 
         var allVisibleSelected = visibleTables.Count > 0 && visibleTables.All(table => table.IsSelected);
@@ -174,15 +174,15 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         ModifiedText.Text = preview.ModifiedText;
         SourceText.Text = preview.SourceText;
         SheetTabs.ItemsSource = table.Sheets;
-        ReadOnlyText.Text = LanguageManager.Format("只读预览 · {0} 个字段", preview.Fields.Count);
+        ReadOnlyText.Text = string.Format("只读预览 · {0} 个字段", preview.Fields.Count);
         var errorCount = preview.Issues.Count(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal);
         var warningCount = preview.Issues.Count(issue => issue.Severity == ValidationSeverity.Warning);
-        ErrorSummaryText.Text = LanguageManager.Format("{0} 错误", errorCount);
-        WarningSummaryText.Text = LanguageManager.Format("{0} 警告", warningCount);
+        ErrorSummaryText.Text = string.Format("{0} 错误", errorCount);
+        WarningSummaryText.Text = string.Format("{0} 警告", warningCount);
         IssueRangeText.Text = string.Empty;
         BuildHintText.Text = warningCount > 0
-            ? LanguageManager.Format("{0} 条警告不阻断输出", warningCount)
-            : LanguageManager.Text("校验通过，可直接输出");
+            ? string.Format("{0} 条警告不阻断输出", warningCount)
+            : "校验通过，可直接输出";
 
         BuildPreviewColumns(preview);
         PreviewGrid.ItemsSource = preview.Data.DefaultView;
@@ -193,7 +193,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
                 ValidationIssueFormatter.Detail(issue),
                 issue.Severity))
             .Concat(catalogErrors.Select(error => new IssueDisplayItem(
-                LanguageManager.Text("表读取失败"),
+                "表读取失败",
                 error,
                 ValidationSeverity.Error)))
             .ToArray();
@@ -270,10 +270,10 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         PreviewGrid.ItemsSource = null;
         PreviewGrid.Columns.Clear();
         IssuesList.ItemsSource = catalogErrors
-            .Select(error => new IssueDisplayItem(LanguageManager.Text("表读取失败"), error, ValidationSeverity.Error))
+            .Select(error => new IssueDisplayItem("表读取失败", error, ValidationSeverity.Error))
             .ToArray();
-        ErrorSummaryText.Text = LanguageManager.Text("0 错误");
-        WarningSummaryText.Text = LanguageManager.Text("0 警告");
+        ErrorSummaryText.Text = "0 错误";
+        WarningSummaryText.Text = "0 警告";
     }
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -289,18 +289,6 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
     {
         SearchBox.Focus();
         SearchBox.SelectAll();
-    }
-
-    public void ApplyLanguage()
-    {
-        SyncText.Text = LanguageManager.Format("已同步 {0}", lastSyncTime.ToString("HH:mm"));
-        ToggleLogsButton.Content = LogsScrollViewer.Visibility == Visibility.Visible
-            ? LanguageManager.Text("收起")
-            : LanguageManager.Text("展开");
-        ApplyFilter();
-        UpdateSelectionUi();
-        if (TableList.SelectedItem is TableModel selected)
-            UpdatePreview(selected);
     }
 
     private void WorkbenchView_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -407,7 +395,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
     {
         if (TableList.SelectedItem is not TableModel current)
         {
-            StatusChanged?.Invoke(this, LanguageManager.Text("请先选择需要刷新的表文件。"));
+            StatusChanged?.Invoke(this, "请先选择需要刷新的表文件。");
             return;
         }
 
@@ -460,15 +448,15 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         if (catalogErrors.Count > 0 && tables.Count == 0)
         {
             IssuesList.ItemsSource = catalogErrors
-                .Select(error => new IssueDisplayItem(LanguageManager.Text("表读取失败"), error, ValidationSeverity.Error))
+                .Select(error => new IssueDisplayItem("表读取失败", error, ValidationSeverity.Error))
                 .ToArray();
             LogsList.ItemsSource = new[]
             {
-                new LogDisplayItem(DateTime.Now, "FAIL", LanguageManager.Text("打表失败，请展开日志查看详细信息。"))
+                new LogDisplayItem(DateTime.Now, "FAIL", "打表失败，请展开日志查看详细信息。")
             };
             SetLogsExpanded(true);
             ShowBuildResultDialog(success: false);
-            StatusChanged?.Invoke(this, LanguageManager.Text("存在无法读取的表，已停止打表"));
+            StatusChanged?.Invoke(this, "存在无法读取的表，已停止打表");
             return;
         }
 
@@ -482,7 +470,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         if (catalogErrors.Count > 0)
             buildLogs = new[]
             {
-                new LogDisplayItem(DateTime.Now, "WARN", LanguageManager.Text("部分文件读取失败，本次打表使用已保留的内存数据。"))
+                new LogDisplayItem(DateTime.Now, "WARN", "部分文件读取失败，本次打表使用已保留的内存数据。")
             }.Concat(buildLogs);
         LogsList.ItemsSource = buildLogs.ToArray();
         IssuesList.ItemsSource = result.Issues
@@ -492,7 +480,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
                 ValidationIssueFormatter.Detail(issue),
                 issue.Severity))
             .Concat(catalogErrors.Select(error => new IssueDisplayItem(
-                LanguageManager.Text("表读取失败"),
+                "表读取失败",
                 error,
                 ValidationSeverity.Warning)))
             .ToArray();
@@ -507,7 +495,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
                 .Take(10)
                 .ToList();
             SettingsStore.Save(settings);
-            StatusChanged?.Invoke(this, LanguageManager.Format("打表完成：{0} 个输出文件", result.FileCount));
+            StatusChanged?.Invoke(this, string.Format("打表完成：{0} 个输出文件", result.FileCount));
             foreach (var table in tables)
                 table.IsSelected = false;
             UpdateSelectionUi();
@@ -517,7 +505,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         {
             SetLogsExpanded(true);
             ShowBuildResultDialog(success: false);
-            StatusChanged?.Invoke(this, LanguageManager.Text("打表未完成，请检查日志"));
+            StatusChanged?.Invoke(this, "打表未完成，请检查日志");
         }
     }
 
@@ -552,7 +540,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
     {
         LogsScrollViewer.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
         LogsRow.Height = expanded ? new GridLength(170) : new GridLength(38);
-        ToggleLogsButton.Content = LanguageManager.Text(expanded ? "收起" : "展开");
+        ToggleLogsButton.Content = expanded ? "收起" : "展开";
     }
 
     private static void OpenPath(string path)

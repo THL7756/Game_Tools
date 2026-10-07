@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Keep project-level restore stable on SDK 9; solution scripts pass the same property explicitly. -->
+    <RestoreUseSkipNonexistentTargets>false</RestoreUseSkipNonexistentTargets>
+  </PropertyGroup>
+</Project>

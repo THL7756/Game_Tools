@@ -29,7 +29,7 @@
 - JSON 单例使用 `data` 对象；Runtime 同时兼容旧的 `rows` 数组。
 - `schemaHash` 用于识别结构变化，`formatVersion` 用于识别格式版本，当前保留。
 - GUI 生成 JSON 和 C#；Runtime Package 仍可兼容 JSON 与 UTB1 bytes。
-- 工具首次启动会在程序目录创建 `ToolData/settings.json` 和 `Languages` 目录，用于保存界面、路径、输出范围和快捷键配置；目录不可写时回退到用户本地数据目录。
+- 工具首次启动会在程序目录创建 `ToolData/settings.json`，用于保存界面、路径、输出范围和快捷键配置；目录不可写时回退到用户本地数据目录。
 
 ### GUI
 

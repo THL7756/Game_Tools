@@ -16,10 +16,11 @@ UnityTableTool 是一个 Windows 本地 Unity 配置表扫描、校验和 JSON �
 - 设置页可维护项目根目录、配置表目录、客户端/服务器输出目录和可选脚本路径。
 - 支持白天、晚上、跟随系统三种模式，以及强调色、背景色、前景色、字体和缩放设置。
 - 滚动区域支持鼠标和键盘滚动，预览表格使用普通滚轮上下滚动、Shift+滚轮左右滚动，滚动条本身隐藏。
-- 支持简体中文和 English，语言包放在发布目录的 `Languages` 文件夹中，可继续添加 JSON 语言包。
 - 问题列表中错误使用红色、警告使用黄色；警告不阻断导出，错误和致命问题会阻断导出。
 
 ## 快速使用
+
+开发调试时直接双击 `run-ui.cmd`，无需打包即可打开界面。
 
 1. 双击 `release/UnityTableTool-2.4.0/UnityTableTool.exe`。
 2. 工具自动扫描项目 `Data` 目录，也可在“设置 / 项目路径”中更改目录。
@@ -39,10 +40,11 @@ UnityTableTool 是一个 Windows 本地 Unity 配置表扫描、校验和 JSON �
 
 ```text
 dotnet test UnityTableTool.sln -c Release
+run-ui.cmd
 publish.cmd
 ```
 
-`publish.cmd` 会清理并生成 `release/UnityTableTool-2.4.0`，同时创建 `release/UnityTableTool-2.4.0-win-x64.zip`。发布包为 Windows x64 自包含版本，不需要单独安装 .NET Desktop Runtime；可扩展语言包保留在发布目录的 `Languages` 文件夹中。
+`publish.cmd` 会清理并生成 `release/UnityTableTool-2.4.0`，同时创建 `release/UnityTableTool-2.4.0-win-x64.zip`。发布包为 Windows x64 自包含版本，不需要单独安装 .NET Desktop Runtime。脚本会显示所用 SDK，并在成功或失败后暂停，方便确认结果。
 
 ## 当前验收范围
 

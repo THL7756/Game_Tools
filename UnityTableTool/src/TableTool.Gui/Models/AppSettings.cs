@@ -26,8 +26,8 @@ public sealed class AppSettings
     public string ForegroundColor { get; set; } = "#E2E6ED";
     public string FontFamilyName { get; set; } = "Noto Sans SC";
     public double FontSize { get; set; } = 13;
-    public double Zoom { get; set; } = 100;
-    public string Language { get; set; } = "zh-CN";
+public double Zoom { get; set; } = 100;
+public string Language { get; set; } = "zh-CN";
     public string SearchShortcut { get; set; } = "Ctrl+K";
     public string BuildShortcut { get; set; } = "Ctrl+B";
     public string RefreshShortcut { get; set; } = "Ctrl+R";
@@ -50,8 +50,8 @@ public sealed class AppSettings
         ForegroundColor = ForegroundColor,
         FontFamilyName = FontFamilyName,
         FontSize = FontSize,
-        Zoom = Zoom,
-        Language = Language,
+Zoom = Zoom,
+Language = Language,
         SearchShortcut = SearchShortcut,
         BuildShortcut = BuildShortcut,
         RefreshShortcut = RefreshShortcut,

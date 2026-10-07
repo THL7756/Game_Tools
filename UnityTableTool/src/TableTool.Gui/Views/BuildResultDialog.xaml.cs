@@ -4,7 +4,6 @@
 
 using System.Windows;
 using System.Windows.Media.Imaging;
-using TableTool.Gui.Services;
 
 namespace TableTool.Gui.Views;
 
@@ -15,9 +14,9 @@ public partial class BuildResultDialog : Window
         InitializeComponent();
 
         var title = success ? "打表成功" : "打表失败";
-        ResultTitle.Text = LanguageManager.Text(title);
+        ResultTitle.Text = title;
         ResultMessage.Visibility = Visibility.Collapsed;
-        CloseButton.Content = LanguageManager.Text("确定");
+        CloseButton.Content = "确定";
         ResultIcon.Source = new BitmapImage(new Uri(
             success
                 ? "pack://application:,,,/UnityTableTool;component/Assets/Icons/check.png"

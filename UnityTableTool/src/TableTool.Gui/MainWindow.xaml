@@ -17,6 +17,7 @@
         BorderThickness="0"
         FontFamily="{DynamicResource Font.Interface}"
         FontSize="{DynamicResource Size.Interface}"
+        UseLayoutRounding="True"
         PreviewKeyDown="Window_PreviewKeyDown">
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="32" ResizeBorderThickness="6" GlassFrameThickness="0" UseAeroCaptionButtons="False" />
@@ -36,6 +37,19 @@
             <Setter Property="Padding" Value="8,6" />
             <Setter Property="FontSize" Value="11" />
         </Style>
+        
+        <Style x:Key="DarkSeparatorStyle" TargetType="Separator">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Separator">
+                        <Rectangle Height="1" Fill="#444444"/> <!-- 改成深色或透明 -->
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
 
         <Style x:Key="ThemeSegmentButton" TargetType="RadioButton">
             <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
@@ -105,13 +119,13 @@
                 <TextBlock Text="游戏开发工具箱" Margin="8,0,0,0" FontSize="12" FontWeight="Medium" VerticalAlignment="Center" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <Button x:Name="MinimizeButton" Style="{StaticResource WindowControlButton}" Click="Minimize_Click" ToolTip="最小化">
+<Button x:Name="MinimizeButton" Style="{StaticResource WindowControlButton}" shell:WindowChrome.IsHitTestVisibleInChrome="True" Click="Minimize_Click" ToolTip="最小化">
                     <Image Source="/UnityTableTool;component/Assets/Icons/minus.png" Width="12" Height="12" />
                 </Button>
-                <Button x:Name="MaximizeButton" Style="{StaticResource WindowControlButton}" Click="Maximize_Click" ToolTip="最大化">
+<Button x:Name="MaximizeButton" Style="{StaticResource WindowControlButton}" shell:WindowChrome.IsHitTestVisibleInChrome="True" Click="Maximize_Click" ToolTip="最大化">
                     <Image Source="/UnityTableTool;component/Assets/Icons/square.png" Width="11" Height="11" />
                 </Button>
-                <Button x:Name="CloseButton" Style="{StaticResource WindowControlButton}" Click="Close_Click" ToolTip="关闭">
+<Button x:Name="CloseButton" Style="{StaticResource WindowControlButton}" shell:WindowChrome.IsHitTestVisibleInChrome="True" Click="Close_Click" ToolTip="关闭">
                     <Image Source="/UnityTableTool;component/Assets/Icons/x.png" Width="13" Height="13" />
                 </Button>
             </StackPanel>
@@ -132,6 +146,7 @@
                         <Separator />
                         <MenuItem Header="退出" Tag="exit" Click="MenuAction_Click" />
                     </MenuItem>
+                    
                     <MenuItem Header="编辑" Style="{StaticResource MenuText}">
                         <MenuItem Header="撤销" InputGestureText="Ctrl+Z" Tag="undo" Click="MenuAction_Click" />
                         <MenuItem Header="恢复" InputGestureText="Ctrl+Y" Tag="redo" Click="MenuAction_Click" />
@@ -146,7 +161,7 @@
                     <MenuItem Header="查看" Style="{StaticResource MenuText}">
                         <MenuItem Header="白天" Tag="light" Click="ThemeMode_Click" />
                         <MenuItem Header="晚上" Tag="dark" Click="ThemeMode_Click" />
-                        <MenuItem Header="跟随系统" Tag="system" Click="ThemeMode_Click" />
+                        <MenuItem Header="系统" Tag="system" Click="ThemeMode_Click" />
                     </MenuItem>
                     <MenuItem Header="使用文档" Style="{StaticResource MenuText}">
                         <MenuItem Header="打开文档目录" Tag="docs" Click="MenuAction_Click" />
@@ -154,43 +169,40 @@
                 </Menu>
             </StackPanel>
 
-            <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,14,0" VerticalAlignment="Center">
-                <TextBlock Text="页面模式" Foreground="{DynamicResource Brush.TextMuted}" FontSize="10" VerticalAlignment="Center" Margin="0,0,8,0" />
-                <RadioButton x:Name="LightThemeButton" GroupName="ThemeMode" Style="{StaticResource ThemeSegmentButton}" Tag="light" Checked="ThemeMode_Checked">
-                    <StackPanel Orientation="Horizontal">
-                        <Image Source="/UnityTableTool;component/Assets/Icons/sun.png" Width="13" Height="13" Margin="0,0,5,0" />
-                        <TextBlock Text="白天" FontSize="10" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
-                    </StackPanel>
-                </RadioButton>
-                <RadioButton x:Name="DarkThemeButton" GroupName="ThemeMode" Style="{StaticResource ThemeSegmentButton}" Tag="dark" Checked="ThemeMode_Checked">
-                    <StackPanel Orientation="Horizontal">
-                        <Image Source="/UnityTableTool;component/Assets/Icons/moon.png" Width="13" Height="13" Margin="0,0,5,0" />
-                        <TextBlock Text="晚上" FontSize="10" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
-                    </StackPanel>
-                </RadioButton>
-                <RadioButton x:Name="SystemThemeButton" GroupName="ThemeMode" Style="{StaticResource ThemeSegmentButton}" Tag="system" Checked="ThemeMode_Checked">
-                    <StackPanel Orientation="Horizontal">
-                        <Image Source="/UnityTableTool;component/Assets/Icons/monitor.png" Width="13" Height="13" Margin="0,0,5,0" />
-                        <TextBlock Text="跟随系统" FontSize="10" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
-                    </StackPanel>
-                </RadioButton>
-                <ComboBox x:Name="LanguageCombo" Width="116" Height="32" Margin="12,0,10,0" Style="{StaticResource ComboBox.Field}" SelectionChanged="LanguageCombo_SelectionChanged">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding DisplayName}" Foreground="{DynamicResource Brush.Text}" />
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-                <Button x:Name="SettingsButton" Style="{StaticResource Button.Secondary}" Padding="12,6" Click="Settings_Click">
-                    <StackPanel Orientation="Horizontal">
-                        <Image Source="/UnityTableTool;component/Assets/Icons/settings2.png" Width="15" Height="15" Margin="0,0,6,0" />
-                        <TextBlock Text="设置" FontSize="11" />
-                    </StackPanel>
-                </Button>
-            </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="2">
+<Grid Grid.Row="1" HorizontalAlignment="Right" Background="Transparent">
+<StackPanel Orientation="Horizontal" Margin="0,0,14,0" VerticalAlignment="Center">
+<TextBlock Text="页面模式" Foreground="{DynamicResource Brush.TextMuted}" FontSize="10" VerticalAlignment="Center" Margin="0,0,8,0" />
+<RadioButton x:Name="LightThemeButton" GroupName="ThemeMode" Style="{StaticResource ThemeSegmentButton}" Tag="light" Checked="ThemeMode_Checked">
+<StackPanel Orientation="Horizontal">
+<Image Source="/UnityTableTool;component/Assets/Icons/sun.png" Width="13" Height="13" Margin="0,0,5,0" />
+<TextBlock Text="白天" FontSize="10" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+</StackPanel>
+</RadioButton>
+<RadioButton x:Name="DarkThemeButton" GroupName="ThemeMode" Style="{StaticResource ThemeSegmentButton}" Tag="dark" Checked="ThemeMode_Checked">
+<StackPanel Orientation="Horizontal">
+<Image Source="/UnityTableTool;component/Assets/Icons/moon.png" Width="13" Height="13" Margin="0,0,5,0" />
+<TextBlock Text="晚上" FontSize="10" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+</StackPanel>
+</RadioButton>
+<RadioButton x:Name="SystemThemeButton" GroupName="ThemeMode" Style="{StaticResource ThemeSegmentButton}" Tag="system" Checked="ThemeMode_Checked">
+<StackPanel Orientation="Horizontal">
+<Image Source="/UnityTableTool;component/Assets/Icons/monitor.png" Width="13" Height="13" Margin="0,0,5,0" />
+<TextBlock Text="系统" FontSize="10" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+</StackPanel>
+</RadioButton>
+<ComboBox x:Name="LanguageCombo" Width="116" Height="32" Margin="12,0,10,0" Style="{StaticResource ComboBox.Field}" DisplayMemberPath="DisplayName" SelectionChanged="LanguageCombo_SelectionChanged">
+</ComboBox>
+<Button x:Name="SettingsButton" Style="{StaticResource Button.Secondary}" MinWidth="60" Padding="12,6" Click="Settings_Click">
+<StackPanel Orientation="Horizontal">
+<Image Source="/UnityTableTool;component/Assets/Icons/settings2.png" Width="15" Height="15" Margin="0,0,6,0" />
+<TextBlock Text="设置" FontSize="11" />
+</StackPanel>
+</Button>
+</StackPanel>
+</Grid>
+<Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="120" />
                 <ColumnDefinition Width="*" />
@@ -227,7 +239,7 @@
                         <RadioButton x:Name="PromptNav" GroupName="ModuleNav" Style="{StaticResource SidebarButton}" Checked="Module_Checked">
                             <StackPanel Orientation="Horizontal">
                                 <Image Source="/UnityTableTool;component/Assets/Icons/notebook-text.png" Width="16" Height="16" Margin="0,0,10,0" />
-                                <TextBlock Text="提示词仓库" FontSize="12" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                                <TextBlock Text="提示词" FontSize="12" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
                             </StackPanel>
                         </RadioButton>
                     </StackPanel>

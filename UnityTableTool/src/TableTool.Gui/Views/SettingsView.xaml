@@ -1,4 +1,4 @@
-<!-- 用途：定义视觉风格、项目路径、快捷键和关于页设置界面。编写日期：2026-10-06；作者：Codex。 -->
+<!-- 用途：定义外观风格、项目路径、快捷键和关于页设置界面。编写日期：2026-10-06；作者：Codex。 -->
 <UserControl x:Class="TableTool.Gui.Views.SettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -87,7 +87,7 @@
                 <RadioButton x:Name="AppearanceNav" GroupName="SettingsPage" Style="{StaticResource SettingsNavButton}" IsChecked="True" Checked="SettingsNav_Checked" Tag="appearance">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="/UnityTableTool;component/Assets/Icons/palette.png" Width="15" Height="15" Margin="0,0,10,0" />
-                        <TextBlock Text="视觉风格" FontSize="12" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                        <TextBlock Text="外观风格" FontSize="12" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
                     </StackPanel>
                 </RadioButton>
                 <RadioButton x:Name="PathsNav" GroupName="SettingsPage" Style="{StaticResource SettingsNavButton}" Checked="SettingsNav_Checked" Tag="paths">
@@ -127,7 +127,7 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Margin="28,12,28,0">
-                        <TextBlock Text="设置 / 视觉风格" Style="{StaticResource Text.Muted}" />
+                        <TextBlock Text="设置 / 外观风格" Style="{StaticResource Text.Muted}" />
                         <TextBlock Text="视觉风格" Style="{StaticResource Text.Title}" Margin="0,8,0,3" />
                         <TextBlock Text="调整工作台外观，让开发环境更顺手。" Foreground="{DynamicResource Brush.TextSecondary}" FontSize="11" />
                     </StackPanel>
@@ -237,7 +237,7 @@
                                     </Grid>
                                     <StackPanel Grid.Row="2" Orientation="Horizontal" Background="#202329">
                                         <Image Source="/UnityTableTool;component/Assets/Icons/monitor1.png" Width="13" Height="13" VerticalAlignment="Center" />
-                                        <TextBlock Text="跟随系统" Foreground="#E2E6ED" FontSize="10" Margin="6,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="系统" Foreground="#E2E6ED" FontSize="10" Margin="6,0" VerticalAlignment="Center" />
                                         <Ellipse Width="11" Height="11" Stroke="#AEB7C3" StrokeThickness="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0" />
                                     </StackPanel>
                                 </Grid>
@@ -259,7 +259,7 @@
                                 <ComboBox x:Name="ThemeCombo" Grid.Column="1" Height="32" Margin="0,10,18,0" Style="{StaticResource ComboBox.Field}" SelectionChanged="ThemeCombo_SelectionChanged">
                                     <ComboBoxItem Content="炭灰 · 默认深色" />
                                     <ComboBoxItem Content="雾白 · 默认浅色" />
-                                    <ComboBoxItem Content="跟随系统" />
+                                    <ComboBoxItem Content="系统" />
                                 </ComboBox>
                             </Grid>
                             <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />

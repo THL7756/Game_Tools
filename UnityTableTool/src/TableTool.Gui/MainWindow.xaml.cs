@@ -18,8 +18,8 @@ public partial class MainWindow : Window
 {
     private readonly AppSettings settings;
     private WorkbenchView? workbenchView;
-    private bool isInitializing = true;
-    private bool isApplyingLanguage;
+private bool isInitializing = true;
+private bool isApplyingLanguage;
     private bool isSwitchingContent;
 
     public MainWindow()
@@ -27,10 +27,10 @@ public partial class MainWindow : Window
         InitializeComponent();
         settings = SettingsStore.Load();
         ThemeManager.Apply(settings);
-        LoadLanguages();
-        SearchMenuItem.InputGestureText = settings.SearchShortcut;
+LoadLanguages();
+SearchMenuItem.InputGestureText = settings.SearchShortcut;
+UpdateThemeButtons();
         ApplyZoom();
-        UpdateThemeButtons();
         isInitializing = false;
 
         var screen = Environment.GetCommandLineArgs()
@@ -42,9 +42,10 @@ public partial class MainWindow : Window
         else if (string.Equals(screen, "settings-appearance", StringComparison.OrdinalIgnoreCase))
             ShowSettings("appearance");
         else
-            ShowWorkbench();
+ShowWorkbench();
+ThemeManager.ThemeChanged += (_, _) => Dispatcher.BeginInvoke(UpdateThemeButtons);
+ApplyLanguageSafely();
 
-        ThemeManager.ThemeChanged += (_, _) => Dispatcher.BeginInvoke(UpdateThemeButtons);
     }
 
     private void ShowWorkbench()
@@ -65,7 +66,6 @@ public partial class MainWindow : Window
             ConfigNav.IsChecked = true;
             workbenchView.RefreshTables(selectAll: false);
             StatusPathText.Text = settings.ProjectRootDirectory.Replace('\\', '/');
-            ApplyLanguageSafely();
         }
         catch (Exception error)
         {
@@ -98,7 +98,6 @@ public partial class MainWindow : Window
             MainContent.Content = view;
             ConfigNav.IsChecked = false;
             StatusPathText.Text = settings.ProjectRootDirectory.Replace('\\', '/');
-            ApplyLanguageSafely();
         }
         catch (Exception error)
         {
@@ -110,30 +109,29 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ApplyLanguageSafely()
-    {
-        if (isApplyingLanguage)
-            return;
+private void ApplyLanguageSafely()
+{
+if (isApplyingLanguage)
+return;
 
-        try
-        {
-            isApplyingLanguage = true;
-            LanguageManager.Apply(this, settings.Language);
-            if (MainContent.Content is DependencyObject content)
-                LanguageManager.Apply(content, settings.Language);
-            workbenchView?.ApplyLanguage();
-        }
-        catch (Exception error)
-        {
-            App.LogUiError("应用界面语言失败", error);
-        }
-        finally
-        {
-            isApplyingLanguage = false;
-        }
-    }
+try
+{
+isApplyingLanguage = true;
+LanguageManager.Apply(this, settings.Language);
+if (MainContent.Content is DependencyObject content)
+LanguageManager.Apply(content, settings.Language);
+}
+catch (Exception error)
+{
+App.LogUiError("应用界面语言失败", error);
+}
+finally
+{
+isApplyingLanguage = false;
+}
+}
 
-    private void ApplyZoom()
+private void ApplyZoom()
     {
         if (RootLayout is null)
             return;
@@ -143,35 +141,37 @@ public partial class MainWindow : Window
             : new ScaleTransform(zoom, zoom);
     }
 
-    private void UpdateThemeButtons()
-    {
-        switch (settings.AppearanceMode)
-        {
-            case AppearanceMode.Light:
-                LightThemeButton.IsChecked = true;
-                break;
-            case AppearanceMode.System:
-                SystemThemeButton.IsChecked = true;
-                break;
-            default:
-                DarkThemeButton.IsChecked = true;
-                break;
-        }
-    }
 
-    private void ThemeMode_Checked(object sender, RoutedEventArgs e)
-    {
-        if (isInitializing || settings is null || sender is not FrameworkElement element)
-            return;
-        ApplyThemeTag(element.Tag?.ToString());
-    }
 
-    private void ThemeMode_Click(object sender, RoutedEventArgs e)
+private void UpdateThemeButtons()
+{
+switch (settings.AppearanceMode)
+{
+case AppearanceMode.Light:
+LightThemeButton.IsChecked = true;
+break;
+case AppearanceMode.System:
+SystemThemeButton.IsChecked = true;
+break;
+default:
+DarkThemeButton.IsChecked = true;
+break;
+}
+}
+
+private void ThemeMode_Checked(object sender, RoutedEventArgs e)
+{
+if (isInitializing || settings is null || sender is not FrameworkElement element)
+return;
+ApplyThemeTag(element.Tag?.ToString());
+}
+
+private void ThemeMode_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement element)
             return;
-        ApplyThemeTag(element.Tag?.ToString());
-        UpdateThemeButtons();
+ApplyThemeTag(element.Tag?.ToString());
+UpdateThemeButtons();
     }
 
     private void ApplyThemeTag(string? tag)
@@ -186,9 +186,10 @@ public partial class MainWindow : Window
         SettingsStore.Save(settings);
     }
 
-    private void Settings_Click(object sender, RoutedEventArgs e) => ShowSettings("appearance");
 
-    private void MenuAction_Click(object sender, RoutedEventArgs e)
+private void Settings_Click(object sender, RoutedEventArgs e) => ShowSettings("appearance");
+
+private void MenuAction_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement element)
             return;
@@ -256,10 +257,9 @@ public partial class MainWindow : Window
                 _ when sender == ProjectNav => new PlaceholderView("项目助手", "项目管理、路径检查和常用操作将在这里提供。", "folder-kanban.png"),
                 _ when sender == AssetsNav => new PlaceholderView("素材工具", "素材浏览、整理和批处理功能待补充。", "images.png"),
                 _ when sender == AudioNav => new PlaceholderView("音频工具", "音频检查、转换和预览功能待补充。", "audio-lines.png"),
-                _ => new PlaceholderView("提示词仓库", "提示词分类、搜索和复用功能待补充。", "notebook-text.png")
+                _ => new PlaceholderView("提示词", "提示词分类、搜索和复用功能待补充。", "notebook-text.png")
             };
-            StatusPathText.Text = LanguageManager.Text("模块待补充");
-            ApplyLanguageSafely();
+            StatusPathText.Text = "模块待补充";
         }
         catch (Exception error)
         {
@@ -271,39 +271,41 @@ public partial class MainWindow : Window
         }
     }
 
-    private void LoadLanguages()
-    {
-        LanguageCombo.ItemsSource = LanguageManager.LoadOptions();
-        LanguageCombo.SelectedValuePath = nameof(LanguageOption.Code);
-        LanguageCombo.SelectedValue = settings.Language;
-        if (LanguageCombo.SelectedIndex < 0)
-        {
-            LanguageCombo.SelectedIndex = 0;
-            if (LanguageCombo.SelectedItem is LanguageOption option)
-            {
-                settings.Language = option.Code;
-                SettingsStore.Save(settings);
-            }
-        }
-    }
 
-    private void LanguageCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (isInitializing || isApplyingLanguage || LanguageCombo.SelectedValue is not string code)
-            return;
-        settings.Language = code;
-        try
-        {
-            SettingsStore.Save(settings);
-            ApplyLanguageSafely();
-        }
-        catch (Exception error)
-        {
-            App.LogUiError("切换界面语言失败", error);
-        }
-    }
 
-    private void ExecuteFocusedCommand(RoutedCommand command)
+private void LoadLanguages()
+{
+LanguageCombo.ItemsSource = LanguageManager.LoadOptions();
+LanguageCombo.SelectedValuePath = nameof(LanguageOption.Code);
+LanguageCombo.SelectedValue = settings.Language;
+if (LanguageCombo.SelectedIndex < 0)
+{
+LanguageCombo.SelectedIndex = 0;
+if (LanguageCombo.SelectedItem is LanguageOption option)
+{
+settings.Language = option.Code;
+SettingsStore.Save(settings);
+}
+}
+}
+
+private void LanguageCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+{
+if (isInitializing || isApplyingLanguage || LanguageCombo.SelectedValue is not string code)
+return;
+settings.Language = code;
+try
+{
+SettingsStore.Save(settings);
+ApplyLanguageSafely();
+}
+catch (Exception error)
+{
+App.LogUiError("切换界面语言失败", error);
+}
+}
+
+private void ExecuteFocusedCommand(RoutedCommand command)
     {
         if (command.CanExecute(null, Keyboard.FocusedElement))
             command.Execute(null, Keyboard.FocusedElement);

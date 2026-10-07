@@ -16,6 +16,5 @@
   <ItemGroup>
     <Resource Include="Assets\Icons\*.png" />
     <None Include="Assets\Icons\*.svg" />
-    <Content Include="Languages\*.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

@@ -20,11 +20,10 @@
 | `RUNTIME_FORMAT_UNKNOWN` | 确认文件是有效 JSON 或以 `UTB1` 开头的 bytes。 |
 | `RUNTIME_SCHEMA_MISMATCH` | 重新导出当前端的数据和代码，确认客户端读取 `Data_c`、服务器读取 `Data_s`。 |
 | 字体大小看起来没有变化 | 在“设置”页调整字体大小；新版本已移除固定字号样式。 |
-| 切换语言后界面没有变化或关闭 | 语言包放在程序目录的 `Languages` 文件夹中；切换和设置页签都有异常保护，仍异常时查看 `%LOCALAPPDATA%\UnityTableTool\ui-errors.log`，并检查 `zh-CN.json` 和 `en-US.json` 是否为有效 JSON。 |
-| 语言下拉框显示异常 | 当前选项显示语言包的 `DisplayName`；首次启动会自动创建 `Languages\zh-CN.json` 和 `Languages\en-US.json`。如果程序目录不可写，会使用内置中英文回退。 |
-| 设置没有记住 | 配置默认保存在程序目录的 `ToolData\settings.json`，包括输出范围、语言、项目路径、主题、字体、缩放和快捷键；安装目录不可写时查看 `%LOCALAPPDATA%\UnityTableTool\settings.json`。 |
+| 设置没有记住 | 配置默认保存在程序目录的 `ToolData\settings.json`，包括输出范围、项目路径、主题、字体、缩放和快捷键；安装目录不可写时查看 `%LOCALAPPDATA%\UnityTableTool\settings.json`。 |
 | 点击项目助手、素材工具、音频工具或提示词仓库崩溃 | 这些页面是安全占位页面，不依赖外部图片资源；若仍崩溃，检查发布目录是否完整并保留 `Assets/Icons`。 |
 | 快捷键无法录入 | 在设置中直接按组合键，先按 Ctrl/Shift/Alt/Win，再按主键；Backspace 或 Delete 清空输入。 |
-| 发布脚本无法运行 | 确认安装 .NET 8 SDK 或 Desktop Runtime，再运行 `publish.cmd`。 |
+| 发布脚本无法运行 | 先确认 `dotnet --version` 能输出 9.x SDK；本项目已改为使用本机安装的 .NET 9 SDK 构建 net8 WPF。再运行 `publish.cmd`，脚本会保留错误窗口。 |
+| 想先看界面，不打包 | 双击 `run-ui.cmd`，它直接启动调试版 GUI。 |
 
 校验只在导出流程执行，错误会显示在 GUI 的“表问题”区域；有错误时不会替换原输出目录，也不会写入 `Code`、`Data_c` 或 `Data_s`。
