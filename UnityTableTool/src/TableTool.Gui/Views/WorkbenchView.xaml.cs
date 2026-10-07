@@ -184,9 +184,6 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         ErrorSummaryText.Text = string.Format("{0} 错误", errorCount);
         WarningSummaryText.Text = string.Format("{0} 警告", warningCount);
         IssueRangeText.Text = string.Empty;
-        BuildHintText.Text = warningCount > 0
-            ? string.Format("{0} 条警告不阻断输出", warningCount)
-            : "校验通过，可直接输出";
 
         BuildPreviewColumns(preview);
         PreviewGrid.ItemsSource = preview.Data.DefaultView;
