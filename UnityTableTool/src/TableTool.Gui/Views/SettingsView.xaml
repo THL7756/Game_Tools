@@ -390,7 +390,7 @@
                                 <StackPanel Margin="18,8">
                                     <StackPanel Orientation="Horizontal">
                                         <Image Source="/UnityTableTool;component/Assets/Icons/monitor1.png" Width="15" Height="15" Margin="0,0,8,0" />
-                                        <TextBlock Text="客户端输出目录" Style="{StaticResource Text.SectionDark}" />
+                                        <TextBlock Text="客户端数据目录" Style="{StaticResource Text.SectionDark}" />
                                     </StackPanel>
                                     <TextBox x:Name="ClientOutputBox" Height="34" Margin="23,0,10,0" Style="{StaticResource TextBox.Field}" FontFamily="{DynamicResource Font.Mono}" />
                                     <TextBlock Text="客户端勾选时，将 JSON 文件写入此目录" Style="{StaticResource Text.Muted}" Margin="23,0,0,0" />
@@ -411,7 +411,7 @@
                                 <StackPanel Margin="18,8">
                                     <StackPanel Orientation="Horizontal">
                                         <Image Source="/UnityTableTool;component/Assets/Icons/server.png" Width="15" Height="15" Margin="0,0,8,0" />
-                                        <TextBlock Text="服务器输出目录" Style="{StaticResource Text.SectionDark}" />
+                                        <TextBlock Text="服务器数据目录" Style="{StaticResource Text.SectionDark}" />
                                     </StackPanel>
                                     <TextBox x:Name="ServerOutputBox" Height="34" Margin="23,0,10,0" Style="{StaticResource TextBox.Field}" FontFamily="{DynamicResource Font.Mono}" />
                                     <TextBlock Text="服务器勾选时，将 JSON 文件写入此目录" Style="{StaticResource Text.Muted}" Margin="23,0,0,0" />

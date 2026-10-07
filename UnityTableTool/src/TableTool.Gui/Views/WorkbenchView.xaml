@@ -436,9 +436,9 @@
             <Grid Margin="18,0">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="输出范围" FontSize="11" Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center" Margin="0,0,12,0" />
-                    <CheckBox x:Name="ClientCheckBox" Style="{StaticResource CheckBox.Tool}" Content="客户端" IsChecked="True" Checked="OutputTarget_Changed" Unchecked="OutputTarget_Changed" />
-                    <CheckBox x:Name="ServerCheckBox" Style="{StaticResource CheckBox.Tool}" Content="服务器" IsChecked="True" Margin="18,0,0,0" Checked="OutputTarget_Changed" Unchecked="OutputTarget_Changed" />
+                    <CheckBox x:Name="ClientCheckBox" Style="{StaticResource CheckBox.Tool}" Content="客户端数据" IsChecked="True" Checked="OutputTarget_Changed" Unchecked="OutputTarget_Changed" />
                     <CheckBox x:Name="ClientCodeCheckBox" Style="{StaticResource CheckBox.Tool}" Content="客户端代码" IsChecked="True" Margin="18,0,0,0" Checked="OutputTarget_Changed" Unchecked="OutputTarget_Changed" />
+                    <CheckBox x:Name="ServerCheckBox" Style="{StaticResource CheckBox.Tool}" Content="服务器数据" IsChecked="True" Margin="18,0,0,0" Checked="OutputTarget_Changed" Unchecked="OutputTarget_Changed" />
                     <CheckBox x:Name="ServerCodeCheckBox" Style="{StaticResource CheckBox.Tool}" Content="服务器代码" IsChecked="True" Margin="18,0,0,0" Checked="OutputTarget_Changed" Unchecked="OutputTarget_Changed" />
                     <TextBlock x:Name="BuildHintText" Text="0 条警告不阻断输出" Style="{StaticResource Text.Muted}" Margin="18,0,0,0" VerticalAlignment="Center" />
                 </StackPanel>

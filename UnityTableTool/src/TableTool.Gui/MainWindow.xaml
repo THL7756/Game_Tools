@@ -37,19 +37,6 @@
             <Setter Property="Padding" Value="8,6" />
             <Setter Property="FontSize" Value="11" />
         </Style>
-        
-        <Style x:Key="DarkSeparatorStyle" TargetType="Separator">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Margin" Value="0"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Separator">
-                        <Rectangle Height="1" Fill="#444444"/> <!-- 改成深色或透明 -->
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        
 
         <Style x:Key="ThemeSegmentButton" TargetType="RadioButton">
             <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
@@ -141,30 +128,30 @@
             <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="20,0">
                 <Menu Background="Transparent" VerticalAlignment="Center">
                     <MenuItem Header="文件" Style="{StaticResource MenuText}">
-                        <MenuItem Header="打开配置表目录" Tag="open-tables" Click="MenuAction_Click" />
-                        <MenuItem Header="重新扫描" Tag="refresh" Click="MenuAction_Click" />
-                        <Separator />
-                        <MenuItem Header="退出" Tag="exit" Click="MenuAction_Click" />
+                        <MenuItem Header="打开配置表目录" MinWidth="150" Tag="open-tables" Click="MenuAction_Click" />
+                        <MenuItem Header="重新扫描" MinWidth="150" Tag="refresh" Click="MenuAction_Click" />
+                        <Separator Style="{StaticResource MenuSeparatorStyle}" />
+                        <MenuItem Header="退出" MinWidth="150" Tag="exit" Click="MenuAction_Click" />
                     </MenuItem>
                     
                     <MenuItem Header="编辑" Style="{StaticResource MenuText}">
-                        <MenuItem Header="撤销" InputGestureText="Ctrl+Z" Tag="undo" Click="MenuAction_Click" />
-                        <MenuItem Header="恢复" InputGestureText="Ctrl+Y" Tag="redo" Click="MenuAction_Click" />
-                        <Separator />
-                        <MenuItem Header="复制" InputGestureText="Ctrl+C" Tag="copy" Click="MenuAction_Click" />
-                        <MenuItem Header="剪切" InputGestureText="Ctrl+X" Tag="cut" Click="MenuAction_Click" />
-                        <MenuItem Header="粘贴" InputGestureText="Ctrl+V" Tag="paste" Click="MenuAction_Click" />
-                        <Separator />
-                        <MenuItem Header="全选" InputGestureText="Ctrl+A" Tag="select-all" Click="MenuAction_Click" />
+                        <MenuItem Header="撤销" MinWidth="150" InputGestureText="Ctrl+Z" Tag="undo" Click="MenuAction_Click" />
+                        <MenuItem Header="恢复" MinWidth="150" InputGestureText="Ctrl+Y" Tag="redo" Click="MenuAction_Click" />
+                        <Separator Style="{StaticResource MenuSeparatorStyle}" />
+                        <MenuItem Header="复制" MinWidth="150" InputGestureText="Ctrl+C" Tag="copy" Click="MenuAction_Click" />
+                        <MenuItem Header="剪切" MinWidth="150" InputGestureText="Ctrl+X" Tag="cut" Click="MenuAction_Click" />
+                        <MenuItem Header="粘贴" MinWidth="150" InputGestureText="Ctrl+V" Tag="paste" Click="MenuAction_Click" />
+                        <Separator Style="{StaticResource MenuSeparatorStyle}" />
+                        <MenuItem Header="全选" MinWidth="150" InputGestureText="Ctrl+A" Tag="select-all" Click="MenuAction_Click" />
                         <MenuItem x:Name="SearchMenuItem" Header="搜索" InputGestureText="Ctrl+K" Tag="search" Click="MenuAction_Click" />
                     </MenuItem>
                     <MenuItem Header="查看" Style="{StaticResource MenuText}">
-                        <MenuItem Header="白天" Tag="light" Click="ThemeMode_Click" />
-                        <MenuItem Header="晚上" Tag="dark" Click="ThemeMode_Click" />
-                        <MenuItem Header="系统" Tag="system" Click="ThemeMode_Click" />
+                        <MenuItem Header="白天" MinWidth="150" Tag="light" Click="ThemeMode_Click" />
+                        <MenuItem Header="晚上" MinWidth="150" Tag="dark" Click="ThemeMode_Click" />
+                        <MenuItem Header="系统" MinWidth="150" Tag="system" Click="ThemeMode_Click" />
                     </MenuItem>
                     <MenuItem Header="使用文档" Style="{StaticResource MenuText}">
-                        <MenuItem Header="打开文档目录" Tag="docs" Click="MenuAction_Click" />
+                        <MenuItem Header="打开文档目录" MinWidth="150" Tag="docs" Click="MenuAction_Click" />
                     </MenuItem>
                 </Menu>
             </StackPanel>

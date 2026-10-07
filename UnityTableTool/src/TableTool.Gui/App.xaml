@@ -415,5 +415,17 @@ BorderThickness="0"
                 </Setter.Value>
             </Setter>
         </Style>
+        
+        <Style TargetType="Separator" x:Key="MenuSeparatorStyle">
+            <Setter Property="Margin" Value="8,4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Separator">
+                        <Rectangle Height="1" Fill="{DynamicResource Brush.Border}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
     </Application.Resources>
 </Application>
