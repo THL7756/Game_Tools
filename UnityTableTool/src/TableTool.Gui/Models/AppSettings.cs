@@ -19,6 +19,8 @@ public sealed class AppSettings
     public string TableDirectory { get; set; } = string.Empty;
     public string ClientOutputDirectory { get; set; } = string.Empty;
     public string ServerOutputDirectory { get; set; } = string.Empty;
+    public string ClientCodeOutputDirectory { get; set; } = string.Empty;
+    public string ServerCodeOutputDirectory { get; set; } = string.Empty;
     public string BuildScriptPath { get; set; } = string.Empty;
     public AppearanceMode AppearanceMode { get; set; } = AppearanceMode.Dark;
     public string AccentColor { get; set; } = "#4D8DF7";
@@ -34,6 +36,7 @@ public string Language { get; set; } = "zh-CN";
     public int VerticalWheelScrollStep { get; set; } = 12;
     public int HorizontalWheelScrollStep { get; set; } = 12;
     public ExportTarget OutputTargets { get; set; } = ExportTarget.Both;
+    public ExportTarget CodeTargets { get; set; } = ExportTarget.Both;
     public List<string> Favorites { get; set; } = [];
     public List<string> RecentTables { get; set; } = [];
 
@@ -43,6 +46,8 @@ public string Language { get; set; } = "zh-CN";
         TableDirectory = TableDirectory,
         ClientOutputDirectory = ClientOutputDirectory,
         ServerOutputDirectory = ServerOutputDirectory,
+        ClientCodeOutputDirectory = ClientCodeOutputDirectory,
+        ServerCodeOutputDirectory = ServerCodeOutputDirectory,
         BuildScriptPath = BuildScriptPath,
         AppearanceMode = AppearanceMode,
         AccentColor = AccentColor,
@@ -58,6 +63,7 @@ Language = Language,
         VerticalWheelScrollStep = VerticalWheelScrollStep,
         HorizontalWheelScrollStep = HorizontalWheelScrollStep,
         OutputTargets = OutputTargets,
+        CodeTargets = CodeTargets,
         Favorites = [.. Favorites],
         RecentTables = [.. RecentTables]
     };

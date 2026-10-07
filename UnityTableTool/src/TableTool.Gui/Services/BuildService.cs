@@ -29,10 +29,17 @@ public sealed class BuildService
         AppSettings settings,
         IReadOnlyList<TableModel> allTables,
         IEnumerable<string> selectedSourceNames,
-        ExportTarget target)
+        ExportTarget dataTarget,
+        ExportTarget codeTarget)
     {
         var stopwatch = Stopwatch.StartNew();
         var logs = new List<BuildLogEntry>();
+        if (dataTarget == ExportTarget.None && codeTarget == ExportTarget.None)
+        {
+            logs.Add(Entry("INFO", "未选择输出范围。"));
+            return new BuildResult(false, [], logs, 0, 0, 0, stopwatch.Elapsed);
+        }
+
         var allDocuments = allTables
             .SelectMany(table => table.Sheets.Select(sheet => sheet.Document))
             .ToArray();
@@ -46,13 +53,7 @@ public sealed class BuildService
         var merged = TableDocumentMerger.Merge(selectedDocuments).ToArray();
         var issues = merged.SelectMany(document => new TableValidator().Validate(document)).ToList();
         issues.AddRange(GetMissingReferenceIssues(allDocuments, selectedDocuments));
-        var targetText = target switch
-        {
-            ExportTarget.Both => "客户端 + 服务器",
-            ExportTarget.Client => "客户端",
-            _ => "服务器"
-        };
-        logs.Add(Entry("INFO", $"开始打表：{merged.Length} 张逻辑表 → {targetText}"));
+        logs.Add(Entry("INFO", $"开始打表：{merged.Length} 张逻辑表 → 数据：{TargetText(dataTarget)} · 代码：{TargetText(codeTarget)}"));
 
         if (issues.Any(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal))
         {
@@ -77,17 +78,22 @@ public sealed class BuildService
             var options = new ExportOptions(
                 settings.ClientOutputDirectory,
                 settings.ServerOutputDirectory,
-                Path.Combine(settings.ProjectRootDirectory, "Code"),
-                generateCode: true,
+                settings.ClientCodeOutputDirectory,
+                settings.ServerCodeOutputDirectory,
+                generateCode: codeTarget != ExportTarget.None,
                 generateJson: true,
                 generateBytes: false,
-                targets: target);
+                targets: dataTarget,
+                codeTargets: codeTarget);
             var exportResult = new ExportService().ExportAll(merged, options);
-            if (target.HasFlag(ExportTarget.Client))
+            if (dataTarget.HasFlag(ExportTarget.Client))
                 logs.Add(Entry("PASS", $"客户端：{CountFilesUnder(exportResult.Files, settings.ClientOutputDirectory)} 个 JSON 文件写入"));
-            if (target.HasFlag(ExportTarget.Server))
+            if (dataTarget.HasFlag(ExportTarget.Server))
                 logs.Add(Entry("PASS", $"服务器：{CountFilesUnder(exportResult.Files, settings.ServerOutputDirectory)} 个 JSON 文件写入"));
-            logs.Add(Entry("PASS", $"C#：{CountFilesWithExtension(exportResult.Files, ".cs", Path.Combine(settings.ProjectRootDirectory, "Code"))} 个文件写入 Code"));
+            if (codeTarget.HasFlag(ExportTarget.Client))
+                logs.Add(Entry("PASS", $"客户端 C#：{CountFilesWithExtension(exportResult.Files, ".cs", settings.ClientCodeOutputDirectory)} 个文件写入 {settings.ClientCodeOutputDirectory}"));
+            if (codeTarget.HasFlag(ExportTarget.Server))
+                logs.Add(Entry("PASS", $"服务器 C#：{CountFilesWithExtension(exportResult.Files, ".cs", settings.ServerCodeOutputDirectory)} 个文件写入 {settings.ServerCodeOutputDirectory}"));
             stopwatch.Stop();
             logs.Add(Entry("DONE", $"完成：{rowCount} 行 · {exportResult.Files.Count} 个文件 · 耗时 {stopwatch.Elapsed.TotalSeconds:F1}s"));
             return new BuildResult(true, issues, logs, merged.Length, rowCount, exportResult.Files.Count, stopwatch.Elapsed);
@@ -99,6 +105,14 @@ public sealed class BuildService
             return new BuildResult(false, issues, logs, merged.Length, rowCount, 0, stopwatch.Elapsed);
         }
     }
+
+    private static string TargetText(ExportTarget target) => target switch
+    {
+        ExportTarget.Both => "客户端 + 服务器",
+        ExportTarget.Client => "客户端",
+        ExportTarget.Server => "服务器",
+        _ => "无"
+    };
 
     private static IEnumerable<ValidationIssue> GetMissingReferenceIssues(
         IReadOnlyList<TableDocument> allDocuments,

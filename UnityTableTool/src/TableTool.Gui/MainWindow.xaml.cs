@@ -380,7 +380,14 @@ private void ExecuteFocusedCommand(RoutedCommand command)
         }
     }
 
-    private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+protected override void OnClosed(EventArgs e)
+{
+base.OnClosed(e);
+Application.Current.Shutdown();
+Environment.Exit(0);
+}
+
+private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ClickCount == 2)
         {

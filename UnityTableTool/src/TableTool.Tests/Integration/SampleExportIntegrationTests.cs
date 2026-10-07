@@ -19,7 +19,7 @@ public sealed class SampleExportIntegrationTests
             ? Path.Combine(root, "Data_c")
             : Path.Combine(Path.GetTempPath(), "unity-table-tool-integration", Guid.NewGuid().ToString("N"));
         var dataOutput = updateSamples ? outputRoot : Path.Combine(outputRoot, "Data_c");
-        var codeOutput = updateSamples ? Path.Combine(root, "Code") : Path.Combine(outputRoot, "Code");
+        var codeOutput = updateSamples ? Path.Combine(root, "Code_c") : Path.Combine(outputRoot, "Code_c");
 
         try
         {

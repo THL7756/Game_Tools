@@ -9,15 +9,27 @@ public sealed class GuiExportService
 
     public ExportResult Export(
         IEnumerable<TableDocument> documents,
-        string dataOutputDirectory,
-        string codeOutputDirectory,
-        ExportTarget target,
+        string clientDataOutputDirectory,
+        string serverDataOutputDirectory,
+        string clientCodeOutputDirectory,
+        string serverCodeOutputDirectory,
+        ExportTarget targets,
+        ExportTarget codeTargets,
         bool code,
         bool json,
         bool bytes)
     {
         return exportService.ExportAll(
             documents,
-            new ExportOptions(dataOutputDirectory, codeOutputDirectory, code, json, bytes, target));
+            new ExportOptions(
+                clientDataOutputDirectory,
+                serverDataOutputDirectory,
+                clientCodeOutputDirectory,
+                serverCodeOutputDirectory,
+                code,
+                json,
+                bytes,
+                targets,
+                codeTargets));
     }
 }

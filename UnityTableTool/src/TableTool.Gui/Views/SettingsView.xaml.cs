@@ -37,6 +37,8 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         TableDirectoryBox.Text = settings.TableDirectory;
         ClientOutputBox.Text = settings.ClientOutputDirectory;
         ServerOutputBox.Text = settings.ServerOutputDirectory;
+        ClientCodeOutputBox.Text = settings.ClientCodeOutputDirectory;
+        ServerCodeOutputBox.Text = settings.ServerCodeOutputDirectory;
         BuildScriptBox.Text = settings.BuildScriptPath;
         SearchShortcutBox.Text = settings.SearchShortcut;
         BuildShortcutBox.Text = settings.BuildShortcut;
@@ -375,6 +377,12 @@ public partial class SettingsView : System.Windows.Controls.UserControl
             case "server":
                 ServerOutputBox.Text = dialog.FolderName;
                 break;
+            case "clientCode":
+                ClientCodeOutputBox.Text = dialog.FolderName;
+                break;
+            case "serverCode":
+                ServerCodeOutputBox.Text = dialog.FolderName;
+                break;
         }
     }
 
@@ -395,6 +403,8 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         "tables" => TableDirectoryBox.Text,
         "client" => ClientOutputBox.Text,
         "server" => ServerOutputBox.Text,
+        "clientCode" => ClientCodeOutputBox.Text,
+        "serverCode" => ServerCodeOutputBox.Text,
         _ => ProjectRootBox.Text
     };
 
@@ -405,6 +415,8 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         settings.TableDirectory = defaults.TableDirectory;
         settings.ClientOutputDirectory = defaults.ClientOutputDirectory;
         settings.ServerOutputDirectory = defaults.ServerOutputDirectory;
+        settings.ClientCodeOutputDirectory = defaults.ClientCodeOutputDirectory;
+        settings.ServerCodeOutputDirectory = defaults.ServerCodeOutputDirectory;
         settings.BuildScriptPath = defaults.BuildScriptPath;
         settings.AppearanceMode = defaults.AppearanceMode;
         settings.AccentColor = defaults.AccentColor;
@@ -429,6 +441,8 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         settings.TableDirectory = TableDirectoryBox.Text.Trim();
         settings.ClientOutputDirectory = ClientOutputBox.Text.Trim();
         settings.ServerOutputDirectory = ServerOutputBox.Text.Trim();
+        settings.ClientCodeOutputDirectory = ClientCodeOutputBox.Text.Trim();
+        settings.ServerCodeOutputDirectory = ServerCodeOutputBox.Text.Trim();
         settings.BuildScriptPath = BuildScriptBox.Text.Trim();
         settings.SearchShortcut = string.IsNullOrWhiteSpace(SearchShortcutBox.Text) ? "Ctrl+K" : SearchShortcutBox.Text.Trim();
         settings.BuildShortcut = string.IsNullOrWhiteSpace(BuildShortcutBox.Text) ? "Ctrl+B" : BuildShortcutBox.Text.Trim();
@@ -450,22 +464,41 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         if (string.IsNullOrWhiteSpace(settings.ProjectRootDirectory)
             || string.IsNullOrWhiteSpace(settings.TableDirectory)
             || string.IsNullOrWhiteSpace(settings.ClientOutputDirectory)
-            || string.IsNullOrWhiteSpace(settings.ServerOutputDirectory))
+            || string.IsNullOrWhiteSpace(settings.ServerOutputDirectory)
+            || string.IsNullOrWhiteSpace(settings.ClientCodeOutputDirectory)
+            || string.IsNullOrWhiteSpace(settings.ServerCodeOutputDirectory))
         {
-            MessageBox.Show("项目根目录、配置表目录和两个输出目录都必须填写。", "设置", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("项目根目录、配置表目录和四个输出目录都必须填写。", "设置", MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
         }
 
-        var client = Path.GetFullPath(settings.ClientOutputDirectory);
-        var server = Path.GetFullPath(settings.ServerOutputDirectory);
-        if (string.Equals(client, server, StringComparison.OrdinalIgnoreCase))
+        var outputs = new[]
         {
-            MessageBox.Show("客户端和服务器输出目录不能相同。", "设置", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Path.GetFullPath(settings.ClientOutputDirectory),
+            Path.GetFullPath(settings.ServerOutputDirectory),
+            Path.GetFullPath(settings.ClientCodeOutputDirectory),
+            Path.GetFullPath(settings.ServerCodeOutputDirectory)
+        };
+        if (outputs.Distinct(StringComparer.OrdinalIgnoreCase).Count() != outputs.Length)
+        {
+            MessageBox.Show("客户端/服务器的数据与代码输出目录不能相同。", "设置", MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
+        }
+
+        for (var left = 0; left < outputs.Length; left++)
+        {
+            for (var right = left + 1; right < outputs.Length; right++)
+            {
+                if (IsSameOrAncestor(outputs[left], outputs[right]) || IsSameOrAncestor(outputs[right], outputs[left]))
+                {
+                    MessageBox.Show("输出目录之间不能互相包含。", "设置", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return false;
+                }
+            }
         }
 
         var tableRoot = Path.GetFullPath(settings.TableDirectory);
-        if (IsSameOrAncestor(client, tableRoot) || IsSameOrAncestor(server, tableRoot))
+        if (outputs.Any(output => IsSameOrAncestor(output, tableRoot)))
         {
             MessageBox.Show("输出目录不能是配置表目录或其父目录。", "设置", MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;

@@ -38,6 +38,8 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         InitializeComponent();
         ClientCheckBox.IsChecked = settings.OutputTargets.HasFlag(ExportTarget.Client);
         ServerCheckBox.IsChecked = settings.OutputTargets.HasFlag(ExportTarget.Server);
+        ClientCodeCheckBox.IsChecked = settings.CodeTargets.HasFlag(ExportTarget.Client);
+        ServerCodeCheckBox.IsChecked = settings.CodeTargets.HasFlag(ExportTarget.Server);
         Loaded += (_, _) => RefreshTables(selectAll: false);
         ThemeManager.ThemeChanged += (_, _) => Dispatcher.BeginInvoke(UpdateFilterButtons);
         isInitializing = false;
@@ -157,7 +159,9 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         var selectedCount = tables.Count(table => table.IsSelected);
         SelectionCountText.Text = string.Format("已勾选 {0} / {1}", selectedCount, tables.Count);
         BuildButtonText.Text = "开始打表";
-        BuildButton.IsEnabled = selectedCount > 0 && (ClientCheckBox.IsChecked == true || ServerCheckBox.IsChecked == true);
+        BuildButton.IsEnabled = selectedCount > 0
+            && (ClientCheckBox.IsChecked == true || ServerCheckBox.IsChecked == true
+                || ClientCodeCheckBox.IsChecked == true || ServerCodeCheckBox.IsChecked == true);
 
         var allVisibleSelected = visibleTables.Count > 0 && visibleTables.All(table => table.IsSelected);
         var anyVisibleSelected = visibleTables.Any(table => table.IsSelected);
@@ -431,13 +435,17 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
 
     private void OutputTarget_Changed(object sender, RoutedEventArgs e)
     {
-        // XAML 加载阶段会先触发复选框事件，此时两个命名控件可能尚未完成赋值。
+        // XAML 加载阶段会先触发复选框事件，此时命名控件可能尚未完成赋值。
         // 等构造完成后再读取并保存输出范围，避免工作台初始化空引用。
-        if (isInitializing || !IsInitialized || ClientCheckBox is null || ServerCheckBox is null)
+        if (isInitializing || !IsInitialized
+            || ClientCheckBox is null || ServerCheckBox is null
+            || ClientCodeCheckBox is null || ServerCodeCheckBox is null)
             return;
 
         settings.OutputTargets = (ClientCheckBox.IsChecked == true ? ExportTarget.Client : ExportTarget.None)
             | (ServerCheckBox.IsChecked == true ? ExportTarget.Server : ExportTarget.None);
+        settings.CodeTargets = (ClientCodeCheckBox.IsChecked == true ? ExportTarget.Client : ExportTarget.None)
+            | (ServerCodeCheckBox.IsChecked == true ? ExportTarget.Server : ExportTarget.None);
         SettingsStore.Save(settings);
         if (IsLoaded)
             UpdateSelectionUi();
@@ -460,12 +468,14 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             return;
         }
 
-        var target = (ClientCheckBox.IsChecked == true ? ExportTarget.Client : ExportTarget.None)
+        var dataTarget = (ClientCheckBox.IsChecked == true ? ExportTarget.Client : ExportTarget.None)
             | (ServerCheckBox.IsChecked == true ? ExportTarget.Server : ExportTarget.None);
+        var codeTarget = (ClientCodeCheckBox.IsChecked == true ? ExportTarget.Client : ExportTarget.None)
+            | (ServerCodeCheckBox.IsChecked == true ? ExportTarget.Server : ExportTarget.None);
         var selectedSources = tables
             .Where(table => table.IsSelected)
             .SelectMany(table => table.Sheets.Select(sheet => sheet.Document.SourceName));
-        var result = buildService.Build(settings, tables, selectedSources, target);
+        var result = buildService.Build(settings, tables, selectedSources, dataTarget, codeTarget);
         var buildLogs = result.Logs.Select(log => new LogDisplayItem(log.Time, log.Level, log.Message));
         if (catalogErrors.Count > 0)
             buildLogs = new[]

@@ -53,26 +53,6 @@
             </Setter>
         </Style>
 
-        <Style x:Key="ColorSwatch" TargetType="Button">
-            <Setter Property="Width" Value="22" />
-            <Setter Property="Height" Value="22" />
-            <Setter Property="Padding" Value="1" />
-            <Setter Property="Margin" Value="4,0" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Swatch" Background="{TemplateBinding Tag}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
-                            <ContentPresenter />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Swatch" Property="BorderBrush" Value="White" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -273,23 +253,8 @@
                                     <TextBlock Text="用于选中状态、主要按钮和链接。" Style="{StaticResource Text.Muted}" Margin="0,3 ,0,0" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,18,0">
-                                    <Button Style="{StaticResource ColorSwatch}" Tag="#80B3FF" Click="AccentSwatch_Click">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/accent-swatch.png" Width="20" Height="20" />
-                                    </Button>
-                                    <Button Style="{StaticResource ColorSwatch}" Tag="#85C7A2" Click="AccentSwatch_Click">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/accent-swatch1.png" Width="20" Height="20" />
-                                    </Button>
-                                    <Button Style="{StaticResource ColorSwatch}" Tag="#B49AD7" Click="AccentSwatch_Click">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/accent-swatch2.png" Width="20" Height="20" />
-                                    </Button>
-                                    <Button Style="{StaticResource ColorSwatch}" Tag="#D9AA81" Click="AccentSwatch_Click">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/accent-swatch3.png" Width="20" Height="20" />
-                                    </Button>
                                     <Border Background="{DynamicResource Brush.Accent}" Width="22" Height="22" Margin="4,0" />
                                     <TextBox x:Name="AccentTextBox" Width="92" Height="32" Style="{StaticResource TextBox.Field}" FontFamily="{DynamicResource Font.Mono}" FontSize="11" />
-                                    <Button Style="{StaticResource Button.Icon}" Width="32" Height="32" Click="PickColor_Click" Tag="accent" ToolTip="选择强调色">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/pipette.png" Width="15" Height="15" />
-                                    </Button>
                                 </StackPanel>
                             </Grid>
                             <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
@@ -305,9 +270,6 @@
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,18,0">
                                     <Border Background="{DynamicResource Brush.Window}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Width="22" Height="22" Margin="4,0" />
                                     <TextBox x:Name="BackgroundTextBox" Width="92" Height="32" Style="{StaticResource TextBox.Field}" FontFamily="{DynamicResource Font.Mono}" FontSize="11" />
-                                    <Button Style="{StaticResource Button.Icon}" Width="32" Height="32" Click="PickColor_Click" Tag="background" ToolTip="选择背景色">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/pipette.png" Width="15" Height="15" />
-                                    </Button>
                                 </StackPanel>
                             </Grid>
                             <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
@@ -323,9 +285,6 @@
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,18,0">
                                     <Border Background="{DynamicResource Brush.Text}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Width="22" Height="22" Margin="4,0" />
                                     <TextBox x:Name="ForegroundTextBox" Width="92" Height="32" Style="{StaticResource TextBox.Field}" FontFamily="{DynamicResource Font.Mono}" FontSize="11" />
-                                    <Button Style="{StaticResource Button.Icon}" Width="32" Height="32" Click="PickColor_Click" Tag="foreground" ToolTip="选择前景色">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/pipette.png" Width="15" Height="15" />
-                                    </Button>
                                 </StackPanel>
                             </Grid>
                             <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
@@ -458,6 +417,48 @@
                                     <TextBlock Text="服务器勾选时，将 JSON 文件写入此目录" Style="{StaticResource Text.Muted}" Margin="23,0,0,0" />
                                 </StackPanel>
                                 <Button Grid.Column="1" Height="34" Margin="0,24,18,0" Style="{StaticResource Button.Secondary}" Click="BrowseFolder_Click" Tag="server">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Image Source="/UnityTableTool;component/Assets/Icons/folder-open.png" Width="16" Height="16" Margin="0,0,7,0" />
+                                        <TextBlock Text="浏览…" FontSize="12" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                            <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
+                            <Grid Height="80">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="112" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="18,8">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Image Source="/UnityTableTool;component/Assets/Icons/file-code2.png" Width="15" Height="15" Margin="0,0,8,0" />
+                                        <TextBlock Text="客户端代码目录" Style="{StaticResource Text.SectionDark}" />
+                                    </StackPanel>
+                                    <TextBox x:Name="ClientCodeOutputBox" Height="34" Margin="23,0,10,0" Style="{StaticResource TextBox.Field}" FontFamily="{DynamicResource Font.Mono}" />
+                                    <TextBlock Text="客户端代码勾选时，将 C# 文件写入此目录" Style="{StaticResource Text.Muted}" Margin="23,0,0,0" />
+                                </StackPanel>
+                                <Button Grid.Column="1" Height="34" Margin="0,24,18,0" Style="{StaticResource Button.Secondary}" Click="BrowseFolder_Click" Tag="clientCode">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Image Source="/UnityTableTool;component/Assets/Icons/folder-open.png" Width="16" Height="16" Margin="0,0,7,0" />
+                                        <TextBlock Text="浏览…" FontSize="12" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                            <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
+                            <Grid Height="80">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="112" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="18,8">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Image Source="/UnityTableTool;component/Assets/Icons/file-code2.png" Width="15" Height="15" Margin="0,0,8,0" />
+                                        <TextBlock Text="服务器代码目录" Style="{StaticResource Text.SectionDark}" />
+                                    </StackPanel>
+                                    <TextBox x:Name="ServerCodeOutputBox" Height="34" Margin="23,0,10,0" Style="{StaticResource TextBox.Field}" FontFamily="{DynamicResource Font.Mono}" />
+                                    <TextBlock Text="服务器代码勾选时，将 C# 文件写入此目录" Style="{StaticResource Text.Muted}" Margin="23,0,0,0" />
+                                </StackPanel>
+                                <Button Grid.Column="1" Height="34" Margin="0,24,18,0" Style="{StaticResource Button.Secondary}" Click="BrowseFolder_Click" Tag="serverCode">
                                     <StackPanel Orientation="Horizontal">
                                         <Image Source="/UnityTableTool;component/Assets/Icons/folder-open.png" Width="16" Height="16" Margin="0,0,7,0" />
                                         <TextBlock Text="浏览…" FontSize="12" />

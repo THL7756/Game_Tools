@@ -33,7 +33,7 @@ public static class SettingsStore
             {
                 var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(SettingsFilePath), JsonOptions);
                 if (settings is not null)
-                    return settings;
+                    return Normalize(settings);
             }
 
             // 兼容上一版保存在 LocalAppData 的配置，首次启动时迁移到工具目录。
@@ -42,6 +42,7 @@ public static class SettingsStore
                 var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(LegacySettingsFilePath), JsonOptions);
                 if (settings is not null)
                 {
+                    Normalize(settings);
                     Save(settings);
                     return settings;
                 }
@@ -78,8 +79,22 @@ public static class SettingsStore
             TableDirectory = Path.Combine(root, "Data"),
             ClientOutputDirectory = Path.Combine(root, "Data_c"),
             ServerOutputDirectory = Path.Combine(root, "Data_s"),
+            ClientCodeOutputDirectory = Path.Combine(root, "Code_c"),
+            ServerCodeOutputDirectory = Path.Combine(root, "Code_s"),
             BuildScriptPath = string.Empty
         };
+    }
+
+    private static AppSettings Normalize(AppSettings settings)
+    {
+        var root = string.IsNullOrWhiteSpace(settings.ProjectRootDirectory)
+            ? FindProjectRoot()
+            : settings.ProjectRootDirectory;
+        if (string.IsNullOrWhiteSpace(settings.ClientCodeOutputDirectory))
+            settings.ClientCodeOutputDirectory = Path.Combine(root, "Code_c");
+        if (string.IsNullOrWhiteSpace(settings.ServerCodeOutputDirectory))
+            settings.ServerCodeOutputDirectory = Path.Combine(root, "Code_s");
+        return settings;
     }
 
     private static string FindProjectRoot()

@@ -132,7 +132,7 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <Image Source="/UnityTableTool;component/Assets/Icons/search.png" Width="14" Height="14" VerticalAlignment="Center" />
-                                <TextBox x:Name="SearchBox" Grid.Column="1" Style="{StaticResource TextBox.Field}" BorderThickness="0" Background="Transparent" Padding="8,0" FontSize="11" Foreground="{DynamicResource Brush.TextMuted}" TextOptions.TextFormattingMode="Display" TextChanged="SearchBox_TextChanged" />
+<TextBox x:Name="SearchBox" Grid.Column="1" Style="{StaticResource TextBox.Field}" BorderThickness="0" Background="Transparent" Padding="8,6" FontSize="11" Foreground="{DynamicResource Brush.TextMuted}" TextOptions.TextFormattingMode="Display" TextChanged="SearchBox_TextChanged" />
                                 <TextBlock x:Name="SearchPlaceholder" Grid.Column="1" Text="搜索表名或文件名" FontSize="11" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" Margin="8,0" TextOptions.TextFormattingMode="Display" IsHitTestVisible="False" />
                                 <TextBlock Grid.Column="2" Text="Ctrl+F" Style="{StaticResource Text.Muted}" VerticalAlignment="Center" Margin="4,0,2,0" />
                             </Grid>
@@ -438,6 +438,8 @@
                     <TextBlock Text="输出范围" FontSize="11" Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center" Margin="0,0,12,0" />
                     <CheckBox x:Name="ClientCheckBox" Style="{StaticResource CheckBox.Tool}" Content="客户端" IsChecked="True" Checked="OutputTarget_Changed" Unchecked="OutputTarget_Changed" />
                     <CheckBox x:Name="ServerCheckBox" Style="{StaticResource CheckBox.Tool}" Content="服务器" IsChecked="True" Margin="18,0,0,0" Checked="OutputTarget_Changed" Unchecked="OutputTarget_Changed" />
+                    <CheckBox x:Name="ClientCodeCheckBox" Style="{StaticResource CheckBox.Tool}" Content="客户端代码" IsChecked="True" Margin="18,0,0,0" Checked="OutputTarget_Changed" Unchecked="OutputTarget_Changed" />
+                    <CheckBox x:Name="ServerCodeCheckBox" Style="{StaticResource CheckBox.Tool}" Content="服务器代码" IsChecked="True" Margin="18,0,0,0" Checked="OutputTarget_Changed" Unchecked="OutputTarget_Changed" />
                     <TextBlock x:Name="BuildHintText" Text="0 条警告不阻断输出" Style="{StaticResource Text.Muted}" Margin="18,0,0,0" VerticalAlignment="Center" />
                 </StackPanel>
                 <Button x:Name="BuildButton" Style="{StaticResource Button.Primary}" Width="140" Height="36" HorizontalAlignment="Right" VerticalAlignment="Center" Click="Build_Click">

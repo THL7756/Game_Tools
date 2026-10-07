@@ -17,53 +17,52 @@ public sealed class ExportService
 
     public ExportResult ExportAll(IEnumerable<TableDocument> documents, ExportOptions options)
     {
-        var targets = new[] { ExportTarget.Client, ExportTarget.Server }
-            .Where(target => options.Targets.HasFlag(target))
-            .ToArray();
-        if (targets.Length == 0)
+        var wantsData = options.GenerateJson || options.GenerateBytes;
+        var dataTargets = wantsData
+            ? new[] { ExportTarget.Client, ExportTarget.Server }.Where(target => options.Targets.HasFlag(target)).ToArray()
+            : [];
+        var codeTargets = options.GenerateCode
+            ? new[] { ExportTarget.Client, ExportTarget.Server }.Where(target => options.CodeTargets.HasFlag(target)).ToArray()
+            : [];
+        if (dataTargets.Length == 0 && codeTargets.Length == 0)
             throw new ArgumentException("At least one export target must be selected.");
-        if (!options.GenerateCode && !options.GenerateJson && !options.GenerateBytes)
-            throw new ArgumentException("At least one output format must be selected.");
 
         var mergedDocuments = TableDocumentMerger.Merge(documents).ToArray();
         if (mergedDocuments.Length == 0)
             throw new InvalidOperationException("No table documents were found.");
 
-        var dataOutputs = targets.ToDictionary(GetTargetName, target => GetDataOutput(options, target), StringComparer.Ordinal);
-        var codeOutput = options.GenerateCode ? Path.GetFullPath(options.CodeOutputDirectory) : null;
-        ValidateOutputDirectories(dataOutputs.Values, codeOutput);
+        var dataOutputs = dataTargets.ToDictionary(GetTargetName, target => GetDataOutput(options, target), StringComparer.Ordinal);
+        var codeOutputs = codeTargets.ToDictionary(GetTargetName, target => GetCodeOutput(options, target), StringComparer.Ordinal);
+        ValidateOutputDirectories(dataOutputs, codeOutputs);
 
         var dataStaging = dataOutputs.ToDictionary(pair => pair.Key, pair => pair.Value + ".staging", StringComparer.Ordinal);
-        var codeStaging = codeOutput is null ? null : codeOutput + ".staging";
-        foreach (var path in dataStaging.Values.Append(codeStaging).Where(path => !string.IsNullOrWhiteSpace(path)))
+        var codeStaging = codeOutputs.ToDictionary(pair => pair.Key, pair => pair.Value + ".staging", StringComparer.Ordinal);
+        foreach (var path in dataStaging.Values.Concat(codeStaging.Values))
         {
-            if (Directory.Exists(path!))
-                Directory.Delete(path!, recursive: true);
-            Directory.CreateDirectory(path!);
+            if (Directory.Exists(path))
+                Directory.Delete(path, recursive: true);
+            Directory.CreateDirectory(path);
         }
 
         var files = new List<string>();
         var hashes = new List<string>();
-        foreach (var target in targets)
+        var activeTargets = dataTargets.Concat(codeTargets).Distinct().ToArray();
+        foreach (var target in activeTargets)
         {
             var targetDocuments = mergedDocuments
                 .Select(document => TableDocumentFilter.ForTarget(document, target))
                 .ToArray();
-            var dataRoot = dataStaging[GetTargetName(target)];
-            var codeRoot = codeStaging is null
-                ? null
-                : targets.Length == 1
-                    ? codeStaging
-                    : Path.Combine(codeStaging, GetTargetName(target));
+            var dataRoot = dataStaging.TryGetValue(GetTargetName(target), out var dataPath) ? dataPath : null;
+            var codeRoot = codeStaging.TryGetValue(GetTargetName(target), out var codePath) ? codePath : null;
 
             foreach (var document in targetDocuments)
             {
-                if (options.GenerateJson)
+                if (dataRoot is not null && options.GenerateJson)
                     files.Add(Write(dataRoot, document.Schema.Name + ".json", new JsonTableExporter().Export(document)));
-                if (options.GenerateBytes)
+                if (dataRoot is not null && options.GenerateBytes)
                     files.Add(WriteBytes(dataRoot, document.Schema.Name + ".bytes", new BinaryTableExporter().Export(document)));
-                if (options.GenerateCode)
-                    files.Add(WriteRoot(codeRoot!, document.Schema.Name + "Data.cs", CSharpExporter.Export(document)));
+                if (codeRoot is not null && options.GenerateCode)
+                    files.Add(Write(codeRoot, document.Schema.Name + "Data.cs", CSharpExporter.Export(document)));
                 hashes.Add(SchemaHasher.Compute(document.Schema));
             }
         }
@@ -73,10 +72,10 @@ public sealed class ExportService
             ReplaceDirectory(pair.Value, dataStaging[pair.Key]);
             files = files.Select(path => path.Replace(dataStaging[pair.Key], pair.Value, StringComparison.OrdinalIgnoreCase)).ToList();
         }
-        if (codeStaging is not null)
+        foreach (var pair in codeOutputs)
         {
-            ReplaceDirectory(codeOutput!, codeStaging);
-            files = files.Select(path => path.Replace(codeStaging, codeOutput, StringComparison.OrdinalIgnoreCase)).ToList();
+            ReplaceDirectory(pair.Value, codeStaging[pair.Key]);
+            files = files.Select(path => path.Replace(codeStaging[pair.Key], pair.Value, StringComparison.OrdinalIgnoreCase)).ToList();
         }
 
         return new ExportResult(files, string.Join(";", hashes.Distinct(StringComparer.Ordinal)));
@@ -89,22 +88,33 @@ public sealed class ExportService
             ? options.ClientDataOutputDirectory
             : options.ServerDataOutputDirectory);
 
-    private static void ValidateOutputDirectories(IEnumerable<string> dataDirectories, string? codeDirectory)
+    private static string GetCodeOutput(ExportOptions options, ExportTarget target) =>
+        Path.GetFullPath(target == ExportTarget.Client
+            ? options.ClientCodeOutputDirectory
+            : options.ServerCodeOutputDirectory);
+
+    private static void ValidateOutputDirectories(
+        IReadOnlyDictionary<string, string> dataOutputs,
+        IReadOnlyDictionary<string, string> codeOutputs)
     {
-        var dataPaths = dataDirectories.ToArray();
-        if (dataPaths.Any(string.IsNullOrWhiteSpace) || (codeDirectory is not null && string.IsNullOrWhiteSpace(codeDirectory)))
+        if (dataOutputs.Values.Any(string.IsNullOrWhiteSpace) || codeOutputs.Values.Any(string.IsNullOrWhiteSpace))
             throw new ArgumentException("Output directories cannot be empty.");
 
-        if (dataPaths.Distinct(StringComparer.OrdinalIgnoreCase).Count() != dataPaths.Length)
+        if (dataOutputs.Count == 2
+            && string.Equals(dataOutputs["Client"], dataOutputs["Server"], StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Client and server data directories must be different.");
 
-        var all = codeDirectory is null ? dataPaths : dataPaths.Append(codeDirectory).ToArray();
+        if (codeOutputs.Count == 2
+            && string.Equals(codeOutputs["Client"], codeOutputs["Server"], StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Client and server code directories must be different.");
+
+        var all = dataOutputs.Values.Concat(codeOutputs.Values).ToArray();
         for (var left = 0; left < all.Length; left++)
         {
             for (var right = left + 1; right < all.Length; right++)
             {
                 if (IsSameOrDescendant(all[left], all[right]) || IsSameOrDescendant(all[right], all[left]))
-                    throw new ArgumentException("Data and code output directories must be separate and cannot contain each other.");
+                    throw new ArgumentException("Output directories must be separate and cannot contain each other.");
             }
         }
     }
@@ -153,6 +163,4 @@ public sealed class ExportService
         File.WriteAllBytes(path, content);
         return path;
     }
-
-    private static string WriteRoot(string root, string name, string content) => Write(root, name, content);
 }

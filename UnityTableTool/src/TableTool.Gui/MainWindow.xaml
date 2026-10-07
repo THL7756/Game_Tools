@@ -29,7 +29,7 @@
             <Setter Property="Padding" Value="0" />
         </Style>
 
-        <Style x:Key="MenuText" TargetType="MenuItem">
+<Style x:Key="MenuText" TargetType="MenuItem" BasedOn="{StaticResource MenuItem.Base}">
             <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="Transparent" />
