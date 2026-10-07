@@ -44,7 +44,7 @@ public static class ThemeManager
             SetBrush("Brush.SurfaceAlt", "#2D323B");
             SetBrush("Brush.SurfaceHover", "#272B32");
             SetBrush("Brush.Border", "#353A43");
-            var darkForeground = ParseColor(foreground, "#FFFFFF");
+            var darkForeground = EnsureContrast(ParseColor(foreground, "#FFFFFF"), background, true);
             SetBrush("Brush.Text", darkForeground);
             SetBrush("Brush.TextSecondary", Blend(darkForeground, background, 0.68));
             SetBrush("Brush.TextMuted", Blend(darkForeground, background, 0.45));
@@ -68,7 +68,7 @@ public static class ThemeManager
             SetBrush("Brush.SurfaceAlt", "#E9EDF3");
             SetBrush("Brush.SurfaceHover", "#EDF2F7");
             SetBrush("Brush.Border", "#D5DAE2");
-            var lightForeground = ParseColor(foreground, "#000000");
+            var lightForeground = EnsureContrast(ParseColor(foreground, "#000000"), background, false);
             SetBrush("Brush.Text", lightForeground);
             SetBrush("Brush.TextSecondary", Blend(lightForeground, background, 0.68));
             SetBrush("Brush.TextMuted", Blend(lightForeground, background, 0.45));
@@ -139,5 +139,23 @@ public static class ThemeManager
             (byte)(foreground.R * amount + background.R * (1 - amount)),
             (byte)(foreground.G * amount + background.G * (1 - amount)),
             (byte)(foreground.B * amount + background.B * (1 - amount)));
+    }
+
+    private static double ColorDistance(System.Windows.Media.Color a, System.Windows.Media.Color b)
+    {
+        var dr = a.R - b.R;
+        var dg = a.G - b.G;
+        var db = a.B - b.B;
+        return Math.Sqrt(dr * dr + dg * dg + db * db);
+    }
+
+    private static System.Windows.Media.Color EnsureContrast(System.Windows.Media.Color foreground, string backgroundHex, bool dark)
+    {
+        var background = ParseColor(backgroundHex, dark ? "#000000" : "#FFFFFF");
+        if (ColorDistance(foreground, background) < 60)
+        {
+            return (System.Windows.Media.Color)ColorConverter.ConvertFromString(dark ? "#FFFFFF" : "#000000");
+        }
+        return foreground;
     }
 }

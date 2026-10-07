@@ -34,7 +34,7 @@
             <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
             <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
-            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderThickness" Value="0" />
             <Setter Property="GridLinesVisibility" Value="All" />
             <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource Brush.Border}" />
             <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource Brush.Border}" />
@@ -103,13 +103,13 @@
                 <Button Style="{StaticResource Button.Secondary}" Height="30" Padding="12,6" Click="Refresh_Click">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="/UnityTableTool;component/Assets/Icons/refresh-cw.png" Width="14" Height="14" Margin="0,0,6,0" />
-                        <TextBlock Text="刷新表列表" FontSize="11" />
+                        <TextBlock Text="刷新表列表" FontSize="11" MinWidth="60"/>
                     </StackPanel>
                 </Button>
                 <Button Style="{StaticResource Button.Secondary}" Height="30" Margin="10,0,0,0" Padding="12,6" Click="OpenTableDirectory_Click">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="/UnityTableTool;component/Assets/Icons/folder-open.png" Width="14" Height="14" Margin="0,0,6,0" />
-                        <TextBlock Text="打开配置表目录" FontSize="11" />
+                        <TextBlock Text="配置表目录" FontSize="11" MinWidth="60"/>
                     </StackPanel>
                 </Button>
             </StackPanel>
@@ -228,13 +228,13 @@
                                 <Button Style="{StaticResource Button.Secondary}" Height="28" Margin="0,0,8,0" Padding="10,5" Click="RefreshCurrentTable_Click">
                                     <StackPanel Orientation="Horizontal">
                                         <Image Source="/UnityTableTool;component/Assets/Icons/refresh-cw.png" Width="13" Height="13" Margin="0,0,5,0" />
-                                        <TextBlock Text="刷新内容" FontSize="10" />
+                                        <TextBlock Text="刷新内容" FontSize="10" MinWidth="60"/>
                                     </StackPanel>
                                 </Button>
                                 <Button Style="{StaticResource Button.Secondary}" Height="28" Padding="10,5" Click="OpenInExcel_Click">
                                     <StackPanel Orientation="Horizontal">
                                         <Image Source="/UnityTableTool;component/Assets/Icons/external-link2.png" Width="14" Height="14" Margin="0,0,6,0" />
-                                        <TextBlock Text="在 Excel 中打开" FontSize="10" />
+                                        <TextBlock Text="打开 Excel" FontSize="10" MinWidth="60"/>
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
@@ -281,7 +281,7 @@
                         <RowDefinition x:Name="LogsRow" Height="38" />
                     </Grid.RowDefinitions>
 
-                    <Border Grid.Row="0" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="5">
+                    <Border Grid.Row="0" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="5" ClipToBounds="True">
                         <DockPanel>
                             <Grid DockPanel.Dock="Top" Height="38">
                                 <StackPanel Orientation="Horizontal" Margin="12,0" VerticalAlignment="Center">

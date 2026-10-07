@@ -132,12 +132,40 @@
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
             <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
             <Setter Property="Padding" Value="8,5" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="5"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style TargetType="ContextMenu">
             <Setter Property="Background" Value="{DynamicResource Brush.Panel}" />
             <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="5"
+                                Padding="0,4">
+                            <ScrollViewer MaxHeight="400">
+                                <ItemsPresenter />
+                            </ScrollViewer>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style TargetType="MenuItem">
@@ -243,13 +271,13 @@
                                    Placement="Bottom"
                                    PlacementTarget="{Binding ElementName=DropDownButton}"
                                    IsOpen="{TemplateBinding IsDropDownOpen}"
-                                   AllowsTransparency="True"
                                    Focusable="False"
-                                   PopupAnimation="Slide">
+                                   PopupAnimation="None">
                                 <Border MinWidth="{Binding ActualWidth, ElementName=DropDownButton}"
                                         Background="{DynamicResource Brush.Panel}"
                                         BorderBrush="{DynamicResource Brush.Border}"
                                         BorderThickness="1"
+                                        CornerRadius="5"
                                         Padding="0,4">
                                     <ScrollViewer MaxHeight="320" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Hidden">
                                         <ItemsPresenter />

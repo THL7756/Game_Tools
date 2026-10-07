@@ -86,6 +86,7 @@
         </Style>
     </Window.Resources>
 
+    <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
     <Grid x:Name="RootLayout">
         <Grid.RowDefinitions>
             <RowDefinition Height="32" />
@@ -243,4 +244,5 @@
             </Grid>
         </Border>
     </Grid>
+    </Border>
 </Window>

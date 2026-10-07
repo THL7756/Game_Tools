@@ -9,3 +9,5 @@ UnityTableTool/release/*.json
 UnityTableTool/release/*.xml
 UnityTableTool/release/*.exe
 UnityTableTool/release/*.config
+TableTools/settings.json
+UnityTableTool/.idea/.idea.UnityTableTool/.idea
