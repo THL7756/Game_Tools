@@ -335,41 +335,48 @@
                                 <ItemsControl x:Name="IssuesList" Margin="12,0,12,10">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1" Padding="0,8">
-                                                <Grid>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto" />
-                                                        <RowDefinition Height="Auto" />
-                                                    </Grid.RowDefinitions>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="54" />
-                                                        <ColumnDefinition Width="210" />
-                                                        <ColumnDefinition Width="88" />
-                                                        <ColumnDefinition Width="130" />
-                                                        <ColumnDefinition Width="*" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <Border Padding="5,2" CornerRadius="3" HorizontalAlignment="Left">
-                                                        <TextBlock Text="{Binding Level}" FontWeight="SemiBold" />
-                                                        <Border.Style>
-                                                            <Style TargetType="Border">
-                                                                <Setter Property="Background" Value="{DynamicResource Brush.ErrorSoft}" />
-                                                                <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.Error}" />
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding Severity}" Value="Warning">
-                                                                        <Setter Property="Background" Value="{DynamicResource Brush.WarningSoft}" />
-                                                                        <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.Warning}" />
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </Border.Style>
-                                                    </Border>
-                                                    <TextBlock Grid.Column="1" Text="{Binding Source}" ToolTip="{Binding Source}" Margin="8,0" VerticalAlignment="Center" TextWrapping="Wrap" TextTrimming="None" />
-                                                    <TextBlock Grid.Column="2" Text="{Binding Location}" ToolTip="{Binding Location}" Margin="8,0" VerticalAlignment="Center" TextWrapping="Wrap" TextTrimming="None" />
-                                                    <TextBlock Grid.Column="3" Text="{Binding Code}" ToolTip="{Binding Code}" Margin="8,0" VerticalAlignment="Center" TextWrapping="Wrap" TextTrimming="None" />
-                                                    <TextBlock Grid.Column="4" Text="{Binding Message}" Margin="8,0" VerticalAlignment="Center" TextWrapping="Wrap" TextTrimming="None" />
-                                                    <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="4" Text="{Binding Detail}" Foreground="{DynamicResource Brush.TextSecondary}" Margin="8,4,8,0" TextWrapping="Wrap" TextTrimming="None" />
-                                                </Grid>
-                                            </Border>
+                                            <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1" Padding="0,6">
+    <Grid MinHeight="36">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" MinWidth="54" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        
+        <!-- 1. 级别标签：背景拉伸适配整行 -->
+        <Border Grid.Column="0" Padding="8,0" CornerRadius="4" 
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
+                Margin="0,0,12,0">
+            <TextBlock Text="{Binding Level}" FontWeight="SemiBold" 
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Background" Value="{DynamicResource Brush.ErrorSoft}" />
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.Error}" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                            <Setter Property="Background" Value="{DynamicResource Brush.WarningSoft}" />
+                            <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.Warning}" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+        </Border>
+
+        <!-- 右侧内容区：紧凑两行排版 -->
+        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+            
+            <!-- 第一行：表名（不换行） + 位置（默认颜色） -->
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,2">
+                <TextBlock Text="{Binding Source}" ToolTip="{Binding Source}" Margin="0,0,8,0" VerticalAlignment="Center" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Location}" ToolTip="{Binding Location}" Margin="0,0,8,0" VerticalAlignment="Center" />
+            </StackPanel>
+            
+            <!-- 第二行：修复提示（淡灰色） -->
+            <TextBlock Text="{Binding Detail}" Foreground="{DynamicResource Brush.TextSecondary}" TextWrapping="Wrap" />
+            
+        </StackPanel>
+    </Grid>
+</Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>

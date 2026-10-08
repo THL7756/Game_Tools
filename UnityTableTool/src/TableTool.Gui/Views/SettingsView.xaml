@@ -330,155 +330,178 @@
                     </StackPanel>
 
                     <Border Grid.Row="1" Margin="28,0,28,10" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="6">
-                        <StackPanel>
-                            <Grid Height="92">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="112" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Margin="18,8">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/folder.png" Width="15" Height="15" Margin="0,0,8,0" />
-                                        <TextBlock Text="项目根目录" Style="{StaticResource Text.SectionDark}" />
-                                    </StackPanel>
-                                    <TextBox x:Name="ProjectRootBox" Height="34" Margin="23,0,10,0" Style="{StaticResource TextBox.Field}" />
-                                    <TextBlock Text="所有相对路径的基准目录" Style="{StaticResource Text.Muted}" Margin="23,0,0,0" />
-                                </StackPanel>
-                                <Button Grid.Column="1" Height="34" Margin="0,28,18,0" Style="{StaticResource Button.Secondary}" Click="BrowseFolder_Click" Tag="root">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/folder-open.png" Width="16" Height="16" Margin="0,0,7,0" />
-                                        <TextBlock Text="浏览…" FontSize="12" />
-                                    </StackPanel>
-                                </Button>
-                            </Grid>
-                            <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
-                            <Grid Height="92">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="112" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Margin="18,8">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/table3.png" Width="15" Height="15" Margin="0,0,8,0" />
-                                        <TextBlock Text="配置表目录" Style="{StaticResource Text.SectionDark}" />
-                                    </StackPanel>
-                                    <TextBox x:Name="TableDirectoryBox" Height="34" Margin="23,0,10,0" Style="{StaticResource TextBox.Field}" />
-                                    <TextBlock Text="读取 .xlsx、.xls、.csv、.tsv 配置表" Style="{StaticResource Text.Muted}" Margin="23,0,0,0" />
-                                </StackPanel>
-                                <Button Grid.Column="1" Height="34" Margin="0,28,18,0" Style="{StaticResource Button.Secondary}" Click="BrowseFolder_Click" Tag="tables">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/folder-open.png" Width="16" Height="16" Margin="0,0,7,0" />
-                                        <TextBlock Text="浏览…" FontSize="12" />
-                                    </StackPanel>
-                                </Button>
-                            </Grid>
-                            <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
-                            <Grid Height="92">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="112" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Margin="18,8">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/monitor1.png" Width="15" Height="15" Margin="0,0,8,0" />
-                                        <TextBlock Text="客户端数据目录" Style="{StaticResource Text.SectionDark}" />
-                                    </StackPanel>
-                                    <TextBox x:Name="ClientOutputBox" Height="34" Margin="23,0,10,0" Style="{StaticResource TextBox.Field}" />
-                                    <TextBlock Text="客户端勾选时，将 JSON 文件写入此目录" Style="{StaticResource Text.Muted}" Margin="23,0,0,0" />
-                                </StackPanel>
-                                <Button Grid.Column="1" Height="34" Margin="0,28,18,0" Style="{StaticResource Button.Secondary}" Click="BrowseFolder_Click" Tag="client">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/folder-open.png" Width="16" Height="16" Margin="0,0,7,0" />
-                                        <TextBlock Text="浏览…" FontSize="12" />
-                                    </StackPanel>
-                                </Button>
-                            </Grid>
-                            <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
-                            <Grid Height="92">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="112" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Margin="18,8">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/server.png" Width="15" Height="15" Margin="0,0,8,0" />
-                                        <TextBlock Text="服务器数据目录" Style="{StaticResource Text.SectionDark}" />
-                                    </StackPanel>
-                                    <TextBox x:Name="ServerOutputBox" Height="34" Margin="23,0,10,0" Style="{StaticResource TextBox.Field}" />
-                                    <TextBlock Text="服务器勾选时，将 JSON 文件写入此目录" Style="{StaticResource Text.Muted}" Margin="23,0,0,0" />
-                                </StackPanel>
-                                <Button Grid.Column="1" Height="34" Margin="0,28,18,0" Style="{StaticResource Button.Secondary}" Click="BrowseFolder_Click" Tag="server">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/folder-open.png" Width="16" Height="16" Margin="0,0,7,0" />
-                                        <TextBlock Text="浏览…" FontSize="12" />
-                                    </StackPanel>
-                                </Button>
-                            </Grid>
-                            <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
-                            <Grid Height="92">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="112" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Margin="18,8">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/file-code2.png" Width="15" Height="15" Margin="0,0,8,0" />
-                                        <TextBlock Text="客户端代码目录" Style="{StaticResource Text.SectionDark}" />
-                                    </StackPanel>
-                                    <TextBox x:Name="ClientCodeOutputBox" Height="34" Margin="23,0,10,0" Style="{StaticResource TextBox.Field}" />
-                                    <TextBlock Text="客户端代码勾选时，将 C# 文件写入此目录" Style="{StaticResource Text.Muted}" Margin="23,0,0,0" />
-                                </StackPanel>
-                                <Button Grid.Column="1" Height="34" Margin="0,28,18,0" Style="{StaticResource Button.Secondary}" Click="BrowseFolder_Click" Tag="clientCode">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/folder-open.png" Width="16" Height="16" Margin="0,0,7,0" />
-                                        <TextBlock Text="浏览…" FontSize="12" />
-                                    </StackPanel>
-                                </Button>
-                            </Grid>
-                            <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
-                            <Grid Height="92">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="112" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Margin="18,8">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/file-code2.png" Width="15" Height="15" Margin="0,0,8,0" />
-                                        <TextBlock Text="服务器代码目录" Style="{StaticResource Text.SectionDark}" />
-                                    </StackPanel>
-                                    <TextBox x:Name="ServerCodeOutputBox" Height="34" Margin="23,0,10,0" Style="{StaticResource TextBox.Field}" />
-                                    <TextBlock Text="服务器代码勾选时，将 C# 文件写入此目录" Style="{StaticResource Text.Muted}" Margin="23,0,0,0" />
-                                </StackPanel>
-                                <Button Grid.Column="1" Height="34" Margin="0,28,18,0" Style="{StaticResource Button.Secondary}" Click="BrowseFolder_Click" Tag="serverCode">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/folder-open.png" Width="16" Height="16" Margin="0,0,7,0" />
-                                        <TextBlock Text="浏览…" FontSize="12" />
-                                    </StackPanel>
-                                </Button>
-                            </Grid>
-                            <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
-                            <Grid Height="92">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="112" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Margin="18,8">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/file-code2.png" Width="15" Height="15" Margin="0,0,8,0" />
-                                        <TextBlock Text="打表脚本" Style="{StaticResource Text.SectionDark}" />
-                                    </StackPanel>
-                                    <TextBox x:Name="BuildScriptBox" Height="34" Margin="23,0,10,0" Style="{StaticResource TextBox.Field}" />
-                                    <TextBlock Text="可选；当前打表由工具内置 JSON 和 C# 导出完成" Style="{StaticResource Text.Muted}" Margin="23,0,0,0" />
-                                </StackPanel>
-                                <Button Grid.Column="1" Height="34" Margin="0,28,18,0" Style="{StaticResource Button.Secondary}" Click="BrowseFile_Click">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/package-open.png" Width="16" Height="16" Margin="0,0,7,0" />
-                                        <TextBlock Text="浏览…" FontSize="12" />
-                                    </StackPanel>
-                                </Button>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
+    <StackPanel>
+
+        <!-- ===== 项目根目录 ===== -->
+        <Grid Margin="0,8,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Border Background="{DynamicResource Brush.Panel}" CornerRadius="6" Margin="12,0,6,0">
+                <StackPanel VerticalAlignment="Center" Margin="16,0,12,0">
+                    <TextBlock Text="项目根目录" Foreground="{DynamicResource Brush.Text}" FontSize="13" FontWeight="SemiBold"/>
+                    <TextBlock Text="所有相对路径的基准目录" Foreground="{DynamicResource Brush.TextMuted}" FontSize="11" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="6,0,12,0">
+                <!-- 路径显示：增加 HorizontalAlignment="Right" 实现右对齐 -->
+                <Border Background="{DynamicResource Brush.Panel}" CornerRadius="6" MinWidth="200" MaxWidth="300" VerticalAlignment="Stretch" Margin="0,0,8,0" HorizontalAlignment="Right">
+                    <TextBlock Text="{Binding Text, ElementName=ProjectRootBox}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="12,0" Foreground="{DynamicResource Brush.TextSecondary}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                </Border>
+                <!-- 按钮：MinWidth改为60，文本改为“更改” -->
+                <Button MinWidth="60" Height="34" Padding="12,0" Style="{StaticResource Button.Secondary}" Click="BrowseFolder_Click" Tag="root">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="/UnityTableTool;component/Assets/Icons/folder-open.png" Width="16" Height="16" Margin="0,0,7,0" />
+                        <TextBlock Text="更改" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+            <TextBox x:Name="ProjectRootBox" Visibility="Collapsed"/>
+        </Grid>
+
+        <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
+
+        <!-- ===== 配置表目录 ===== -->
+        <Grid Margin="0,8,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Border Background="{DynamicResource Brush.Panel}" CornerRadius="6" Margin="12,0,6,0">
+                <StackPanel VerticalAlignment="Center" Margin="16,0,12,0">
+                    <TextBlock Text="配置表目录" Foreground="{DynamicResource Brush.Text}" FontSize="13" FontWeight="SemiBold"/>
+                    <TextBlock Text="读取 .xlsx、.xls、.csv、.tsv 配置表" Foreground="{DynamicResource Brush.TextMuted}" FontSize="11" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="6,0,12,0">
+                <Border Background="{DynamicResource Brush.Panel}" CornerRadius="6" MinWidth="200" MaxWidth="300" VerticalAlignment="Stretch" Margin="0,0,8,0" HorizontalAlignment="Right">
+                    <TextBlock Text="{Binding Text, ElementName=TableDirectoryBox}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="12,0" Foreground="{DynamicResource Brush.TextSecondary}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                </Border>
+                <Button MinWidth="60" Height="34" Padding="12,0" Style="{StaticResource Button.Secondary}" Click="BrowseFolder_Click" Tag="tables">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="/UnityTableTool;component/Assets/Icons/folder-open.png" Width="16" Height="16" Margin="0,0,7,0" />
+                        <TextBlock Text="更改" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+            <TextBox x:Name="TableDirectoryBox" Visibility="Collapsed"/>
+        </Grid>
+
+        <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
+
+        <!-- ===== 客户端数据目录 ===== -->
+        <Grid Margin="0,8,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Border Background="{DynamicResource Brush.Panel}" CornerRadius="6" Margin="12,0,6,0">
+                <StackPanel VerticalAlignment="Center" Margin="16,0,12,0">
+                    <TextBlock Text="客户端数据目录" Foreground="{DynamicResource Brush.Text}" FontSize="13" FontWeight="SemiBold"/>
+                    <TextBlock Text="客户端勾选时，将 JSON 文件写入此目录" Foreground="{DynamicResource Brush.TextMuted}" FontSize="11" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="6,0,12,0">
+                <Border Background="{DynamicResource Brush.Panel}" CornerRadius="6" MinWidth="200" MaxWidth="300" VerticalAlignment="Stretch" Margin="0,0,8,0" HorizontalAlignment="Right">
+                    <TextBlock Text="{Binding Text, ElementName=ClientOutputBox}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="12,0" Foreground="{DynamicResource Brush.TextSecondary}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                </Border>
+                <Button MinWidth="60" Height="34" Padding="12,0" Style="{StaticResource Button.Secondary}" Click="BrowseFolder_Click" Tag="client">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="/UnityTableTool;component/Assets/Icons/folder-open.png" Width="16" Height="16" Margin="0,0,7,0" />
+                        <TextBlock Text="更改" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+            <TextBox x:Name="ClientOutputBox" Visibility="Collapsed"/>
+        </Grid>
+
+        <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
+
+        <!-- ===== 服务器数据目录 ===== -->
+        <Grid Margin="0,8,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Border Background="{DynamicResource Brush.Panel}" CornerRadius="6" Margin="12,0,6,0">
+                <StackPanel VerticalAlignment="Center" Margin="16,0,12,0">
+                    <TextBlock Text="服务器数据目录" Foreground="{DynamicResource Brush.Text}" FontSize="13" FontWeight="SemiBold"/>
+                    <TextBlock Text="服务器勾选时，将 JSON 文件写入此目录" Foreground="{DynamicResource Brush.TextMuted}" FontSize="11" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="6,0,12,0">
+                <Border Background="{DynamicResource Brush.Panel}" CornerRadius="6" MinWidth="200" MaxWidth="300" VerticalAlignment="Stretch" Margin="0,0,8,0" HorizontalAlignment="Right">
+                    <TextBlock Text="{Binding Text, ElementName=ServerOutputBox}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="12,0" Foreground="{DynamicResource Brush.TextSecondary}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                </Border>
+                <Button MinWidth="60" Height="34" Padding="12,0" Style="{StaticResource Button.Secondary}" Click="BrowseFolder_Click" Tag="server">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="/UnityTableTool;component/Assets/Icons/folder-open.png" Width="16" Height="16" Margin="0,0,7,0" />
+                        <TextBlock Text="更改" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+            <TextBox x:Name="ServerOutputBox" Visibility="Collapsed"/>
+        </Grid>
+
+        <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
+
+        <!-- ===== 客户端代码目录 ===== -->
+        <Grid Margin="0,8,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Border Background="{DynamicResource Brush.Panel}" CornerRadius="6" Margin="12,0,6,0">
+                <StackPanel VerticalAlignment="Center" Margin="16,0,12,0">
+                    <TextBlock Text="客户端代码目录" Foreground="{DynamicResource Brush.Text}" FontSize="13" FontWeight="SemiBold"/>
+                    <TextBlock Text="客户端代码勾选时，将 C# 文件写入此目录" Foreground="{DynamicResource Brush.TextMuted}" FontSize="11" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="6,0,12,0">
+                <Border Background="{DynamicResource Brush.Panel}" CornerRadius="6" MinWidth="200" MaxWidth="300" VerticalAlignment="Stretch" Margin="0,0,8,0" HorizontalAlignment="Right">
+                    <TextBlock Text="{Binding Text, ElementName=ClientCodeOutputBox}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="12,0" Foreground="{DynamicResource Brush.TextSecondary}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                </Border>
+                <Button MinWidth="60" Height="34" Padding="12,0" Style="{StaticResource Button.Secondary}" Click="BrowseFolder_Click" Tag="clientCode">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="/UnityTableTool;component/Assets/Icons/folder-open.png" Width="16" Height="16" Margin="0,0,7,0" />
+                        <TextBlock Text="更改" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+            <TextBox x:Name="ClientCodeOutputBox" Visibility="Collapsed"/>
+        </Grid>
+
+        <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
+
+        <!-- ===== 服务器代码目录 ===== -->
+        <Grid Margin="0,8,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Border Background="{DynamicResource Brush.Panel}" CornerRadius="6" Margin="12,0,6,0">
+                <StackPanel VerticalAlignment="Center" Margin="16,0,12,0">
+                    <TextBlock Text="服务器代码目录" Foreground="{DynamicResource Brush.Text}" FontSize="13" FontWeight="SemiBold"/>
+                    <TextBlock Text="服务器代码勾选时，将 C# 文件写入此目录" Foreground="{DynamicResource Brush.TextMuted}" FontSize="11" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="6,0,12,0">
+                <Border Background="{DynamicResource Brush.Panel}" CornerRadius="6" MinWidth="200" MaxWidth="300" VerticalAlignment="Stretch" Margin="0,0,8,0" HorizontalAlignment="Right">
+                    <TextBlock Text="{Binding Text, ElementName=ServerCodeOutputBox}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="12,0" Foreground="{DynamicResource Brush.TextSecondary}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                </Border>
+                <Button MinWidth="60" Height="34" Padding="12,0" Style="{StaticResource Button.Secondary}" Click="BrowseFolder_Click" Tag="serverCode">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="/UnityTableTool;component/Assets/Icons/folder-open.png" Width="16" Height="16" Margin="0,0,7,0" />
+                        <TextBlock Text="更改" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+            <TextBox x:Name="ServerCodeOutputBox" Visibility="Collapsed"/>
+        </Grid>
+
+    </StackPanel>
+</Border>
                 </Grid>
 
                 <Grid x:Name="ShortcutsPanel" Visibility="Collapsed" Margin="28,20">

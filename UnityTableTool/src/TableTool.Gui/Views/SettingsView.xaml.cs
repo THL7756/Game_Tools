@@ -41,7 +41,6 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         ServerOutputBox.Text = settings.ServerOutputDirectory;
         ClientCodeOutputBox.Text = settings.ClientCodeOutputDirectory;
         ServerCodeOutputBox.Text = settings.ServerCodeOutputDirectory;
-        BuildScriptBox.Text = settings.BuildScriptPath;
         BuildShortcutBox.Text = settings.BuildShortcut;
         RefreshShortcutBox.Text = settings.RefreshShortcut;
         ArrayInnerSeparatorBox.Text = settings.ArrayInnerSeparator;
@@ -481,21 +480,6 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         ToolLogService.Info("设置", $"选择目录：{dialog.FolderName}");
     }
 
-    private void BrowseFile_Click(object sender, RoutedEventArgs e)
-    {
-        var dialog = new OpenFileDialog
-        {
-            Title = "选择打表脚本",
-            Filter = "脚本文件 (*.py;*.ps1;*.bat;*.cmd)|*.py;*.ps1;*.bat;*.cmd|所有文件 (*.*)|*.*",
-            InitialDirectory = settings.ProjectRootDirectory
-        };
-        if (dialog.ShowDialog() == true)
-        {
-            BuildScriptBox.Text = dialog.FileName;
-            ToolLogService.Info("设置", $"选择打表脚本：{dialog.FileName}");
-        }
-    }
-
     private string GetInitialDirectory(string? tag) => tag switch
     {
         "tables" => TableDirectoryBox.Text,
@@ -546,7 +530,6 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         settings.ServerOutputDirectory = ServerOutputBox.Text.Trim();
         settings.ClientCodeOutputDirectory = ClientCodeOutputBox.Text.Trim();
         settings.ServerCodeOutputDirectory = ServerCodeOutputBox.Text.Trim();
-        settings.BuildScriptPath = BuildScriptBox.Text.Trim();
         settings.AccentColor = NormalizeColor(AccentTextBox.Text, settings.AccentColor);
         settings.BackgroundColor = NormalizeColor(BackgroundTextBox.Text, settings.BackgroundColor);
         settings.ForegroundColor = NormalizeColor(ForegroundTextBox.Text, settings.ForegroundColor);
