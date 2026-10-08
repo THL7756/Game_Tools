@@ -28,7 +28,6 @@ private bool isApplyingLanguage;
         settings = SettingsStore.Load();
         ThemeManager.Apply(settings);
 LoadLanguages();
-SearchMenuItem.InputGestureText = settings.SearchShortcut;
 UpdateThemeButtons();
         ApplyZoom();
         isInitializing = false;
@@ -43,7 +42,11 @@ UpdateThemeButtons();
             ShowSettings("appearance");
         else
 ShowWorkbench();
-ThemeManager.ThemeChanged += (_, _) => Dispatcher.BeginInvoke(UpdateThemeButtons);
+ThemeManager.ThemeChanged += (_, _) => Dispatcher.BeginInvoke(() =>
+{
+    UpdateThemeButtons();
+    ApplyZoom();
+});
 ApplyLanguageSafely();
 
     }
@@ -91,7 +94,6 @@ ApplyLanguageSafely();
                 SettingsStore.Save(settings);
                 ThemeManager.Apply(settings);
                 ApplyZoom();
-                SearchMenuItem.InputGestureText = settings.SearchShortcut;
                 workbenchView?.RefreshTables(selectAll: false);
                 ShowWorkbench();
             };
@@ -184,6 +186,7 @@ UpdateThemeButtons();
         };
         ThemeManager.Apply(settings);
         SettingsStore.Save(settings);
+        ToolLogService.Info("界面", $"页面模式已切换：{settings.AppearanceMode}");
     }
 
 
@@ -323,12 +326,6 @@ private void ExecuteFocusedCommand(RoutedCommand command)
         if (MainContent.Content is SettingsView)
             return;
 
-        if (MatchesShortcut(settings.SearchShortcut, e))
-        {
-            FocusSearchBox();
-            e.Handled = true;
-            return;
-        }
 
         if (MatchesShortcut(settings.BuildShortcut, e))
         {
@@ -374,9 +371,11 @@ private void ExecuteFocusedCommand(RoutedCommand command)
         {
             Directory.CreateDirectory(path);
             Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+            ToolLogService.Info("系统", $"打开目录：{path}");
         }
-        catch
+        catch (Exception error)
         {
+            ToolLogService.Error("系统", $"打开目录失败：{path}：{error.Message}");
         }
     }
 

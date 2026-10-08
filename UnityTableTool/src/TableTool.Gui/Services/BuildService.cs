@@ -118,13 +118,20 @@ public sealed class BuildService
         IReadOnlyList<TableDocument> allDocuments,
         IReadOnlyList<TableDocument> selectedDocuments)
     {
-        foreach (var name in TableSelectionResolver.FindMissingReferences(allDocuments, selectedDocuments))
+        foreach (var missing in TableSelectionResolver.FindMissingReferenceDetails(allDocuments, selectedDocuments))
         {
+            var field = selectedDocuments
+                .FirstOrDefault(document => string.Equals(document.SourceName, missing.SourceName, StringComparison.OrdinalIgnoreCase))
+                ?.Schema.Fields.FirstOrDefault(item =>
+                    string.Equals(item.Name, missing.FieldName, StringComparison.OrdinalIgnoreCase));
             yield return new ValidationIssue(
-                "REFERENCE_MISSING",
+                ErrorCodes.TableReferenceMissing,
                 ValidationSeverity.Warning,
-                $"引用表 {name} 未找到。",
-                "当前选择",
+                $"引用表 {missing.ReferencedTableName} 未找到。",
+                missing.SourceName,
+                SourceColumn: field?.SourceColumn + 1,
+                FieldName: missing.FieldName,
+                Key: missing.ReferencedTableName,
                 Suggestion: "补全引用表，或移除对应引用字段。");
         }
     }

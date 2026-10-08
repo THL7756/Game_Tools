@@ -11,7 +11,9 @@
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         Background="{DynamicResource Brush.Window}"
-        Foreground="{DynamicResource Brush.Text}">
+        Foreground="{DynamicResource Brush.Text}"
+        FontFamily="{DynamicResource Font.Interface}"
+        FontSize="{DynamicResource Size.Interface}">
     <Border Margin="1"
             Padding="22,18"
             Background="{DynamicResource Brush.Panel}"

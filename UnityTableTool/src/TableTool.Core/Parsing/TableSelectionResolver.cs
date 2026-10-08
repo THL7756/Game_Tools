@@ -2,6 +2,11 @@ using TableTool.Core.Models;
 
 namespace TableTool.Core.Parsing;
 
+public sealed record MissingReferenceDetail(
+    string SourceName,
+    string FieldName,
+    string ReferencedTableName);
+
 public static class TableSelectionResolver
 {
     public static IReadOnlyList<TableDocument> Expand(
@@ -45,15 +50,28 @@ public static class TableSelectionResolver
         IEnumerable<TableDocument> allDocuments,
         IEnumerable<TableDocument> selectedDocuments)
     {
+        return FindMissingReferenceDetails(allDocuments, selectedDocuments)
+            .Select(detail => detail.ReferencedTableName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public static IReadOnlyList<MissingReferenceDetail> FindMissingReferenceDetails(
+        IEnumerable<TableDocument> allDocuments,
+        IEnumerable<TableDocument> selectedDocuments)
+    {
         var available = allDocuments
             .Select(document => document.Schema.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         return selectedDocuments
-            .SelectMany(document => document.Schema.Fields)
-            .Where(field => field.Name.EndsWith("_id", StringComparison.OrdinalIgnoreCase))
-            .Select(field => field.Name[..^3])
-            .Where(name => !available.Contains(name))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .SelectMany(document => document.Schema.Fields.Select(field => (Document: document, Field: field)))
+            .Where(item => item.Field.Name.EndsWith("_id", StringComparison.OrdinalIgnoreCase))
+            .Select(item => new MissingReferenceDetail(
+                item.Document.SourceName,
+                item.Field.Name,
+                item.Field.Name[..^3]))
+            .Where(detail => !available.Contains(detail.ReferencedTableName))
+            .DistinctBy(detail => (detail.SourceName, detail.FieldName, detail.ReferencedTableName))
             .ToArray();
     }
 

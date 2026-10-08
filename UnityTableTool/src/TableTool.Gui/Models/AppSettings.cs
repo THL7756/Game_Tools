@@ -1,5 +1,5 @@
-// 用途：保存工具路径、界面主题和字体缩放配置。
-// 最近修改日期：2026-10-06
+// 用途：保存工具路径、界面主题、字体缩放、快捷键和滚动配置。
+// 最近修改日期：2026-10-08
 // 作者：Codex（按用户需求修改）
 
 using TableTool.Core.Models;
@@ -26,11 +26,10 @@ public sealed class AppSettings
     public string AccentColor { get; set; } = "#4D8DF7";
     public string BackgroundColor { get; set; } = "#17191D";
     public string ForegroundColor { get; set; } = "#E2E6ED";
-    public string FontFamilyName { get; set; } = "Noto Sans SC";
+    public string FontFamilyName { get; set; } = "Segoe UI";
     public double FontSize { get; set; } = 13;
-public double Zoom { get; set; } = 100;
-public string Language { get; set; } = "zh-CN";
-    public string SearchShortcut { get; set; } = "Ctrl+K";
+    public double Zoom { get; set; } = 100;
+    public string Language { get; set; } = "zh-CN";
     public string BuildShortcut { get; set; } = "Ctrl+B";
     public string RefreshShortcut { get; set; } = "Ctrl+R";
     public int VerticalWheelScrollStep { get; set; } = 12;
@@ -55,9 +54,8 @@ public string Language { get; set; } = "zh-CN";
         ForegroundColor = ForegroundColor,
         FontFamilyName = FontFamilyName,
         FontSize = FontSize,
-Zoom = Zoom,
-Language = Language,
-        SearchShortcut = SearchShortcut,
+        Zoom = Zoom,
+        Language = Language,
         BuildShortcut = BuildShortcut,
         RefreshShortcut = RefreshShortcut,
         VerticalWheelScrollStep = VerticalWheelScrollStep,

@@ -88,6 +88,7 @@
     </Window.Resources>
 
     <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
+    <ScrollViewer x:Name="ZoomViewport" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" HorizontalContentAlignment="Center" VerticalContentAlignment="Center">
     <Grid x:Name="RootLayout">
         <Grid.RowDefinitions>
             <RowDefinition Height="32" />
@@ -143,7 +144,7 @@
                         <MenuItem Header="粘贴" MinWidth="150" InputGestureText="Ctrl+V" Tag="paste" Click="MenuAction_Click" />
                         <Separator Style="{StaticResource MenuSeparatorStyle}" />
                         <MenuItem Header="全选" MinWidth="150" InputGestureText="Ctrl+A" Tag="select-all" Click="MenuAction_Click" />
-                        <MenuItem x:Name="SearchMenuItem" Header="搜索" InputGestureText="Ctrl+K" Tag="search" Click="MenuAction_Click" />
+                        <MenuItem x:Name="SearchMenuItem" Header="搜索" Tag="search" Click="MenuAction_Click" />
                     </MenuItem>
                     <MenuItem Header="查看" Style="{StaticResource MenuText}">
                         <MenuItem Header="白天" MinWidth="150" Tag="light" Click="ThemeMode_Click" />
@@ -243,5 +244,6 @@
             </Grid>
         </Border>
     </Grid>
+    </ScrollViewer>
     </Border>
 </Window>

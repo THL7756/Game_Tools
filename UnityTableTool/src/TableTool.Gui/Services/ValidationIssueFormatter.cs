@@ -1,5 +1,5 @@
-// 用途：把校验问题转换为包含文件、工作表和 Excel 单元格位置的展示文本。
-// 编写日期：2026-10-06
+// 用途：把校验问题格式化为统一的来源、位置和说明字段。
+// 编写日期：2026-10-08
 // 作者：Codex（按用户需求修改）
 
 using System.IO;
@@ -9,29 +9,44 @@ namespace TableTool.Gui.Services;
 
 public static class ValidationIssueFormatter
 {
-    public static string Location(ValidationIssue issue)
+    public static string Level(ValidationSeverity severity) => severity switch
     {
-        var source = issue.SourceName ?? string.Empty;
+        ValidationSeverity.Fatal => "致命",
+        ValidationSeverity.Error => "错误",
+        ValidationSeverity.Warning => "警告",
+        _ => "信息"
+    };
+
+    public static string Source(ValidationIssue issue)
+    {
+        var parts = SplitSource(issue.SourceName);
+        return parts.Sheet.Length == 0 ? parts.File : $"{parts.File} · {parts.Sheet}";
+    }
+
+    public static string Location(ValidationIssue issue) =>
+        issue.SourceRow is int row && issue.SourceColumn is int column
+            ? $"{ColumnName(column)}{row}"
+            : string.IsNullOrWhiteSpace(issue.FieldName) ? "表级" : issue.FieldName;
+
+    public static string Headline(ValidationIssue issue) =>
+        $"{Source(issue)} · {Location(issue)} · {issue.Code}";
+
+    public static string Detail(ValidationIssue issue) =>
+        issue.Suggestion is null ? issue.Message : $"{issue.Message} {issue.Suggestion}";
+
+    private static (string File, string Sheet) SplitSource(string sourceName)
+    {
+        var source = sourceName ?? string.Empty;
         var parts = source.Split("::", 2, StringSplitOptions.None);
         var fileName = Path.GetFileName(parts[0]);
         if (string.IsNullOrWhiteSpace(fileName))
             fileName = parts[0];
 
         var sheet = parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1])
-            ? $"[{parts[1]}]"
+            ? parts[1]
             : string.Empty;
-        var cell = issue.SourceRow is int row && issue.SourceColumn is int column
-            ? $"{ColumnName(column)}{row}"
-            : string.IsNullOrWhiteSpace(issue.FieldName) ? "表级" : issue.FieldName;
-
-        return $"{fileName}{sheet}!{cell}";
+        return (fileName, sheet);
     }
-
-    public static string Headline(ValidationIssue issue) =>
-        $"{Location(issue)} · {issue.Code}";
-
-    public static string Detail(ValidationIssue issue) =>
-        issue.Suggestion is null ? issue.Message : $"{issue.Message} {issue.Suggestion}";
 
     private static string ColumnName(int column)
     {

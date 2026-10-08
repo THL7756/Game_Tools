@@ -19,6 +19,7 @@ public partial class SettingsView : System.Windows.Controls.UserControl
     private string currentPage = "appearance";
     private bool isInitializing = true;
     private bool isChangingPage;
+    private readonly Dictionary<TextBox, string> shortcutValuesBeforeCapture = [];
 
     public event EventHandler? SettingsSaved;
 
@@ -40,31 +41,31 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         ClientCodeOutputBox.Text = settings.ClientCodeOutputDirectory;
         ServerCodeOutputBox.Text = settings.ServerCodeOutputDirectory;
         BuildScriptBox.Text = settings.BuildScriptPath;
-        SearchShortcutBox.Text = settings.SearchShortcut;
         BuildShortcutBox.Text = settings.BuildShortcut;
         RefreshShortcutBox.Text = settings.RefreshShortcut;
-        VerticalWheelStepSlider.Value = NormalizeWheelStep(settings.VerticalWheelScrollStep);
-        HorizontalWheelStepSlider.Value = NormalizeWheelStep(settings.HorizontalWheelScrollStep);
-        UpdateWheelStepLabels();
+        LoadWheelStepControls();
         AccentTextBox.Text = settings.AccentColor.ToUpperInvariant();
         BackgroundTextBox.Text = settings.BackgroundColor.ToUpperInvariant();
         ForegroundTextBox.Text = settings.ForegroundColor.ToUpperInvariant();
 
         if (ThemeCombo.Parent is Grid themeRow)
             themeRow.Visibility = Visibility.Collapsed;
-        FontCombo.SelectedIndex = settings.FontFamilyName switch
+        var installedFonts = Fonts.SystemFontFamilies
+            .OrderBy(font => font.Source, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+        FontCombo.ItemsSource = installedFonts;
+        var selectedFont = installedFonts.FirstOrDefault(font =>
+            string.Equals(font.Source, settings.FontFamilyName, StringComparison.OrdinalIgnoreCase))
+            ?? installedFonts.FirstOrDefault(font => string.Equals(font.Source, "Segoe UI", StringComparison.OrdinalIgnoreCase))
+            ?? installedFonts.FirstOrDefault();
+        FontCombo.SelectedItem = selectedFont;
+        if (selectedFont is not null && !string.Equals(selectedFont.Source, settings.FontFamilyName, StringComparison.OrdinalIgnoreCase))
         {
-            "Microsoft YaHei UI" => 1,
-            "JetBrains Mono" => 2,
-            _ => 0
-        };
-        FontSizeCombo.SelectedIndex = settings.FontSize switch
-        {
-            12 => 0,
-            14 => 2,
-            16 => 3,
-            _ => 1
-        };
+            settings.FontFamilyName = selectedFont.Source;
+            ThemeManager.Apply(settings);
+        }
+        FontSizeCombo.ItemsSource = new double[] { 8, 10, 12, 13, 14, 16, 18, 20, 24, 28, 32 };
+        FontSizeCombo.Text = settings.FontSize.ToString("0.#");
         ZoomCombo.SelectedIndex = settings.Zoom switch
         {
             90 => 0,
@@ -76,6 +77,21 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         SetPreviewSelection(settings.AppearanceMode);
     }
 
+    private void ShortcutBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (sender is not TextBox box || shortcutValuesBeforeCapture.ContainsKey(box))
+            return;
+        shortcutValuesBeforeCapture[box] = GetShortcutValue(box);
+        box.Text = "请按下快捷键…";
+    }
+
+    private void ShortcutBox_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (sender is not TextBox box || !shortcutValuesBeforeCapture.Remove(box, out _))
+            return;
+        box.Text = FormatShortcutDisplay(GetShortcutValue(box));
+    }
+
     private void ShortcutBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (sender is not TextBox box)
@@ -85,52 +101,79 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt
             or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin)
         {
+            box.Text = $"{FormatModifiers(Keyboard.Modifiers)}+…";
+            e.Handled = true;
+            return;
+        }
+
+        if (key == Key.Escape)
+        {
+            var previous = shortcutValuesBeforeCapture.GetValueOrDefault(box, GetShortcutValue(box));
+            shortcutValuesBeforeCapture.Remove(box);
+            box.Text = FormatShortcutDisplay(previous);
+            Keyboard.ClearFocus();
             e.Handled = true;
             return;
         }
 
         if (key is Key.Back or Key.Delete)
         {
-            box.Text = string.Empty;
             SetShortcutValue(box, string.Empty);
+            shortcutValuesBeforeCapture.Remove(box);
+            box.Text = "未设置";
             PersistSettings();
+            ToolLogService.Info("设置", "快捷键已清除。");
             e.Handled = true;
             return;
         }
 
-        var modifiers = Keyboard.Modifiers;
         if (key == Key.None)
         {
             e.Handled = true;
             return;
         }
 
+        var shortcut = $"{FormatModifiers(Keyboard.Modifiers)}{key}";
+        var otherBox = ReferenceEquals(box, BuildShortcutBox) ? RefreshShortcutBox : BuildShortcutBox;
+        if (string.Equals(shortcut, GetShortcutValue(otherBox), StringComparison.OrdinalIgnoreCase))
+        {
+            box.Text = "快捷键冲突，请重新输入";
+            e.Handled = true;
+            return;
+        }
+
+        SetShortcutValue(box, shortcut);
+        shortcutValuesBeforeCapture.Remove(box);
+        box.Text = shortcut;
+        PersistSettings();
+        ToolLogService.Info("设置", $"快捷键已更新：{shortcut}");
+        e.Handled = true;
+    }
+
+    private static string FormatModifiers(ModifierKeys modifiers)
+    {
         var parts = new List<string>();
         if (modifiers.HasFlag(ModifierKeys.Control)) parts.Add("Ctrl");
         if (modifiers.HasFlag(ModifierKeys.Shift)) parts.Add("Shift");
         if (modifiers.HasFlag(ModifierKeys.Alt)) parts.Add("Alt");
         if (modifiers.HasFlag(ModifierKeys.Windows)) parts.Add("Win");
-        parts.Add(key.ToString());
-        box.Text = string.Join("+", parts);
-        SetShortcutValue(box, box.Text);
-        PersistSettings();
-        e.Handled = true;
+        return parts.Count == 0 ? string.Empty : string.Join("+", parts) + "+";
     }
+
+    private static string FormatShortcutDisplay(string value) =>
+        string.IsNullOrWhiteSpace(value) ? "未设置" : value;
+
+    private string GetShortcutValue(TextBox box) =>
+        string.Equals(box.Tag?.ToString(), "build", StringComparison.OrdinalIgnoreCase)
+            ? settings.BuildShortcut
+            : settings.RefreshShortcut;
 
     private void SetShortcutValue(TextBox box, string value)
     {
-        switch (box.Tag?.ToString())
-        {
-            case "build":
-                settings.BuildShortcut = value;
-                break;
-            case "refresh":
-                settings.RefreshShortcut = value;
-                break;
-            default:
-                settings.SearchShortcut = value;
-                break;
-        }
+        if (string.Equals(box.Tag?.ToString(), "build", StringComparison.OrdinalIgnoreCase))
+            settings.BuildShortcut = value;
+        else
+            settings.RefreshShortcut = value;
     }
 
     private void SetPreviewSelection(AppearanceMode mode)
@@ -221,29 +264,44 @@ public partial class SettingsView : System.Windows.Controls.UserControl
 
     private void FontCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (isInitializing)
+        if (isInitializing || FontCombo.SelectedItem is not FontFamily font)
             return;
-        settings.FontFamilyName = FontCombo.SelectedIndex switch
-        {
-            1 => "Microsoft YaHei UI",
-            2 => "JetBrains Mono",
-            _ => "Noto Sans SC"
-        };
+        settings.FontFamilyName = font.Source;
         ThemeManager.Apply(settings);
         PersistSettings();
     }
 
     private void FontSizeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (isInitializing)
+        if (!isInitializing && FontSizeCombo.SelectedItem is double size)
+            CommitFontSize(size.ToString("0.#"), showError: false);
+    }
+
+    private void FontSizeCombo_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter)
             return;
-        settings.FontSize = FontSizeCombo.SelectedIndex switch
+        CommitFontSize(FontSizeCombo.Text, showError: true);
+        e.Handled = true;
+    }
+
+    private void FontSizeCombo_LostFocus(object sender, RoutedEventArgs e) =>
+        CommitFontSize(FontSizeCombo.Text, showError: true);
+
+    private void CommitFontSize(string text, bool showError)
+    {
+        if (!double.TryParse(text, out var size))
+            size = double.NaN;
+        if (double.IsNaN(size) || size < 6 || size > 72)
         {
-            0 => 12,
-            2 => 14,
-            3 => 16,
-            _ => 13
-        };
+            if (showError)
+                MessageBox.Show("字体大小必须是 6–72 之间的数值。", "设置", MessageBoxButton.OK, MessageBoxImage.Warning);
+            FontSizeCombo.Text = settings.FontSize.ToString("0.#");
+            return;
+        }
+
+        settings.FontSize = Math.Round(size, 1);
+        FontSizeCombo.Text = settings.FontSize.ToString("0.#");
         ThemeManager.Apply(settings);
         PersistSettings();
     }
@@ -263,39 +321,71 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         PersistSettings();
     }
 
-    private void WheelStepSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void LoadWheelStepControls()
     {
-        if (isInitializing)
+        SetWheelStepControls(VerticalWheelStepSlider, VerticalWheelStepBox, settings.VerticalWheelScrollStep);
+        SetWheelStepControls(HorizontalWheelStepSlider, HorizontalWheelStepBox, settings.HorizontalWheelScrollStep);
+    }
+
+    private static void SetWheelStepControls(Slider slider, TextBox box, int value)
+    {
+        var normalized = Math.Clamp(value, 1, 200);
+        slider.Value = Math.Min(normalized, 30);
+        box.Text = normalized.ToString();
+    }
+
+    private void VerticalWheelStepSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!isInitializing && VerticalWheelStepBox is not null)
+            SetWheelStep(true, (int)e.NewValue);
+    }
+
+    private void HorizontalWheelStepSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!isInitializing && HorizontalWheelStepBox is not null)
+            SetWheelStep(false, (int)e.NewValue);
+    }
+
+    private void WheelStepBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter)
             return;
-        settings.VerticalWheelScrollStep = SnapWheelStep(VerticalWheelStepSlider.Value);
-        settings.HorizontalWheelScrollStep = SnapWheelStep(HorizontalWheelStepSlider.Value);
-        UpdateWheelStepLabels();
+        CommitWheelStep(sender as TextBox, showError: true);
+        e.Handled = true;
+    }
+
+    private void WheelStepBox_LostFocus(object sender, RoutedEventArgs e) =>
+        CommitWheelStep(sender as TextBox, showError: true);
+
+    private void CommitWheelStep(TextBox? box, bool showError)
+    {
+        if (box is null || !int.TryParse(box.Text, out var value) || value < 1 || value > 200)
+        {
+            if (showError)
+                MessageBox.Show("滚轮步长必须是 1–200 之间的整数。", "设置", MessageBoxButton.OK, MessageBoxImage.Warning);
+            LoadWheelStepControls();
+            return;
+        }
+        SetWheelStep(ReferenceEquals(box, VerticalWheelStepBox), value);
+    }
+
+    private void SetWheelStep(bool vertical, int value)
+    {
+        value = Math.Clamp(value, 1, 200);
+        if (vertical)
+        {
+            settings.VerticalWheelScrollStep = value;
+            VerticalWheelStepBox.Text = value.ToString();
+            VerticalWheelStepSlider.Value = Math.Min(value, 30);
+        }
+        else
+        {
+            settings.HorizontalWheelScrollStep = value;
+            HorizontalWheelStepBox.Text = value.ToString();
+            HorizontalWheelStepSlider.Value = Math.Min(value, 30);
+        }
         PersistSettings();
     }
-
-    private void UpdateWheelStepLabels()
-    {
-        if (VerticalWheelStepValueText is not null)
-            VerticalWheelStepValueText.Text = $"{SnapWheelStep(VerticalWheelStepSlider.Value)} px";
-        if (HorizontalWheelStepValueText is not null)
-            HorizontalWheelStepValueText.Text = $"{SnapWheelStep(HorizontalWheelStepSlider.Value)} px";
-    }
-
-    private static double NormalizeWheelStep(int value) => value switch
-    {
-        6 => 6,
-        18 => 18,
-        24 => 24,
-        _ => 12
-    };
-
-    private static int SnapWheelStep(double value) => value switch
-    {
-        <= 9 => 6,
-        <= 15 => 12,
-        <= 21 => 18,
-        _ => 24
-    };
 
     private void AccentSwatch_Click(object sender, RoutedEventArgs e)
     {
@@ -384,6 +474,7 @@ public partial class SettingsView : System.Windows.Controls.UserControl
                 ServerCodeOutputBox.Text = dialog.FolderName;
                 break;
         }
+        ToolLogService.Info("设置", $"选择目录：{dialog.FolderName}");
     }
 
     private void BrowseFile_Click(object sender, RoutedEventArgs e)
@@ -395,7 +486,10 @@ public partial class SettingsView : System.Windows.Controls.UserControl
             InitialDirectory = settings.ProjectRootDirectory
         };
         if (dialog.ShowDialog() == true)
+        {
             BuildScriptBox.Text = dialog.FileName;
+            ToolLogService.Info("设置", $"选择打表脚本：{dialog.FileName}");
+        }
     }
 
     private string GetInitialDirectory(string? tag) => tag switch
@@ -425,14 +519,16 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         settings.FontFamilyName = defaults.FontFamilyName;
         settings.FontSize = defaults.FontSize;
         settings.Zoom = defaults.Zoom;
-        settings.SearchShortcut = defaults.SearchShortcut;
         settings.BuildShortcut = defaults.BuildShortcut;
         settings.RefreshShortcut = defaults.RefreshShortcut;
         settings.VerticalWheelScrollStep = defaults.VerticalWheelScrollStep;
         settings.HorizontalWheelScrollStep = defaults.HorizontalWheelScrollStep;
+        isInitializing = true;
         LoadControls();
+        isInitializing = false;
         ThemeManager.Apply(settings);
         PersistSettings();
+        ToolLogService.Info("设置", "已恢复默认设置。");
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)
@@ -444,9 +540,6 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         settings.ClientCodeOutputDirectory = ClientCodeOutputBox.Text.Trim();
         settings.ServerCodeOutputDirectory = ServerCodeOutputBox.Text.Trim();
         settings.BuildScriptPath = BuildScriptBox.Text.Trim();
-        settings.SearchShortcut = string.IsNullOrWhiteSpace(SearchShortcutBox.Text) ? "Ctrl+K" : SearchShortcutBox.Text.Trim();
-        settings.BuildShortcut = string.IsNullOrWhiteSpace(BuildShortcutBox.Text) ? "Ctrl+B" : BuildShortcutBox.Text.Trim();
-        settings.RefreshShortcut = string.IsNullOrWhiteSpace(RefreshShortcutBox.Text) ? "Ctrl+R" : RefreshShortcutBox.Text.Trim();
         settings.AccentColor = NormalizeColor(AccentTextBox.Text, settings.AccentColor);
         settings.BackgroundColor = NormalizeColor(BackgroundTextBox.Text, settings.BackgroundColor);
         settings.ForegroundColor = NormalizeColor(ForegroundTextBox.Text, settings.ForegroundColor);
@@ -456,6 +549,7 @@ public partial class SettingsView : System.Windows.Controls.UserControl
 
         SettingsStore.Save(settings);
         ThemeManager.Apply(settings);
+        ToolLogService.Success("设置", "设置已保存。");
         SettingsSaved?.Invoke(this, EventArgs.Empty);
     }
 
@@ -544,7 +638,7 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         if (scrollViewer is null)
             return;
 
-        var step = Math.Clamp((double)settings.VerticalWheelScrollStep, 4d, 60d);
+        var step = Math.Clamp((double)settings.VerticalWheelScrollStep, 1d, 200d);
         scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset - Math.Sign(e.Delta) * step);
         e.Handled = true;
     }

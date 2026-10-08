@@ -1,16 +1,44 @@
-// 用途：生成配置表预览、字段标题和校验问题。
-// 编写日期：2026-10-06
+// 用途：生成配置表预览、字段标题和校验高亮映射。
+// 编写日期：2026-10-08
 // 作者：Codex（按用户需求修改）
 
-using System.Data;
 using System.IO;
 using TableTool.Core.Models;
-using TableTool.Core.Parsing;
 using TableTool.Core.Validation;
+using TableTool.Gui.Views;
 
 namespace TableTool.Gui.Services;
 
-public sealed record PreviewField(string Name, string Header, string TypeLabel);
+public sealed record PreviewField(
+    string Name,
+    string Header,
+    string TypeLabel,
+    string HighlightLevel,
+    string HighlightTooltip);
+
+public sealed class PreviewRow
+{
+    private readonly IReadOnlyDictionary<string, string> values;
+    private readonly IReadOnlyDictionary<string, string> cellLevels;
+    private readonly IReadOnlyDictionary<string, string> cellTooltips;
+
+    public PreviewRow(
+        int sourceRow,
+        IReadOnlyDictionary<string, string> values,
+        IReadOnlyDictionary<string, string> cellLevels,
+        IReadOnlyDictionary<string, string> cellTooltips)
+    {
+        SourceRow = sourceRow;
+        this.values = values;
+        this.cellLevels = cellLevels;
+        this.cellTooltips = cellTooltips;
+    }
+
+    internal int SourceRow { get; }
+    public IReadOnlyDictionary<string, string> CellLevels => cellLevels;
+    public IReadOnlyDictionary<string, string> CellTooltips => cellTooltips;
+    public string? this[string fieldName] => values.GetValueOrDefault(fieldName);
+}
 
 public sealed record PreviewViewModel(
     string Title,
@@ -18,56 +46,68 @@ public sealed record PreviewViewModel(
     string SourceText,
     IReadOnlyList<string> SheetNames,
     IReadOnlyList<PreviewField> Fields,
-    DataTable Data,
+    IReadOnlyList<PreviewRow> Rows,
     IReadOnlyList<ValidationIssue> Issues,
     string IssueSummary);
 
 public sealed class PreviewService
 {
-    public PreviewViewModel Create(TableModel table, IReadOnlyList<TableModel> allTables)
+    public PreviewViewModel Create(
+        TableModel table,
+        IReadOnlyList<ValidationIssue> batchIssues)
     {
-        var document = table.Document;
-        var fields = document.Schema.Fields.Select(field => new PreviewField(
-            field.Name,
-            field.Name,
-            GetTypeLabel(field, document.Schema))).ToArray();
-
-        var data = new DataTable("Preview");
-        foreach (var field in fields)
-            data.Columns.Add(field.Name, typeof(string));
-
-        foreach (var row in document.Rows.Where(row => !row.IsTest))
-        {
-            var values = fields.Select(field =>
-            {
-                var raw = row.RawValues.TryGetValue(field.Name, out var value) ? value : null;
-                return string.IsNullOrWhiteSpace(raw)
-                    ? document.Schema.Fields.First(item => item.Name == field.Name).DefaultValue ?? string.Empty
-                    : raw;
-            }).ToArray();
-            data.Rows.Add(values);
-        }
-
-        var issues = new List<ValidationIssue>(new TableValidator().Validate(document));
-        var selectedDocuments = allTables
-            .Where(item => item.IsSelected)
-            .SelectMany(item => item.Sheets.Select(sheet => sheet.Document))
+        var document = table.CurrentSheet.Document;
+        var ownIssues = new TableValidator().Validate(document);
+        var issues = ownIssues
+            .Concat(batchIssues.Where(issue =>
+                string.Equals(issue.SourceName, document.SourceName, StringComparison.OrdinalIgnoreCase)))
+            .Distinct()
+            .OrderBy(issue => issue.Severity)
+            .ThenBy(issue => issue.SourceRow ?? 0)
+            .ThenBy(issue => issue.SourceColumn ?? 0)
             .ToArray();
-        if (selectedDocuments.Length > 0)
+        var highlights = ValidationHighlightResolver.Resolve(document, issues);
+
+        var fields = document.Schema.Fields.Select(field =>
         {
-            var missing = TableSelectionResolver.FindMissingReferences(
-                allTables.Select(item => item.Document),
-                selectedDocuments);
-            foreach (var name in missing)
+            var highlight = highlights.Fields.GetValueOrDefault(field.Name);
+            return new PreviewField(
+                field.Name,
+                field.Name,
+                GetTypeLabel(field, document.Schema),
+                ToHighlightName(highlight?.Level ?? ValidationHighlightLevel.None),
+                highlight is null ? string.Empty : $"{highlight.Code}：{highlight.Reason}");
+        }).ToArray();
+
+        var rows = document.Rows
+            .Where(row => !row.IsTest)
+            .Select(row =>
             {
-                issues.Add(new ValidationIssue(
-                    ErrorCodes.TableReferenceMissing,
-                    ValidationSeverity.Warning,
-                    $"引用表 {name} 未找到。",
-                    document.SourceName,
-                    Suggestion: "补全引用表，或移除对应引用字段。"));
-            }
-        }
+                var values = document.Schema.Fields.ToDictionary(
+                    field => field.Name,
+                    field =>
+                    {
+                        var raw = row.RawValues.GetValueOrDefault(field.Name);
+                        return string.IsNullOrWhiteSpace(raw)
+                            ? field.DefaultValue ?? string.Empty
+                            : raw;
+                    },
+                    StringComparer.OrdinalIgnoreCase);
+                var cellLevels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                var cellTooltips = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var field in document.Schema.Fields)
+                {
+                    var key = ValidationHighlightResolver.CellKey(row.SourceRow, field.Name);
+                    var highlight = highlights.Cells.GetValueOrDefault(key);
+                    if (highlight is null)
+                        continue;
+                    cellLevels[field.Name] = ToHighlightName(highlight.Level);
+                    cellTooltips[field.Name] = $"{highlight.Code}：{highlight.Reason}";
+                }
+
+                return new PreviewRow(row.SourceRow, values, cellLevels, cellTooltips);
+            })
+            .ToArray();
 
         var errors = issues.Count(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal);
         var warnings = issues.Count(issue => issue.Severity == ValidationSeverity.Warning);
@@ -81,10 +121,17 @@ public sealed class PreviewService
             $"{GetRelativeSource(table.SourcePath)} · {table.CurrentSheet.SheetName}",
             sheetNames,
             fields,
-            data,
+            rows,
             issues,
             $"{errors} 错误 / {warnings} 警告");
     }
+
+    public static string ToHighlightName(ValidationHighlightLevel level) => level switch
+    {
+        ValidationHighlightLevel.Error => "Error",
+        ValidationHighlightLevel.Warning => "Warning",
+        _ => "None"
+    };
 
     private static string GetTypeLabel(FieldSchema field, TableSchema schema)
     {

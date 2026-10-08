@@ -1,5 +1,5 @@
 // 用途：根据设置更新应用颜色、字体和缩放资源。
-// 最近修改日期：2026-10-06
+// 最近修改日期：2026-10-08
 // 作者：Codex（按用户需求修改）
 
 using System.Windows;
@@ -81,8 +81,10 @@ public static class ThemeManager
         SetBrush("Brush.Success", dark ? "#54D6A0" : "#16845B");
         SetBrush("Brush.Warning", dark ? "#E7B95E" : "#A36B00");
         SetBrush("Brush.Error", dark ? "#FF7B7B" : "#C53A3A");
+        SetBrush("Brush.SuccessSoft", dark ? "#17382D" : "#E2F4EC");
+        SetBrush("Brush.WarningSoft", dark ? "#3A3321" : "#FFF1C9");
+        SetBrush("Brush.ErrorSoft", dark ? "#3A2024" : "#FCE8E8");
         Application.Current.Resources["Font.Interface"] = new FontFamily(settings.FontFamilyName);
-        Application.Current.Resources["Font.Mono"] = new FontFamily("Consolas, Cascadia Mono");
         Application.Current.Resources["Size.Interface"] = settings.FontSize;
         Application.Current.Resources["Size.Zoom"] = settings.Zoom / 100d;
         ThemeChanged?.Invoke(null, EventArgs.Empty);
@@ -109,7 +111,6 @@ public static class ThemeManager
 
     private static void ApplySystemMenuBrushes(bool dark)
     {
-        // 顶部菜单弹出项使用透明底，直接显示为主题按钮，避免 WPF 默认白色菜单边框。
         SetSystemBrush(SystemColors.MenuBrushKey, dark ? "#111111" : "#FFFFFF");
         SetSystemBrush(SystemColors.MenuTextBrushKey, dark ? "#FFFFFF" : "#000000");
         SetSystemBrush(SystemColors.MenuHighlightBrushKey, dark ? "#272B32" : "#EDF2F7");

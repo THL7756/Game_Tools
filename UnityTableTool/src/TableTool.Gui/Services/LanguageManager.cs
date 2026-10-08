@@ -56,7 +56,7 @@ public static class LanguageManager
             ["刷新内容"] = "Refresh content",
             ["打开 Excel"] = "Open in Excel",
             ["表问题"] = "Table issues",
-            ["打表日志"] = "Build log",
+            ["日志"] = "Log",
             ["输出范围"] = "Output targets",
             ["客户端"] = "Client",
             ["服务器"] = "Server",

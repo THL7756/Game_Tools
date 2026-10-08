@@ -3,7 +3,7 @@
 // 作者：Codex（按用户需求修改）
 
 using System.ComponentModel;
-using System.Data;
+using TableTool.Core.Validation;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
@@ -26,6 +26,8 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
     private IReadOnlyList<TableModel> tables = Array.Empty<TableModel>();
     private IReadOnlyList<TableModel> visibleTables = Array.Empty<TableModel>();
     private IReadOnlyList<string> catalogErrors = Array.Empty<string>();
+    private IReadOnlyList<ValidationIssue> batchIssues = Array.Empty<ValidationIssue>();
+    private string lastValidationSignature = string.Empty;
     private string activeFilter = "all";
     private DateTime lastSyncTime = DateTime.Now;
     private bool isInitializing = true;
@@ -42,6 +44,9 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         ServerCodeCheckBox.IsChecked = settings.CodeTargets.HasFlag(ExportTarget.Server);
         Loaded += (_, _) => RefreshTables(selectAll: false);
         ThemeManager.ThemeChanged += (_, _) => Dispatcher.BeginInvoke(UpdateFilterButtons);
+        ToolLogService.EntryAdded += ToolLogService_EntryAdded;
+        ToolLogService.Cleared += ToolLogService_Cleared;
+        ReloadLogs();
         isInitializing = false;
     }
 
@@ -62,6 +67,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             StatusChanged?.Invoke(this, result.Errors.Count > 0
                 ? string.Join("；", result.Errors)
                 : "未找到可读取的配置表，已保留当前列表。");
+            ToolLogService.Warning("配置表", "刷新表列表未找到可读取文件，已保留当前列表。");
             catalogErrors = result.Errors;
             UpdateSelectionUi();
             return;
@@ -88,6 +94,10 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         ApplyFilter();
         lastSyncTime = DateTime.Now;
         SyncText.Text = string.Format("已同步 {0}", lastSyncTime.ToString("HH:mm"));
+        if (result.Errors.Count == 0)
+            ToolLogService.Success("配置表", $"刷新表列表：读取 {result.Tables.Count} 个文件。");
+        else
+            ToolLogService.Warning("配置表", $"刷新表列表：读取 {result.Tables.Count} 个文件，{result.Errors.Count} 个错误。");
         if (result.Errors.Count > 0)
             StatusChanged?.Invoke(this, string.Join("；", result.Errors));
         else
@@ -173,30 +183,35 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
 
     private void UpdatePreview(TableModel table)
     {
-        var preview = previewService.Create(table, tables);
+        var allDocuments = tables.SelectMany(item => item.Sheets.Select(sheet => sheet.Document)).ToArray();
+        var selectedSourceNames = tables
+            .Where(item => item.IsSelected)
+            .SelectMany(item => item.Sheets.Select(sheet => sheet.Document.SourceName));
+        batchIssues = TableBatchValidator.Validate(allDocuments, selectedSourceNames).Issues;
+        var preview = previewService.Create(table, batchIssues);
         PreviewTitleText.Text = preview.Title;
         ModifiedText.Text = preview.ModifiedText;
         SourceText.Text = preview.SourceText;
         SheetTabs.ItemsSource = table.Sheets;
         ReadOnlyText.Text = string.Format("只读预览 · {0} 个字段", preview.Fields.Count);
-        var errorCount = preview.Issues.Count(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal);
-        var warningCount = preview.Issues.Count(issue => issue.Severity == ValidationSeverity.Warning);
+        var errorCount = batchIssues.Count(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal) + catalogErrors.Count;
+        var warningCount = batchIssues.Count(issue => issue.Severity == ValidationSeverity.Warning);
         ErrorSummaryText.Text = string.Format("{0} 错误", errorCount);
         WarningSummaryText.Text = string.Format("{0} 警告", warningCount);
-        IssueRangeText.Text = string.Empty;
+        var validationSignature = string.Join("|", selectedSourceNames.OrderBy(name => name, StringComparer.OrdinalIgnoreCase))
+            + $"::{errorCount}:{warningCount}";
+        if (!string.Equals(lastValidationSignature, validationSignature, StringComparison.Ordinal))
+        {
+            lastValidationSignature = validationSignature;
+            ToolLogService.Info("校验", $"检查 {batchIssues.Count} 条问题：{errorCount} 错误，{warningCount} 警告。");
+        }
+        UpdateSheetValidationStates(table, preview.Issues);
 
         BuildPreviewColumns(preview);
-        PreviewGrid.ItemsSource = preview.Data.DefaultView;
-        IssuesList.ItemsSource = preview.Issues
-            .OrderBy(issue => issue.Severity)
-            .Select(issue => new IssueDisplayItem(
-                ValidationIssueFormatter.Headline(issue),
-                ValidationIssueFormatter.Detail(issue),
-                issue.Severity))
-            .Concat(catalogErrors.Select(error => new IssueDisplayItem(
-                "表读取失败",
-                error,
-                ValidationSeverity.Error)))
+        PreviewGrid.ItemsSource = preview.Rows;
+        IssuesList.ItemsSource = batchIssues
+            .Select(IssueDisplayItem.FromIssue)
+            .Concat(catalogErrors.Select(IssueDisplayItem.CatalogError))
             .ToArray();
     }
 
@@ -208,12 +223,13 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             var header = new StackPanel
             {
                 Margin = new Thickness(0, 1, 0, 1),
-                HorizontalAlignment = HorizontalAlignment.Center
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Background = GetHighlightBrush(field.HighlightLevel),
+                ToolTip = string.IsNullOrWhiteSpace(field.HighlightTooltip) ? null : field.HighlightTooltip
             };
             header.Children.Add(new TextBlock
             {
                 Text = field.Header,
-                FontFamily = (FontFamily)FindResource("Font.Mono"),
                 FontSize = 11,
                 FontWeight = FontWeights.SemiBold,
                 Foreground = (Brush)FindResource("Brush.Text"),
@@ -229,12 +245,32 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
                 TextAlignment = TextAlignment.Center
             });
 
+            var cellStyle = new Style(typeof(DataGridCell));
+            cellStyle.Setters.Add(new Setter(ToolTipProperty, new Binding($"CellTooltips[{field.Name}]")));
+            var errorTrigger = new DataTrigger
+            {
+                Binding = new Binding($"CellLevels[{field.Name}]"),
+                Value = "Error"
+            };
+            errorTrigger.Setters.Add(new Setter(BackgroundProperty, FindResource("Brush.ErrorSoft")));
+            errorTrigger.Setters.Add(new Setter(ForegroundProperty, FindResource("Brush.Error")));
+            cellStyle.Triggers.Add(errorTrigger);
+            var warningTrigger = new DataTrigger
+            {
+                Binding = new Binding($"CellLevels[{field.Name}]"),
+                Value = "Warning"
+            };
+            warningTrigger.Setters.Add(new Setter(BackgroundProperty, FindResource("Brush.WarningSoft")));
+            warningTrigger.Setters.Add(new Setter(ForegroundProperty, FindResource("Brush.Warning")));
+            cellStyle.Triggers.Add(warningTrigger);
+
             PreviewGrid.Columns.Add(new DataGridTextColumn
             {
                 Header = header,
                 Binding = new Binding($"[{field.Name}]"),
                 Width = GetColumnWidth(field.Name),
                 CanUserSort = false,
+                CellStyle = cellStyle,
                 ElementStyle = new Style(typeof(TextBlock))
                 {
                     Setters =
@@ -248,6 +284,37 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             });
         }
     }
+
+    private void UpdateSheetValidationStates(TableModel table, IReadOnlyList<ValidationIssue> previewIssues)
+    {
+        foreach (var sheet in table.Sheets)
+        {
+            var issues = new TableValidator().Validate(sheet.Document)
+                .Concat(batchIssues.Where(issue => string.Equals(issue.SourceName, sheet.Document.SourceName, StringComparison.OrdinalIgnoreCase)))
+                .Concat(sheet == table.CurrentSheet ? previewIssues : [])
+                .Distinct()
+                .ToArray();
+            var level = ValidationHighlightResolver.GetHighestLevel(issues);
+            var (levelName, marker) = level switch
+            {
+                ValidationHighlightLevel.Error => ("Error", "错"),
+                ValidationHighlightLevel.Warning => ("Warning", "警"),
+                _ => ("None", string.Empty)
+            };
+            var highestIssue = issues.FirstOrDefault(issue => level == ValidationHighlightLevel.Error
+                ? issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal
+                : issue.Severity == ValidationSeverity.Warning);
+            var tooltip = highestIssue is null ? string.Empty : $"{highestIssue.Code}：{highestIssue.Message}";
+            sheet.SetValidationState(levelName, marker, tooltip);
+        }
+    }
+
+    private Brush GetHighlightBrush(string level) => level switch
+    {
+        "Error" => (Brush)FindResource("Brush.ErrorSoft"),
+        "Warning" => (Brush)FindResource("Brush.WarningSoft"),
+        _ => Brushes.Transparent
+    };
 
     private static DataGridLength GetColumnWidth(string fieldName) => fieldName switch
     {
@@ -271,7 +338,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         PreviewGrid.ItemsSource = null;
         PreviewGrid.Columns.Clear();
         IssuesList.ItemsSource = catalogErrors
-            .Select(error => new IssueDisplayItem("表读取失败", error, ValidationSeverity.Error))
+            .Select(IssueDisplayItem.CatalogError)
             .ToArray();
         ErrorSummaryText.Text = "0 错误";
         WarningSummaryText.Text = "0 警告";
@@ -300,9 +367,9 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         if (scrollViewer is null)
             return;
 
-        var step = Math.Clamp((double)settings.VerticalWheelScrollStep, 4d, 60d);
+        var step = Math.Clamp((double)settings.VerticalWheelScrollStep, 1d, 200d);
         if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
-            scrollViewer.ScrollToHorizontalOffset(scrollViewer.HorizontalOffset - Math.Sign(e.Delta) * Math.Clamp((double)settings.HorizontalWheelScrollStep, 4d, 60d));
+            scrollViewer.ScrollToHorizontalOffset(scrollViewer.HorizontalOffset - Math.Sign(e.Delta) * Math.Clamp((double)settings.HorizontalWheelScrollStep, 1d, 200d));
         else
             scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset - Math.Sign(e.Delta) * step);
 
@@ -422,6 +489,8 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         table.IsFavorite = !table.IsFavorite;
         settings.Favorites = tables.Where(item => item.IsFavorite).Select(item => item.FavoriteKey).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         SettingsStore.Save(settings);
+        var favoriteAction = table.IsFavorite ? "收藏" : "取消收藏";
+        ToolLogService.Info("工作台", $"{favoriteAction}：{table.DisplayName}");
         ApplyFilter();
         UpdateSelectionUi();
     }
@@ -444,6 +513,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         settings.CodeTargets = (ClientCodeCheckBox.IsChecked == true ? ExportTarget.Client : ExportTarget.None)
             | (ServerCodeCheckBox.IsChecked == true ? ExportTarget.Server : ExportTarget.None);
         SettingsStore.Save(settings);
+        ToolLogService.Info("工作台", "输出范围已更新。");
         if (IsLoaded)
             UpdateSelectionUi();
     }
@@ -453,12 +523,9 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         if (catalogErrors.Count > 0 && tables.Count == 0)
         {
             IssuesList.ItemsSource = catalogErrors
-                .Select(error => new IssueDisplayItem("表读取失败", error, ValidationSeverity.Error))
+                .Select(IssueDisplayItem.CatalogError)
                 .ToArray();
-            LogsList.ItemsSource = new[]
-            {
-                new LogDisplayItem(DateTime.Now, "FAIL", "打表失败，请展开日志查看详细信息。")
-            };
+            ToolLogService.Error("打表", "存在无法读取的表，已停止打表。");
             SetLogsExpanded(true);
             ShowBuildResultDialog(success: false);
             StatusChanged?.Invoke(this, "存在无法读取的表，已停止打表");
@@ -473,24 +540,18 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             .Where(table => table.IsSelected)
             .SelectMany(table => table.Sheets.Select(sheet => sheet.Document.SourceName));
         var result = buildService.Build(settings, tables, selectedSources, dataTarget, codeTarget);
-        var buildLogs = result.Logs.Select(log => new LogDisplayItem(log.Time, log.Level, log.Message));
+        foreach (var log in result.Logs)
+            ToolLogService.Add(NormalizeBuildLevel(log.Level), "打表", log.Message);
         if (catalogErrors.Count > 0)
-            buildLogs = new[]
-            {
-                new LogDisplayItem(DateTime.Now, "WARN", "部分文件读取失败，本次打表使用已保留的内存数据。")
-            }.Concat(buildLogs);
-        LogsList.ItemsSource = buildLogs.ToArray();
-        IssuesList.ItemsSource = result.Issues
+            ToolLogService.Warning("配置表", "部分文件读取失败，本次打表使用已保留的内存数据。");
+        IssuesList.ItemsSource = batchIssues
+            .Concat(result.Issues)
+            .Distinct()
             .OrderBy(issue => issue.Severity)
-            .Select(issue => new IssueDisplayItem(
-                ValidationIssueFormatter.Headline(issue),
-                ValidationIssueFormatter.Detail(issue),
-                issue.Severity))
-            .Concat(catalogErrors.Select(error => new IssueDisplayItem(
-                "表读取失败",
-                error,
-                ValidationSeverity.Warning)))
+            .Select(IssueDisplayItem.FromIssue)
+            .Concat(catalogErrors.Select(IssueDisplayItem.CatalogError))
             .ToArray();
+        ReloadLogs();
 
         if (result.Success)
         {
@@ -530,12 +591,41 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
     private void CopyLogs_Click(object sender, RoutedEventArgs e)
     {
         var items = LogsList.ItemsSource as IEnumerable<LogDisplayItem> ?? [];
-        var text = string.Join(Environment.NewLine, items.Select(item => $"{item.TimeText} {item.Level} {item.Message}"));
+        var text = string.Join(Environment.NewLine, items.Select(item => item.CopyText));
         if (text.Length > 0)
             Clipboard.SetText(text);
     }
 
-    private void ClearLogs_Click(object sender, RoutedEventArgs e) => LogsList.ItemsSource = Array.Empty<LogDisplayItem>();
+    private void CopyIssues_Click(object sender, RoutedEventArgs e)
+    {
+        var items = IssuesList.ItemsSource as IEnumerable<IssueDisplayItem> ?? [];
+        var text = string.Join(Environment.NewLine, items.Select(item => item.CopyText));
+        if (text.Length > 0)
+            Clipboard.SetText(text);
+    }
+
+    private void ClearLogs_Click(object sender, RoutedEventArgs e) => ToolLogService.Clear();
+
+    private void ToolLogService_EntryAdded(object? sender, ToolLogEntry entry) =>
+        Dispatcher.BeginInvoke(ReloadLogs);
+
+    private void ToolLogService_Cleared(object? sender, EventArgs e) =>
+        Dispatcher.BeginInvoke(ReloadLogs);
+
+    private void ReloadLogs()
+    {
+        LogsList.ItemsSource = ToolLogService.Snapshot()
+            .Select(LogDisplayItem.FromEntry)
+            .ToArray();
+    }
+
+    private static string NormalizeBuildLevel(string level) => level switch
+    {
+        "PASS" or "DONE" => "SUCCESS",
+        "WARN" => "WARNING",
+        "FAIL" => "ERROR",
+        _ => "INFO"
+    };
 
     private void ToggleLogs_Click(object sender, RoutedEventArgs e)
     {
@@ -562,9 +652,11 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             if (string.IsNullOrWhiteSpace(Path.GetExtension(path)))
                 Directory.CreateDirectory(path);
             Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+            ToolLogService.Info("系统", $"打开：{path}");
         }
-        catch
+        catch (Exception error)
         {
+            ToolLogService.Error("系统", $"打开失败：{path}：{error.Message}");
         }
     }
 }

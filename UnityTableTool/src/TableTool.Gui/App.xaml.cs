@@ -6,6 +6,7 @@ using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Threading;
+using TableTool.Gui.Services;
 
 namespace TableTool.Gui;
 
@@ -19,6 +20,7 @@ public partial class App : System.Windows.Application
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
         base.OnStartup(e);
+        ToolLogService.Info("系统", "工具已启动");
     }
 
     internal static void LogUiError(string context, Exception error) =>
@@ -44,6 +46,7 @@ public partial class App : System.Windows.Application
 
     private static void WriteError(string context, Exception error, bool handled)
     {
+        ToolLogService.Error("系统", $"{context}：{error.Message}");
         try
         {
             var path = Path.Combine(

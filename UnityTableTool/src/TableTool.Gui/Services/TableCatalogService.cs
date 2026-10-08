@@ -1,8 +1,9 @@
 // 用途：扫描配置表文件，按文件聚合真实 Sheet，并构建工作台列表模型。
-// 编写日期：2026-10-06
+// 编写日期：2026-10-08
 // 作者：Codex（按用户需求修改）
 
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using TableTool.Core.Models;
 using TableTool.Core.Parsing;
@@ -71,7 +72,7 @@ public sealed class TableCatalogService
         var isRecent = ContainsFileKey(recent, fileKey, sourcePath, group);
         return new TableModel(
             fileKey,
-            Path.GetFileName(fileKey),
+            Path.GetFileNameWithoutExtension(fileKey),
             sourcePath,
             sheets,
             isFavorite,
@@ -110,6 +111,9 @@ public sealed class TableCatalogService
 public sealed class TableSheetModel : INotifyPropertyChanged
 {
     private bool isCurrent;
+    private string validationLevel = "None";
+    private string validationMarker = string.Empty;
+    private string validationTooltip = string.Empty;
 
     public TableSheetModel(TableDocument document, string sheetName)
     {
@@ -120,6 +124,9 @@ public sealed class TableSheetModel : INotifyPropertyChanged
     public TableDocument Document { get; }
     public string SheetName { get; }
     public string LogicalTableName => Document.Schema.Name;
+    public string ValidationLevel => validationLevel;
+    public string ValidationMarker => validationMarker;
+    public string ValidationTooltip => validationTooltip;
 
     public bool IsCurrent
     {
@@ -131,6 +138,16 @@ public sealed class TableSheetModel : INotifyPropertyChanged
             isCurrent = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsCurrent)));
         }
+    }
+
+    public void SetValidationState(string level, string marker, string tooltip)
+    {
+        validationLevel = level;
+        validationMarker = marker;
+        validationTooltip = tooltip;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ValidationLevel)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ValidationMarker)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ValidationTooltip)));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -166,7 +183,7 @@ public sealed class TableModel : INotifyPropertyChanged
     public string FileKey { get; }
     public string FavoriteKey => FileKey;
     public string DisplayName { get; }
-    public string DisplayLabel => DisplayName;
+    public string DisplayLabel => TruncateDisplayName(DisplayName, 7);
     public string SourcePath { get; }
     public bool IsRecent { get; }
     public IReadOnlyList<TableSheetModel> Sheets { get; }
@@ -212,4 +229,20 @@ public sealed class TableModel : INotifyPropertyChanged
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    private static string TruncateDisplayName(string value, int maxTextElements)
+    {
+        if (string.IsNullOrEmpty(value))
+            return string.Empty;
+
+        var elements = StringInfo.GetTextElementEnumerator(value);
+        var result = new List<string>(maxTextElements + 1);
+        while (elements.MoveNext() && result.Count < maxTextElements)
+            result.Add(elements.GetTextElement());
+
+        var hasMore = elements.MoveNext();
+        return hasMore
+            ? string.Concat(result) + "…"
+            : value;
+    }
 }
