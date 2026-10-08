@@ -363,11 +363,11 @@
                                                             </Style>
                                                         </Border.Style>
                                                     </Border>
-                                                    <TextBlock Grid.Column="1" Text="{Binding Source}" Margin="8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Grid.Column="2" Text="{Binding Location}" Margin="8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Grid.Column="3" Text="{Binding Code}" Margin="8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Grid.Column="4" Text="{Binding Message}" Margin="8,0" VerticalAlignment="Center" TextWrapping="Wrap" />
-                                                    <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="4" Text="{Binding Detail}" Foreground="{DynamicResource Brush.TextSecondary}" Margin="8,4,8,0" TextWrapping="Wrap" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Source}" ToolTip="{Binding Source}" Margin="8,0" VerticalAlignment="Center" TextWrapping="Wrap" TextTrimming="None" />
+                                                    <TextBlock Grid.Column="2" Text="{Binding Location}" ToolTip="{Binding Location}" Margin="8,0" VerticalAlignment="Center" TextWrapping="Wrap" TextTrimming="None" />
+                                                    <TextBlock Grid.Column="3" Text="{Binding Code}" ToolTip="{Binding Code}" Margin="8,0" VerticalAlignment="Center" TextWrapping="Wrap" TextTrimming="None" />
+                                                    <TextBlock Grid.Column="4" Text="{Binding Message}" Margin="8,0" VerticalAlignment="Center" TextWrapping="Wrap" TextTrimming="None" />
+                                                    <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="4" Text="{Binding Detail}" Foreground="{DynamicResource Brush.TextSecondary}" Margin="8,4,8,0" TextWrapping="Wrap" TextTrimming="None" />
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
@@ -423,7 +423,7 @@
                                                         </Style>
                                                     </TextBlock.Style>
                                                 </TextBlock>
-                                                <TextBlock Grid.Column="2" Text="{Binding Source}" Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Source}" Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center" TextWrapping="Wrap" TextTrimming="None" Margin="0,0,8,0" />
                                                 <TextBlock Grid.Column="3" Text="{Binding Message}" Foreground="{DynamicResource Brush.TextSecondary}" TextWrapping="Wrap" />
                                             </Grid>
                                         </DataTemplate>

@@ -1,5 +1,9 @@
 using TableTool.Core.Models;
 
+// 用途：按客户端或服务器端过滤表字段，同时保留行来源坐标。
+// 编写日期：2026-10-08
+// 作者：Codex（按用户需求修改）
+
 namespace TableTool.Core.Parsing;
 
 public static class TableDocumentFilter
@@ -22,7 +26,8 @@ public static class TableDocumentFilter
                 row.IsTest,
                 row.RawValues
                     .Where(pair => names.Contains(pair.Key))
-                    .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal)))
+                    .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase),
+                row.SourceName))
             .ToArray();
 
         var schema = document.Schema with

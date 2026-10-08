@@ -57,6 +57,7 @@ public sealed class TableValidator
         var keys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var row in document.Rows)
         {
+            var rowSource = row.SourceName ?? document.SourceName;
             foreach (var field in document.Schema.AllFields)
             {
                 var raw = row.RawValues.TryGetValue(field.Name, out var value) ? value : null;
@@ -80,8 +81,8 @@ public sealed class TableValidator
                             : string.IsNullOrWhiteSpace(raw) ? ErrorCodes.FieldDefaultInvalid : ErrorCodes.FieldTypeUnknown,
                         row.IsTest ? ValidationSeverity.Error : ValidationSeverity.Error,
                         BuildValueMessage(field, raw, error),
-                        document.SourceName,
-                        row.SourceRow,
+                        rowSource,
+                        document.Schema.IsSingleton ? field.NameRow : row.SourceRow,
                         field.SourceColumn + 1,
                         field.Name,
                         raw,
@@ -106,7 +107,7 @@ public sealed class TableValidator
                     ErrorCodes.PrimaryKeyMissing,
                     ValidationSeverity.Error,
                     $"主键“{document.Schema.PrimaryKey}”不能为空。",
-                    document.SourceName,
+                    rowSource,
                     row.SourceRow,
                     primaryKeyField.SourceColumn + 1,
                     document.Schema.PrimaryKey,
@@ -119,7 +120,7 @@ public sealed class TableValidator
                     ErrorCodes.PrimaryKeyDuplicate,
                     ValidationSeverity.Error,
                     $"主键“{key}”重复。",
-                    document.SourceName,
+                    rowSource,
                     row.SourceRow,
                     primaryKeyField.SourceColumn + 1,
                     document.Schema.PrimaryKey,

@@ -1,4 +1,5 @@
 // 用途：把校验问题映射为 Sheet、字段和单元格的高亮状态。
+// 用途：把校验问题映射到 Sheet、字段和预览单元格高亮。
 // 编写日期：2026-10-08
 // 作者：Codex。
 
@@ -53,7 +54,7 @@ public static class ValidationHighlightResolver
                 var key = CellKey(sourceRow, issue.FieldName);
                 cells[key] = KeepHighest(cells.GetValueOrDefault(key), highlight);
             }
-            else if (!string.IsNullOrWhiteSpace(issue.FieldName))
+            if (!string.IsNullOrWhiteSpace(issue.FieldName))
             {
                 fields[issue.FieldName] = KeepHighest(fields.GetValueOrDefault(issue.FieldName), highlight);
             }

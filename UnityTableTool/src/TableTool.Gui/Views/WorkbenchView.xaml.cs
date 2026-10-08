@@ -1,5 +1,5 @@
 // 用途：实现配置表搜索、筛选、预览、校验和 JSON/C# 打表交互。
-// 用途：实现配置表搜索、筛选、预览、校验和 JSON/C# 打表交互。
+// 编写日期：2026-10-08
 // 最近修改日期：2026-10-08
 // 作者：Codex（按用户需求修改）
 
@@ -195,32 +195,40 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         var selectedSourceNames = tables
             .Where(item => item.IsSelected)
             .SelectMany(item => item.Sheets.Select(sheet => sheet.Document.SourceName));
-        batchIssues = TableBatchValidator.Validate(allDocuments, selectedSourceNames, GetArraySeparators()).Issues;
+        var validationSources = selectedSourceNames
+            .Append(table.CurrentSheet.Document.SourceName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        batchIssues = TableBatchValidator.Validate(allDocuments, validationSources, GetArraySeparators()).Issues;
         var preview = previewService.Create(table, batchIssues, GetArraySeparators());
+        var displayIssues = batchIssues
+            .Concat(preview.Issues)
+            .Distinct()
+            .ToArray();
         PreviewTitleText.Text = preview.Title;
         ModifiedText.Text = preview.ModifiedText;
         SourceText.Text = preview.SourceText;
         SheetTabs.ItemsSource = table.Sheets;
         ReadOnlyText.Text = string.Format("只读预览 · {0} 个字段", preview.Fields.Count);
-        var errorCount = batchIssues.Count(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal)
+        var errorCount = displayIssues.Count(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal)
             + catalogErrors.Count;
-        var warningCount = batchIssues.Count(issue => issue.Severity == ValidationSeverity.Warning);
+        var warningCount = displayIssues.Count(issue => issue.Severity == ValidationSeverity.Warning);
         ErrorSummaryText.Text = string.Format("{0} 错误", errorCount);
         WarningSummaryText.Text = string.Format("{0} 警告", warningCount);
-        var validationSignature = string.Join("|", selectedSourceNames.OrderBy(name => name, StringComparer.OrdinalIgnoreCase))
+        var validationSignature = string.Join("|", validationSources.OrderBy(name => name, StringComparer.OrdinalIgnoreCase))
             + $"::{errorCount}:{warningCount}";
         if (!string.Equals(lastValidationSignature, validationSignature, StringComparison.Ordinal))
         {
             lastValidationSignature = validationSignature;
-            ToolLogService.Info("校验", $"检查 {batchIssues.Count} 条问题：{errorCount} 错误，{warningCount} 警告。");
+            ToolLogService.Info("校验", $"检查 {displayIssues.Length} 条问题：{errorCount} 错误，{warningCount} 警告。");
         }
         UpdateSheetValidationStates(table, preview.Issues);
 
         BuildPreviewColumns(preview);
         PreviewGrid.ItemsSource = preview.Rows;
-        IssuesList.ItemsSource = batchIssues
+        IssuesList.ItemsSource = displayIssues
             .Select(IssueDisplayItem.FromIssue)
-            .Concat(catalogErrors.Select(IssueDisplayItem.CatalogError))
+            .Concat(catalogErrors.Select(error => IssueDisplayItem.CatalogError(error)))
             .ToArray();
     }
 
@@ -570,7 +578,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             .Distinct()
             .OrderBy(issue => issue.Severity)
             .Select(IssueDisplayItem.FromIssue)
-            .Concat(catalogErrors.Select(IssueDisplayItem.CatalogError))
+            .Concat(catalogErrors.Select(error => IssueDisplayItem.CatalogError(error)))
             .ToArray();
         ReloadLogs();
 

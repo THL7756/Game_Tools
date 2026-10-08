@@ -14,7 +14,11 @@ public static class ErrorCodes
     public const string FieldTargetInvalid = "FIELD_TARGET_INVALID";
     public const string SingletonRowCountInvalid = "SINGLETON_ROW_COUNT_INVALID";
     public const string TableReferenceMissing = "TABLE_REFERENCE_MISSING";
+    public const string TableReferenceKeyMissing = "TABLE_REFERENCE_KEY_MISSING";
+    public const string TableReferenceTypeMismatch = "TABLE_REFERENCE_TYPE_MISMATCH";
     public const string TableMergeInvalid = "TABLE_MERGE_ERROR";
+    public const string FieldNameDuplicate = "FIELD_NAME_DUPLICATE";
+    public const string FieldNameMissing = "FIELD_NAME_MISSING";
     public const string EnumValueInvalid = "ENUM_VALUE_INVALID";
     public const string EnumCSharpInvalid = "ENUM_CSHARP_IDENTIFIER_INVALID";
     public const string TableNotFormal = "TABLE_NOT_FORMAL";

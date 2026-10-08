@@ -140,7 +140,7 @@ public sealed class PreviewService
     {
         var suffix = string.Concat(Enumerable.Repeat("()", field.Type.Dimensions));
         var type = field.Type.BaseType + suffix;
-        if (field.Name.Equals(schema.PrimaryKey, StringComparison.OrdinalIgnoreCase))
+        if (!schema.IsSingleton && field.Name.Equals(schema.PrimaryKey, StringComparison.OrdinalIgnoreCase))
             return $"{type} · 主键";
         if (field.Name.EndsWith("_id", StringComparison.OrdinalIgnoreCase))
             return $"{type} · 引用";

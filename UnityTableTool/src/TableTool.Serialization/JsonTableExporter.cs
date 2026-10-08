@@ -19,10 +19,10 @@ public sealed class JsonTableExporter
 
     public string Export(TableDocument document)
     {
-        var rows = document.Rows.Where(row => !row.IsTest).Select(row => row.RawValues.ToDictionary(
-            pair => pair.Key,
-            pair => pair.Value,
-            StringComparer.Ordinal)).ToArray();
+        var rows = document.Rows.Where(row => !row.IsTest).Select(row => document.Schema.Fields.ToDictionary(
+            field => field.Name,
+            field => GetEffectiveValue(row, field),
+            StringComparer.OrdinalIgnoreCase)).ToArray();
         var payload = new
         {
             formatVersion = 1,
@@ -41,5 +41,11 @@ public sealed class JsonTableExporter
         };
 
         return JsonSerializer.Serialize(payload, Options);
+    }
+
+    private static string? GetEffectiveValue(TableRow row, FieldSchema field)
+    {
+        var raw = row.RawValues.GetValueOrDefault(field.Name);
+        return string.IsNullOrWhiteSpace(raw) ? field.DefaultValue : raw;
     }
 }

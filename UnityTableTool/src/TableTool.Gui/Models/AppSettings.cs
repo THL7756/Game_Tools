@@ -1,4 +1,5 @@
 // 用途：保存工具路径、界面主题、字体缩放、快捷键和滚动配置。
+// 编写日期：2026-10-08
 // 最近修改日期：2026-10-08
 // 作者：Codex（按用户需求修改）
 
@@ -29,6 +30,8 @@ public sealed class AppSettings
     public string FontFamilyName { get; set; } = "Segoe UI";
     public double FontSize { get; set; } = 13;
     public double Zoom { get; set; } = 100;
+    public double WindowWidth { get; set; } = 1024;
+    public double WindowHeight { get; set; } = 680;
     public string Language { get; set; } = "zh-CN";
     public string BuildShortcut { get; set; } = "Ctrl+B";
     public string RefreshShortcut { get; set; } = "Ctrl+R";
@@ -58,6 +61,8 @@ public sealed class AppSettings
         FontFamilyName = FontFamilyName,
         FontSize = FontSize,
         Zoom = Zoom,
+        WindowWidth = WindowWidth,
+        WindowHeight = WindowHeight,
         Language = Language,
         BuildShortcut = BuildShortcut,
         RefreshShortcut = RefreshShortcut,

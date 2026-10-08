@@ -1,6 +1,6 @@
 // 用途：汇总当前勾选表及其关联表的批量校验结果。
 // 编写日期：2026-10-08
-// 作者：Codex。
+// 作者：Codex（按用户需求修改）
 
 using TableTool.Core.Models;
 using TableTool.Core.Parsing;
@@ -24,28 +24,12 @@ public static class TableBatchValidator
             .ToList();
 
         issues.AddRange(TableDocumentMerger.FindSchemaConflicts(selectedDocuments));
-
-        foreach (var missing in TableSelectionResolver.FindMissingReferenceDetails(allDocuments, selectedDocuments))
-        {
-            var field = selectedDocuments
-                .FirstOrDefault(document => string.Equals(document.SourceName, missing.SourceName, StringComparison.OrdinalIgnoreCase))
-                ?.Schema.Fields.FirstOrDefault(item =>
-                    string.Equals(item.Name, missing.FieldName, StringComparison.OrdinalIgnoreCase));
-
-            issues.Add(new ValidationIssue(
-                ErrorCodes.TableReferenceMissing,
-                ValidationSeverity.Error,
-                $"引用表 {missing.ReferencedTableName} 未找到。",
-                missing.SourceName,
-                SourceColumn: field?.SourceColumn + 1,
-                FieldName: missing.FieldName,
-                Key: missing.ReferencedTableName,
-                Suggestion: "补全引用表，或移除对应引用字段。"));
-        }
+        issues.AddRange(TableReferenceValidator.Validate(allDocuments, selectedDocuments, separators));
 
         return new TableValidationBatch(
             selectedDocuments,
             issues
+                .Distinct()
                 .OrderBy(issue => issue.Severity)
                 .ThenBy(issue => issue.SourceName, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(issue => issue.SourceRow ?? 0)

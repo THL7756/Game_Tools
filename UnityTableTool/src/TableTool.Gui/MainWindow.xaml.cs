@@ -1,8 +1,10 @@
-// 用途：管理主窗口导航、窗口控制和顶层主题操作。
+// 用途：承载工具主窗口、模块切换、设置恢复和关闭保存逻辑。
+// 编写日期：2026-10-08
 // 最近修改日期：2026-10-06
 // 作者：Codex（按用户需求修改）
 
 using System.Diagnostics;
+using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -26,6 +28,9 @@ private bool isApplyingLanguage;
     {
         InitializeComponent();
         settings = SettingsStore.Load();
+        Width = Math.Max(MinWidth, settings.WindowWidth);
+        Height = Math.Max(MinHeight, settings.WindowHeight);
+        Closing += MainWindow_Closing;
         ThemeManager.Apply(settings);
 LoadLanguages();
 UpdateThemeButtons();
@@ -384,6 +389,17 @@ protected override void OnClosed(EventArgs e)
 base.OnClosed(e);
 Application.Current.Shutdown();
 Environment.Exit(0);
+}
+
+private void MainWindow_Closing(object? sender, CancelEventArgs e)
+{
+    if (WindowState == WindowState.Normal)
+    {
+        settings.WindowWidth = Math.Max(MinWidth, Width);
+        settings.WindowHeight = Math.Max(MinHeight, Height);
+    }
+
+    SettingsStore.Save(settings);
 }
 
 private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

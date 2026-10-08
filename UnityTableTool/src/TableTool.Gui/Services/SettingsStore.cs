@@ -1,4 +1,5 @@
-// 用途：读取、保存和恢复用户配置。
+// 用途：读写工具设置，并校准路径、窗口尺寸和分隔符配置。
+// 编写日期：2026-10-08
 // 最近修改日期：2026-10-06
 // 作者：Codex（按用户需求修改）
 
@@ -102,6 +103,12 @@ public static class SettingsStore
             settings.VerticalWheelScrollStep = 12;
         if (settings.HorizontalWheelScrollStep == 1)
             settings.HorizontalWheelScrollStep = 12;
+        if (double.IsNaN(settings.WindowWidth) || double.IsInfinity(settings.WindowWidth))
+            settings.WindowWidth = 1024;
+        if (double.IsNaN(settings.WindowHeight) || double.IsInfinity(settings.WindowHeight))
+            settings.WindowHeight = 680;
+        settings.WindowWidth = Math.Max(760, settings.WindowWidth);
+        settings.WindowHeight = Math.Max(520, settings.WindowHeight);
         if (!new TableTool.Core.Models.ArraySeparatorOptions(
                 settings.ArrayInnerSeparator,
                 settings.ArrayMiddleSeparator,

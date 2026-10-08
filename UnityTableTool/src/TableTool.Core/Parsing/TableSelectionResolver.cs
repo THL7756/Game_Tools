@@ -1,5 +1,9 @@
 using TableTool.Core.Models;
 
+// 用途：展开当前选择表的引用闭包，并提供缺失引用的来源详情。
+// 编写日期：2026-10-08
+// 作者：Codex（按用户需求修改）
+
 namespace TableTool.Core.Parsing;
 
 public sealed record MissingReferenceDetail(
@@ -29,7 +33,7 @@ public static class TableSelectionResolver
             changed = false;
             foreach (var table in all.Where(document => selectedTables.Contains(document.Schema.Name)))
             {
-                foreach (var field in table.Schema.Fields)
+                foreach (var field in table.Schema.AllFields)
                 {
                     if (!field.Name.EndsWith("_id", StringComparison.OrdinalIgnoreCase))
                         continue;
@@ -64,7 +68,7 @@ public static class TableSelectionResolver
             .Select(document => document.Schema.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         return selectedDocuments
-            .SelectMany(document => document.Schema.Fields.Select(field => (Document: document, Field: field)))
+            .SelectMany(document => document.Schema.AllFields.Select(field => (Document: document, Field: field)))
             .Where(item => item.Field.Name.EndsWith("_id", StringComparison.OrdinalIgnoreCase))
             .Select(item => new MissingReferenceDetail(
                 item.Document.SourceName,

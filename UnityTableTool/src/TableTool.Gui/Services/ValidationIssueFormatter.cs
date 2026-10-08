@@ -1,5 +1,5 @@
 // 用途：把校验问题格式化为统一的来源、位置和说明字段。
-// 用途：将校验问题转换为中文来源、单元格定位和日志文本。
+// 用途：格式化校验问题的来源、位置、错误码和用户提示。
 // 编写日期：2026-10-08
 // 作者：Codex（按用户需求修改）
 
@@ -43,7 +43,11 @@ public static class ValidationIssueFormatter
             "FIELD_TARGET_INVALID" => "客户端/服务器标记不正确。",
             "ENUM_VALUE_INVALID" => "枚举值不在允许范围内。",
             "TABLE_REFERENCE_MISSING" => "引用的逻辑表不存在。",
-            "TABLE_MERGE_ERROR" => "同名表的字段、类型、默认值或测试列定义不一致。",
+            "TABLE_REFERENCE_KEY_MISSING" => "引用的主键值不存在。",
+            "TABLE_REFERENCE_TYPE_MISMATCH" => "引用字段与目标主键类型不一致。",
+            "TABLE_MERGE_ERROR" => "同名表字段定义不一致。",
+            "FIELD_NAME_DUPLICATE" => "字段名重复。",
+            "FIELD_NAME_MISSING" => "字段名为空。",
             _ => "配置表校验未通过。"
         },
         _ => issue.Message
@@ -68,7 +72,11 @@ public static class ValidationIssueFormatter
         "ENUM_VALUE_INVALID" => "请使用 enum 声明中的成员。",
         "ENUM_CSHARP_IDENTIFIER_INVALID" => "请使用合法的 C# 枚举成员名称。",
         "TABLE_REFERENCE_MISSING" => "请补全引用表或移除引用字段。",
+        "TABLE_REFERENCE_KEY_MISSING" => "请填写目标表中存在的主键值。",
+        "TABLE_REFERENCE_TYPE_MISMATCH" => "请让引用字段和目标主键使用相同类型。",
         "TABLE_MERGE_ERROR" => "请让同名表对应字段定义保持一致。",
+        "FIELD_NAME_DUPLICATE" => "请保证字段名称唯一。",
+        "FIELD_NAME_MISSING" => "请为数据行填写字段名。",
         _ => "请检查对应单元格。"
     };
 
@@ -76,7 +84,7 @@ public static class ValidationIssueFormatter
     {
         var source = sourceName ?? string.Empty;
         var parts = source.Split("::", 2, StringSplitOptions.None);
-        var fileName = Path.GetFileName(parts[0]);
+        var fileName = parts[0].Replace('\\', '/');
         if (string.IsNullOrWhiteSpace(fileName))
             fileName = parts[0];
 

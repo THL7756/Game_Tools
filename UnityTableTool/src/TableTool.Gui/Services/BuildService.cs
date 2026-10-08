@@ -1,4 +1,5 @@
 // 用途：执行选中配置表的关联展开、校验和 JSON/C# 分端打表。
+// 编写日期：2026-10-08
 // 最近修改日期：2026-10-08
 
 // 作者：Codex（按用户需求修改）
@@ -101,7 +102,13 @@ public sealed class BuildService
                     Suggestion: "请修改 enum 成员名称后再生成 C#。"));
             }
         }
-        issues.AddRange(GetMissingReferenceIssues(allDocuments, selectedDocuments));
+        issues.AddRange(TableReferenceValidator.Validate(
+            allDocuments,
+            selectedDocuments,
+            new ArraySeparatorOptions(
+                settings.ArrayInnerSeparator,
+                settings.ArrayMiddleSeparator,
+                settings.ArrayOuterSeparator)));
         logs.Add(Entry("INFO", $"开始打表：{merged.Length} 张逻辑表 → 数据：{TargetText(dataTarget)} · 代码：{TargetText(codeTarget)}"));
 
         if (issues.Any(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal))
@@ -162,28 +169,6 @@ public sealed class BuildService
         ExportTarget.Server => "服务器",
         _ => "无"
     };
-
-    private static IEnumerable<ValidationIssue> GetMissingReferenceIssues(
-        IReadOnlyList<TableDocument> allDocuments,
-        IReadOnlyList<TableDocument> selectedDocuments)
-    {
-        foreach (var missing in TableSelectionResolver.FindMissingReferenceDetails(allDocuments, selectedDocuments))
-        {
-            var field = selectedDocuments
-                .FirstOrDefault(document => string.Equals(document.SourceName, missing.SourceName, StringComparison.OrdinalIgnoreCase))
-                ?.Schema.Fields.FirstOrDefault(item =>
-                    string.Equals(item.Name, missing.FieldName, StringComparison.OrdinalIgnoreCase));
-            yield return new ValidationIssue(
-                ErrorCodes.TableReferenceMissing,
-                ValidationSeverity.Error,
-                $"引用表 {missing.ReferencedTableName} 未找到。",
-                missing.SourceName,
-                SourceColumn: field?.SourceColumn + 1,
-                FieldName: missing.FieldName,
-                Key: missing.ReferencedTableName,
-                Suggestion: "补全引用表，或移除对应引用字段。");
-        }
-    }
 
     private static BuildLogEntry Entry(string level, string message) => new(DateTime.Now, level, message);
 

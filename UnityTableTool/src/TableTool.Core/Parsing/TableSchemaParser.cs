@@ -47,6 +47,7 @@ public sealed class TableSchemaParser
         var validationFields = new List<FieldSchema>();
         var fields = new List<FieldSchema>();
         var issues = new List<ValidationIssue>();
+        var fieldNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         for (var i = 0; i < names.Count; i++)
         {
@@ -54,6 +55,20 @@ public sealed class TableSchemaParser
             if (ShouldSkipColumn(name))
                 continue;
             var isTestColumn = IsTestColumn(name);
+
+            if (!fieldNames.Add(name))
+            {
+                issues.Add(new ValidationIssue(
+                    ErrorCodes.FieldNameDuplicate,
+                    ValidationSeverity.Error,
+                    $"字段名“{name}”重复。",
+                    grid.SourceName,
+                    4,
+                    i + offset + 1,
+                    name,
+                    Suggestion: "请保证正式字段和测试字段名称唯一。"));
+                continue;
+            }
 
             var typeText = Get(types, i)?.Trim() ?? string.Empty;
             var type = ParseType(typeText, grid.SourceName, 3, i + offset, out var typeIssue);
@@ -90,7 +105,7 @@ public sealed class TableSchemaParser
                 || (offset == 1 && string.IsNullOrWhiteSpace(marker))
                 ? 1
                 : 0;
-            var values = new Dictionary<string, string?>(StringComparer.Ordinal);
+            var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
             foreach (var field in fields.Concat(validationFields))
             {
                 var index = field.SourceColumn - offset + valueOffset;
@@ -99,11 +114,14 @@ public sealed class TableSchemaParser
 
             if (values.Values.All(string.IsNullOrWhiteSpace))
                 continue;
-            rows.Add(new TableRow(rowIndex + 1, isTest, values));
+            rows.Add(new TableRow(rowIndex + 1, isTest, values, grid.SourceName));
         }
 
+        var primaryKey = fields.FirstOrDefault(field =>
+                field.Name.Equals("id", StringComparison.OrdinalIgnoreCase))?.Name
+            ?? fields[0].Name;
         return new TableParseResult(
-            new TableDocument(grid.SourceName, new TableSchema(tableName, fields, fields[0].Name, false, validationFields), rows, issues),
+            new TableDocument(grid.SourceName, new TableSchema(tableName, fields, primaryKey, false, validationFields), rows, issues),
             issues,
             true);
     }
@@ -123,83 +141,183 @@ public sealed class TableSchemaParser
         var targetColumn = FindTargetColumn(grid.Rows, semanticRowIndex, semanticRow);
         var defaultTarget = FieldTarget.Both;
         var fields = new List<FieldSchema>();
-        var values = new Dictionary<string, string?>(StringComparer.Ordinal);
+        var validationFields = new List<FieldSchema>();
+        var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         var rows = new List<TableRow>();
 
-        for (var rowIndex = semanticRowIndex + 1; rowIndex < grid.Rows.Count; rowIndex++)
+        var layout = ResolveSingletonLayout(grid.Rows, semanticRowIndex, idColumn, typeColumn, dataColumn, targetColumn);
+        var semanticTargetColumn = FindSemanticTargetValueColumn(semanticRow);
+        ValidationIssue? semanticTargetIssue = null;
+        if (semanticTargetColumn >= 0)
+            defaultTarget = ParseTarget(Get(semanticRow, semanticTargetColumn), grid.SourceName, semanticRowIndex + 1, semanticTargetColumn, out semanticTargetIssue);
+        if (semanticTargetIssue is not null)
+            issues.Add(semanticTargetIssue);
+        if (layout.MetadataRow >= 0 && layout.TargetColumn >= 0)
+        {
+            var targetText = Get(grid.Rows[layout.MetadataRow], layout.TargetColumn);
+            ValidationIssue? metadataTargetIssue = null;
+            if (!string.IsNullOrWhiteSpace(targetText))
+                defaultTarget = ParseTarget(targetText, grid.SourceName, layout.MetadataRow + 1, layout.TargetColumn, out metadataTargetIssue);
+            if (metadataTargetIssue is not null)
+                issues.Add(metadataTargetIssue);
+        }
+
+        var fieldNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var startRow = layout.MetadataRow >= 0 ? layout.MetadataRow + 1 : semanticRowIndex + 1;
+
+        for (var rowIndex = startRow; rowIndex < grid.Rows.Count; rowIndex++)
         {
             var row = grid.Rows[rowIndex];
-            var id = Get(row, idColumn)?.Trim() ?? string.Empty;
+            var directName = Get(row, idColumn)?.Trim() ?? string.Empty;
+            var directType = Get(row, typeColumn)?.Trim() ?? string.Empty;
+            var directValue = Get(row, dataColumn);
+            var shiftedName = Get(row, typeColumn)?.Trim() ?? string.Empty;
+            var shiftedType = Get(row, dataColumn)?.Trim() ?? string.Empty;
+            var shiftedValue = Get(row, dataColumn + 1);
+            var useShifted = layout.MetadataRow < 0
+                && string.IsNullOrWhiteSpace(directName)
+                && !string.IsNullOrWhiteSpace(shiftedName)
+                && !LooksLikeType(shiftedName);
+            var nameColumn = useShifted ? typeColumn : idColumn;
+            var typeColumnForRow = useShifted ? dataColumn : typeColumn;
+            var valueColumnForRow = useShifted ? dataColumn + 1 : dataColumn;
+            var id = useShifted ? shiftedName : directName;
+            var typeText = useShifted ? shiftedType : directType;
+            var data = EmptyToNull(useShifted ? shiftedValue : directValue);
             if (id.StartsWith("##", StringComparison.Ordinal))
                 continue;
             if (id.StartsWith("#test", StringComparison.OrdinalIgnoreCase)
                 || id.StartsWith("#ceshi", StringComparison.OrdinalIgnoreCase))
                 continue;
-            if (string.IsNullOrWhiteSpace(id)
-                && string.IsNullOrWhiteSpace(Get(row, GetOptional(typeColumn))?.Trim())
-                && string.IsNullOrWhiteSpace(Get(row, GetOptional(dataColumn))?.Trim()))
+
+            if (string.IsNullOrWhiteSpace(id))
             {
-                if (targetColumn >= 0 && !string.IsNullOrWhiteSpace(Get(row, targetColumn)))
+                if (row.Any(value => !string.IsNullOrWhiteSpace(value)))
                 {
-                    defaultTarget = ParseTarget(Get(row, targetColumn), grid.SourceName, rowIndex + 1, targetColumn, out var defaultTargetIssue);
-                    if (defaultTargetIssue is not null)
-                        issues.Add(defaultTargetIssue);
+                    issues.Add(new ValidationIssue(
+                        ErrorCodes.FieldNameMissing,
+                        ValidationSeverity.Error,
+                        "单例字段名称为空。",
+                        grid.SourceName,
+                        rowIndex + 1,
+                        nameColumn + 1,
+                        Suggestion: "请为单例数据行填写字段名。"));
                 }
                 continue;
             }
-            if (string.IsNullOrWhiteSpace(id))
+
+            if (id.Equals("desc", StringComparison.OrdinalIgnoreCase))
                 continue;
-            var typeText = Get(row, typeColumn)?.Trim() ?? string.Empty;
-            var data = EmptyToNull(Get(row, dataColumn));
-            var type = ParseType(typeText, grid.SourceName, rowIndex + 1, typeColumn, out var typeIssue);
+
+            if (!fieldNames.Add(id))
+            {
+                issues.Add(new ValidationIssue(
+                    ErrorCodes.FieldNameDuplicate,
+                    ValidationSeverity.Error,
+                    $"单例字段“{id}”重复定义。",
+                    grid.SourceName,
+                    rowIndex + 1,
+                    nameColumn + 1,
+                    id,
+                    Suggestion: "请保证单例字段名称唯一。"));
+                continue;
+            }
+
+            var type = ParseType(typeText, grid.SourceName, rowIndex + 1, typeColumnForRow, out var typeIssue);
             if (typeIssue is not null)
                 issues.Add(typeIssue with { FieldName = id });
             ValidationIssue? targetIssue = null;
             var target = defaultTarget;
-            if (targetColumn >= 0 && !string.IsNullOrWhiteSpace(Get(row, targetColumn)))
-                target = ParseTarget(Get(row, targetColumn), grid.SourceName, rowIndex + 1, targetColumn, out targetIssue);
+            if (layout.TargetColumn >= 0 && !string.IsNullOrWhiteSpace(Get(row, layout.TargetColumn)))
+                target = ParseTarget(Get(row, layout.TargetColumn), grid.SourceName, rowIndex + 1, layout.TargetColumn, out targetIssue);
             if (targetIssue is not null)
                 issues.Add(targetIssue with { FieldName = id });
-            var existingIndex = fields.FindIndex(field => field.Name.Equals(id, StringComparison.Ordinal));
-            if (existingIndex >= 0)
-            {
-                var existing = fields[existingIndex];
-                if (!string.Equals(existing.Type.DisplayText, type.DisplayText, StringComparison.Ordinal))
-                {
-                    issues.Add(new ValidationIssue(
-                        ErrorCodes.TableMergeInvalid,
-                        ValidationSeverity.Error,
-                        $"单例字段“{id}”重复定义且类型不一致。",
-                        grid.SourceName,
-                        rowIndex + 1,
-                        typeColumn + 1,
-                        id));
-                    continue;
-                }
-                fields[existingIndex] = existing with { Target = MergeTarget(existing.Target, target) };
-                if (string.IsNullOrWhiteSpace(values[id]) && data is not null)
-                    values[id] = data;
-                continue;
-            }
 
-            fields.Add(new FieldSchema(
-                dataColumn,
+            var field = new FieldSchema(
+                valueColumnForRow,
                 id,
                 descriptionColumn >= 0 ? Get(row, descriptionColumn)?.Trim() ?? string.Empty : string.Empty,
                 type,
                 target,
-                null));
+                null,
+                rowIndex + 1,
+                rowIndex + 1,
+                layout.TargetColumn >= 0 ? rowIndex + 1 : 0,
+                rowIndex + 1,
+                IsTestColumn(id));
             values[id] = data;
+            if (field.IsTest)
+            {
+                validationFields.Add(field);
+                continue;
+            }
+            fields.Add(field);
         }
 
         if (fields.Count == 0)
             return TableParseResult.Informal(grid.SourceName, "单例表没有正式数据字段。");
 
-        rows.Add(new TableRow(semanticRowIndex + 2, false, values));
+        rows.Add(new TableRow(startRow + 1, false, values, grid.SourceName));
         return new TableParseResult(
             new TableDocument(grid.SourceName, new TableSchema(tableName, fields, fields[0].Name, true), rows, issues),
             issues,
             true);
+    }
+
+    private sealed record SingletonLayout(
+        int NameColumn,
+        int TypeColumn,
+        int ValueColumn,
+        int TargetColumn,
+        int MetadataRow);
+
+    private static SingletonLayout ResolveSingletonLayout(
+        IReadOnlyList<IReadOnlyList<string?>> rows,
+        int semanticRowIndex,
+        int idColumn,
+        int typeColumn,
+        int dataColumn,
+        int targetColumn)
+    {
+        for (var rowIndex = semanticRowIndex + 1; rowIndex < Math.Min(rows.Count, semanticRowIndex + 4); rowIndex++)
+        {
+            var row = rows[rowIndex];
+            var target = Get(row, idColumn)?.Trim() ?? string.Empty;
+            var description = Get(row, typeColumn)?.Trim() ?? string.Empty;
+            if (IsTargetValue(target) && IsDescriptionLabel(description))
+            {
+                return new SingletonLayout(
+                    typeColumn,
+                    dataColumn,
+                    dataColumn + 1,
+                    idColumn,
+                    rowIndex);
+            }
+        }
+
+        return new SingletonLayout(idColumn, typeColumn, dataColumn, targetColumn, -1);
+    }
+
+    private static bool IsTargetValue(string value) => value.Equals("c", StringComparison.OrdinalIgnoreCase)
+        || value.Equals("s", StringComparison.OrdinalIgnoreCase)
+        || value.Equals("cs", StringComparison.OrdinalIgnoreCase)
+        || value.Equals("clientserver", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsDescriptionLabel(string value) => value.Equals("desc", StringComparison.OrdinalIgnoreCase)
+        || value.Equals("description", StringComparison.OrdinalIgnoreCase)
+        || value.Equals("说明", StringComparison.OrdinalIgnoreCase);
+
+    private static bool LooksLikeType(string value)
+    {
+        try
+        {
+            TypeDescriptor.Parse(value);
+            return true;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
     }
 
     private static int FindSingletonSemanticRow(IReadOnlyList<IReadOnlyList<string?>> rows)
@@ -245,6 +363,18 @@ public sealed class TableSchemaParser
                     return column;
             }
         }
+        return -1;
+    }
+
+    private static int FindSemanticTargetValueColumn(IReadOnlyList<string?> row)
+    {
+        for (var index = 0; index < row.Count; index++)
+        {
+            var value = row[index]?.Trim() ?? string.Empty;
+            if (IsTargetValue(value))
+                return index;
+        }
+
         return -1;
     }
 
