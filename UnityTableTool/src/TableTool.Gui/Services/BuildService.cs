@@ -1,5 +1,5 @@
 // 用途：执行选中配置表的关联展开、校验和 JSON/C# 分端打表。
-// 最近修改日期：2026-10-06
+// 最近修改日期：2026-10-08
 
 // 作者：Codex（按用户需求修改）
 
@@ -50,7 +50,23 @@ public sealed class BuildService
             return new BuildResult(false, [], logs, 0, 0, 0, stopwatch.Elapsed);
         }
 
-        var merged = TableDocumentMerger.Merge(selectedDocuments).ToArray();
+        TableDocument[] merged;
+        try
+        {
+            merged = TableDocumentMerger.Merge(selectedDocuments).ToArray();
+        }
+        catch (FormatException error)
+        {
+            var issue = new ValidationIssue(
+                ErrorCodes.TableMergeInvalid,
+                ValidationSeverity.Error,
+                error.Message,
+                "当前选择",
+                Suggestion: "检查同名表的字段、类型、默认值和测试列是否一致。");
+            logs.Add(Entry("FAIL", error.Message));
+            stopwatch.Stop();
+            return new BuildResult(false, [issue], logs, selectedDocuments.Length, 0, 0, stopwatch.Elapsed);
+        }
         var issues = merged.SelectMany(document => new TableValidator().Validate(document)).ToList();
         issues.AddRange(GetMissingReferenceIssues(allDocuments, selectedDocuments));
         logs.Add(Entry("INFO", $"开始打表：{merged.Length} 张逻辑表 → 数据：{TargetText(dataTarget)} · 代码：{TargetText(codeTarget)}"));
@@ -126,7 +142,7 @@ public sealed class BuildService
                     string.Equals(item.Name, missing.FieldName, StringComparison.OrdinalIgnoreCase));
             yield return new ValidationIssue(
                 ErrorCodes.TableReferenceMissing,
-                ValidationSeverity.Warning,
+                ValidationSeverity.Error,
                 $"引用表 {missing.ReferencedTableName} 未找到。",
                 missing.SourceName,
                 SourceColumn: field?.SourceColumn + 1,

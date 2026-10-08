@@ -57,15 +57,15 @@
 publish.cmd
 ```
 
-发布脚本会运行全部自动化测试，并生成：
+发布脚本执行 restore 和发布，不负责运行自动化测试；发布输出目录为：
 
 ```text
-release/UnityTableTool/UnityTableTool.exe
+release/UnityTableTool-2.4.0/UnityTableTool.exe
 ```
 
-当前验证结果：`35/35` 测试通过，GUI Release 构建通过。发布包为 Windows x64 自包含版本。
+当前验证结果：清理前基线为 `34/35`；失败项来自 `Data` 中重复的长文件名 schema 样例。核心校验冒烟验证已通过，GUI Release 构建通过，`run-ui.cmd` 的 .NET 8 restore、Debug 构建和启动链路已通过；测试源码按项目清理要求移除。NuGet 漏洞检查因当前网络不可用只产生警告。发布包为 Windows x64 自包含版本。
 
-构建缓存位于 `%TEMP%\UnityTableTool-build`，`.build`、`.nuget`、`.dotnet-home` 等目录不是发布包必需内容。网络不可用时，脚本会在存在既有 Release 构建的情况下直接打包该构建，并明确输出提示。
+构建缓存位于项目 `.build`、`.nuget` 和 `.dotnet-home` 目录，不属于发布包内容。
 # UnityTableTool 文档索引
 
 - [项目实施与验收计划](ProjectPlan.md)

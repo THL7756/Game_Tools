@@ -44,8 +44,8 @@ run-ui.cmd
 publish.cmd
 ```
 
-`publish.cmd` 会清理并生成 `release/UnityTableTool-2.4.0`，同时创建 `release/UnityTableTool-2.4.0-win-x64.zip`。发布包为 Windows x64 自包含版本，不需要单独安装 .NET Desktop Runtime。脚本会显示所用 SDK，并在成功或失败后暂停，方便确认结果。
+`publish.cmd` 会清理并生成 `release/UnityTableTool-2.4.0`，同时创建 `release/UnityTableTool-2.4.0-win-x64.zip`。发布包为 Windows x64 自包含版本，不需要单独安装 .NET Desktop Runtime。脚本会显示所用 SDK，并在成功或失败后暂停，方便确认结果。`global.json` 优先使用已安装的 .NET 8 SDK，缺少时允许回退到已安装的大版本。
 
 ## 当前验收范围
 
-详细实施计划和验收标准见 [docs/ProjectPlan.md](docs/ProjectPlan.md)。本轮代码修改完成后只做 Release 编译确认，测试和重新打包按用户要求暂不执行。
+详细实施计划和验收标准见 [docs/ProjectPlan.md](docs/ProjectPlan.md)。本轮先运行全量测试和 GUI 冒烟验证，再按项目清理要求移除测试源码和临时测试样例。

@@ -1,3 +1,7 @@
+// 用途：把校验问题映射为 Sheet、字段和单元格的高亮状态。
+// 编写日期：2026-10-08
+// 作者：Codex。
+
 using TableTool.Core.Models;
 
 namespace TableTool.Core.Validation;

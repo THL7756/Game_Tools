@@ -1,5 +1,5 @@
 // 用途：验证字段类型、默认值、主键和表引用前提。
-// 编写日期：2026-10-06
+// 编写日期：2026-10-08
 // 作者：Codex（按用户需求修改）
 
 using TableTool.Core.Models;
@@ -24,7 +24,8 @@ public sealed class TableValidator
                 Suggestion: "删除多余数据行，或去掉 type:single 元数据。"));
         }
 
-        var primaryKeyField = fields.FirstOrDefault(field => field.Name == document.Schema.PrimaryKey);
+        var primaryKeyField = fields.FirstOrDefault(field =>
+            string.Equals(field.Name, document.Schema.PrimaryKey, StringComparison.OrdinalIgnoreCase));
         if (!document.Schema.IsSingleton && primaryKeyField is null)
         {
             issues.Add(new ValidationIssue(
@@ -95,11 +96,25 @@ public sealed class TableValidator
             if (primaryKeyField is null)
                 continue;
 
+            if (row.IsTest)
+                continue;
+
             var rawKey = row.RawValues.TryGetValue(document.Schema.PrimaryKey, out var suppliedKey) ? suppliedKey : null;
             var key = string.IsNullOrWhiteSpace(rawKey) ? primaryKeyField.DefaultValue : rawKey;
             if (string.IsNullOrWhiteSpace(key))
+            {
+                issues.Add(new ValidationIssue(
+                    ErrorCodes.PrimaryKeyMissing,
+                    ValidationSeverity.Error,
+                    $"Primary key '{document.Schema.PrimaryKey}' is missing.",
+                    document.SourceName,
+                    row.SourceRow,
+                    primaryKeyField.SourceColumn + 1,
+                    document.Schema.PrimaryKey,
+                    Suggestion: "为该数据行填写主键，或设置有效的默认值。"));
                 continue;
-            if (!row.IsTest && !keys.Add(key))
+            }
+            if (!keys.Add(key))
             {
                 issues.Add(new ValidationIssue(
                     ErrorCodes.PrimaryKeyDuplicate,

@@ -1,13 +1,20 @@
 @echo on
 rem Restore, publish, and package UnityTableTool.
 rem Date: 2026-10-08
+rem SDK policy: global.json prefers the installed .NET 8 SDK and rolls forward when needed.
 rem The window stays open on success or failure so the result is visible.
 setlocal
-set "BUILD_ROOT=%TEMP%\UnityTableTool-build"
-set "DOTNET_CLI_HOME=%BUILD_ROOT%\.dotnet-home"
-set "NUGET_PACKAGES=%BUILD_ROOT%\.nuget\packages"
+set "BUILD_ROOT=%~dp0.build"
+set "DOTNET_CLI_HOME=%~dp0.dotnet-home"
+set "NUGET_PACKAGES=%~dp0.nuget\packages"
 set "DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1"
 set "DOTNET_CLI_TELEMETRY_OPTOUT=1"
+set "SDK_FALLBACK=0"
+dotnet --version >nul 2>&1
+if errorlevel 1 (
+    set "SDK_FALLBACK=1"
+    pushd "%TEMP%"
+)
 
 dotnet --version
 dotnet restore "%~dp0UnityTableTool.sln" --configfile "%~dp0NuGet.Config" -p:RestoreUseSkipNonexistentTargets=false
@@ -20,11 +27,13 @@ powershell -NoProfile -Command "Compress-Archive -Path '%~dp0release\UnityTableT
 if errorlevel 1 goto :failed
 echo Published to %~dp0release\UnityTableTool-2.4.0
 echo Packaged to %~dp0release\UnityTableTool-2.4.0-win-x64.zip
+if "%SDK_FALLBACK%"=="1" popd
 pause
 exit /b 0
 
 :failed
 set "EXIT_CODE=%ERRORLEVEL%"
+if "%SDK_FALLBACK%"=="1" popd
 echo.
 echo Publish failed with exit code %EXIT_CODE%.
 pause

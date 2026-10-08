@@ -7,7 +7,7 @@
 | `FIELD_TYPE_UNKNOWN` | 检查字段类型是否为 `int`、`long`、`float`、`double`、`bool`、`string`、`Vector2`、`Vector3`、`Vector4`、`Color` 或 `Quaternion`。 |
 | `FIELD_ARRAY_SEPARATOR_INVALID` | 检查一维 `#`、二维 `|` 和 `#`、三维 `;`、`|` 和 `#` 是否按维度使用。 |
 | `PRIMARY_KEY_DUPLICATE` | 修改普通表第一字段的重复 key。 |
-| `TABLE_REFERENCE_MISSING` | 检查 `<逻辑表名>_id` 字段名称，或补充关联表。 |
+| `TABLE_REFERENCE_MISSING` | 检查 `<逻辑表名>_id` 字段名称，或补充关联表；缺失引用会阻断打表。 |
 | `SINGLETON_ROW_COUNT_INVALID` | 单例源表的字段应聚合成一个对象；检查 `id`、`type`、`data` 语义列和字段内容。 |
 | 表列表没有结果 | 点击扫描，检查设置中的表根目录和搜索关键字；启动时会自动扫描项目 `Data` 目录。 |
 | 刷新后表列表为空 | 先检查设置中的表目录是否存在；读取失败的文件会出现在问题列表。刷新不会用空结果覆盖已有列表。 |
@@ -23,7 +23,7 @@
 | 设置没有记住 | 配置默认保存在程序目录的 `ToolData\settings.json`，包括输出范围、项目路径、主题、字体、缩放和快捷键；安装目录不可写时查看 `%LOCALAPPDATA%\UnityTableTool\settings.json`。 |
 | 点击项目助手、素材工具、音频工具或提示词仓库崩溃 | 这些页面是安全占位页面，不依赖外部图片资源；若仍崩溃，检查发布目录是否完整并保留 `Assets/Icons`。 |
 | 快捷键无法录入 | 在快捷键页点击输入框进入录制状态，再按组合键；Esc 取消，Backspace 或 Delete 清空输入。 |
-| 发布脚本无法运行 | 先确认 `dotnet --version` 能输出 9.x SDK；本项目已改为使用本机安装的 .NET 9 SDK 构建 net8 WPF。再运行 `publish.cmd`，脚本会保留错误窗口。 |
+| 发布脚本无法运行 | 先确认 `dotnet --version` 能输出已安装的 .NET 8 或更高 SDK；`global.json` 会优先选择 .NET 8 并允许回退到更高大版本。再运行 `publish.cmd`，脚本会保留错误窗口。 |
 | 想先看界面，不打包 | 双击 `run-ui.cmd`，它直接启动调试版 GUI。 |
 
 勾选变化时会校验所有相关 Sheet，并在 GUI 的“表问题”区域汇总；有错误时不会替换原输出目录，也不会写入 `Code`、`Data_c` 或 `Data_s`。

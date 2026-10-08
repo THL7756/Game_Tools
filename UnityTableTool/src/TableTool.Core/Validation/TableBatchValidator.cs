@@ -1,3 +1,7 @@
+// 用途：汇总当前勾选表及其关联表的批量校验结果。
+// 编写日期：2026-10-08
+// 作者：Codex。
+
 using TableTool.Core.Models;
 using TableTool.Core.Parsing;
 
@@ -18,6 +22,20 @@ public static class TableBatchValidator
             .SelectMany(document => new TableValidator().Validate(document))
             .ToList();
 
+        try
+        {
+            TableDocumentMerger.Merge(selectedDocuments);
+        }
+        catch (FormatException error)
+        {
+            issues.Add(new ValidationIssue(
+                ErrorCodes.TableMergeInvalid,
+                ValidationSeverity.Error,
+                error.Message,
+                "当前选择",
+                Suggestion: "检查同名表的字段、类型、默认值和测试列是否一致。"));
+        }
+
         foreach (var missing in TableSelectionResolver.FindMissingReferenceDetails(allDocuments, selectedDocuments))
         {
             var field = selectedDocuments
@@ -27,7 +45,7 @@ public static class TableBatchValidator
 
             issues.Add(new ValidationIssue(
                 ErrorCodes.TableReferenceMissing,
-                ValidationSeverity.Warning,
+                ValidationSeverity.Error,
                 $"引用表 {missing.ReferencedTableName} 未找到。",
                 missing.SourceName,
                 SourceColumn: field?.SourceColumn + 1,

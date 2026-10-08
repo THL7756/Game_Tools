@@ -1,5 +1,5 @@
 // 用途：在打表导出阶段合并同名、同结构的表文档。
-// 编写日期：2026-10-06
+// 编写日期：2026-10-08
 // 作者：Codex（按用户需求修改）
 
 using TableTool.Core.Models;
@@ -40,8 +40,14 @@ public static class TableDocumentMerger
     private static bool HasSameSchema(TableSchema left, TableSchema right) =>
         left.IsSingleton == right.IsSingleton
         && string.Equals(left.PrimaryKey, right.PrimaryKey, StringComparison.OrdinalIgnoreCase)
-        && left.Fields.Count == right.Fields.Count
-        && left.Fields.Zip(right.Fields).All(pair => HasSameField(pair.First, pair.Second));
+        && HasSameFields(left.Fields, right.Fields)
+        && HasSameFields(left.ValidationFields ?? [], right.ValidationFields ?? []);
+
+    private static bool HasSameFields(
+        IReadOnlyList<FieldSchema> left,
+        IReadOnlyList<FieldSchema> right) =>
+        left.Count == right.Count
+        && left.Zip(right).All(pair => HasSameField(pair.First, pair.Second));
 
     private static bool HasSameField(FieldSchema left, FieldSchema right) =>
         string.Equals(left.Name, right.Name, StringComparison.Ordinal)

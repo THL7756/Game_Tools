@@ -1,5 +1,5 @@
 // 用途：实现配置表搜索、筛选、预览、校验和 JSON/C# 打表交互。
-// 最近修改日期：2026-10-06
+// 最近修改日期：2026-10-08
 // 作者：Codex（按用户需求修改）
 
 using System.ComponentModel;
@@ -520,6 +520,17 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
 
     public void BuildTables()
     {
+        if (TableList.SelectedItem is TableModel selected)
+            UpdatePreview(selected);
+        else
+        {
+            var allDocuments = tables.SelectMany(item => item.Sheets.Select(sheet => sheet.Document)).ToArray();
+            var selectedSourceNames = tables
+                .Where(item => item.IsSelected)
+                .SelectMany(item => item.Sheets.Select(sheet => sheet.Document.SourceName));
+            batchIssues = TableBatchValidator.Validate(allDocuments, selectedSourceNames).Issues;
+        }
+
         if (catalogErrors.Count > 0 && tables.Count == 0)
         {
             IssuesList.ItemsSource = catalogErrors
