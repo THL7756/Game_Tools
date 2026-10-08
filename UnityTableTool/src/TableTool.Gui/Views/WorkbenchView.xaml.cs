@@ -1,4 +1,5 @@
 // 用途：实现配置表搜索、筛选、预览、校验和 JSON/C# 打表交互。
+// 用途：实现配置表搜索、筛选、预览、校验和 JSON/C# 打表交互。
 // 最近修改日期：2026-10-08
 // 作者：Codex（按用户需求修改）
 
@@ -26,6 +27,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
     private IReadOnlyList<TableModel> tables = Array.Empty<TableModel>();
     private IReadOnlyList<TableModel> visibleTables = Array.Empty<TableModel>();
     private IReadOnlyList<string> catalogErrors = Array.Empty<string>();
+    private IReadOnlyList<string> catalogInfos = Array.Empty<string>();
     private IReadOnlyList<ValidationIssue> batchIssues = Array.Empty<ValidationIssue>();
     private string lastValidationSignature = string.Empty;
     private string activeFilter = "all";
@@ -62,12 +64,18 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             StringComparer.OrdinalIgnoreCase);
         var result = catalogService.Load(settings);
         catalogErrors = result.Errors;
+        catalogInfos = result.Infos;
+        foreach (var info in catalogInfos)
+            ToolLogService.Info("配置表", info);
         if (result.Tables.Count == 0 && previousTables.Count > 0)
         {
             StatusChanged?.Invoke(this, result.Errors.Count > 0
                 ? string.Join("；", result.Errors)
                 : "未找到可读取的配置表，已保留当前列表。");
-            ToolLogService.Warning("配置表", "刷新表列表未找到可读取文件，已保留当前列表。");
+            if (result.Errors.Count > 0)
+                ToolLogService.Warning("配置表", "刷新表列表未找到可读取文件，已保留当前列表。");
+            else
+                ToolLogService.Info("配置表", "当前目录只有非正式表内容，已保留当前正式表列表。");
             catalogErrors = result.Errors;
             UpdateSelectionUi();
             return;
@@ -187,14 +195,15 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         var selectedSourceNames = tables
             .Where(item => item.IsSelected)
             .SelectMany(item => item.Sheets.Select(sheet => sheet.Document.SourceName));
-        batchIssues = TableBatchValidator.Validate(allDocuments, selectedSourceNames).Issues;
-        var preview = previewService.Create(table, batchIssues);
+        batchIssues = TableBatchValidator.Validate(allDocuments, selectedSourceNames, GetArraySeparators()).Issues;
+        var preview = previewService.Create(table, batchIssues, GetArraySeparators());
         PreviewTitleText.Text = preview.Title;
         ModifiedText.Text = preview.ModifiedText;
         SourceText.Text = preview.SourceText;
         SheetTabs.ItemsSource = table.Sheets;
         ReadOnlyText.Text = string.Format("只读预览 · {0} 个字段", preview.Fields.Count);
-        var errorCount = batchIssues.Count(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal) + catalogErrors.Count;
+        var errorCount = batchIssues.Count(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal)
+            + catalogErrors.Count;
         var warningCount = batchIssues.Count(issue => issue.Severity == ValidationSeverity.Warning);
         ErrorSummaryText.Text = string.Format("{0} 错误", errorCount);
         WarningSummaryText.Text = string.Format("{0} 警告", warningCount);
@@ -289,7 +298,8 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
     {
         foreach (var sheet in table.Sheets)
         {
-            var issues = new TableValidator().Validate(sheet.Document)
+            var issues = (sheet.Document.ParseIssues ?? [])
+                .Concat(new TableValidator(GetArraySeparators()).Validate(sheet.Document))
                 .Concat(batchIssues.Where(issue => string.Equals(issue.SourceName, sheet.Document.SourceName, StringComparison.OrdinalIgnoreCase)))
                 .Concat(sheet == table.CurrentSheet ? previewIssues : [])
                 .Distinct()
@@ -304,7 +314,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             var highestIssue = issues.FirstOrDefault(issue => level == ValidationHighlightLevel.Error
                 ? issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal
                 : issue.Severity == ValidationSeverity.Warning);
-            var tooltip = highestIssue is null ? string.Empty : $"{highestIssue.Code}：{highestIssue.Message}";
+            var tooltip = highestIssue is null ? string.Empty : ValidationIssueFormatter.Detail(highestIssue);
             sheet.SetValidationState(levelName, marker, tooltip);
         }
     }
@@ -528,7 +538,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             var selectedSourceNames = tables
                 .Where(item => item.IsSelected)
                 .SelectMany(item => item.Sheets.Select(sheet => sheet.Document.SourceName));
-            batchIssues = TableBatchValidator.Validate(allDocuments, selectedSourceNames).Issues;
+            batchIssues = TableBatchValidator.Validate(allDocuments, selectedSourceNames, GetArraySeparators()).Issues;
         }
 
         if (catalogErrors.Count > 0 && tables.Count == 0)
@@ -589,6 +599,11 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
     }
 
     private void Build_Click(object sender, RoutedEventArgs e) => BuildTables();
+
+    private ArraySeparatorOptions GetArraySeparators() => new(
+        settings.ArrayInnerSeparator,
+        settings.ArrayMiddleSeparator,
+        settings.ArrayOuterSeparator);
 
     private void ShowBuildResultDialog(bool success)
     {

@@ -1,5 +1,6 @@
 // 用途：实现项目路径和视觉风格设置页面交互。
-// 最近修改日期：2026-10-06
+// 用途：实现设置页的路径、外观、快捷键、滚轮和数组分隔符配置。
+// 最近修改日期：2026-10-08
 // 作者：Codex（按用户需求修改）
 
 using System.IO;
@@ -43,6 +44,9 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         BuildScriptBox.Text = settings.BuildScriptPath;
         BuildShortcutBox.Text = settings.BuildShortcut;
         RefreshShortcutBox.Text = settings.RefreshShortcut;
+        ArrayInnerSeparatorBox.Text = settings.ArrayInnerSeparator;
+        ArrayMiddleSeparatorBox.Text = settings.ArrayMiddleSeparator;
+        ArrayOuterSeparatorBox.Text = settings.ArrayOuterSeparator;
         LoadWheelStepControls();
         AccentTextBox.Text = settings.AccentColor.ToUpperInvariant();
         BackgroundTextBox.Text = settings.BackgroundColor.ToUpperInvariant();
@@ -523,6 +527,9 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         settings.RefreshShortcut = defaults.RefreshShortcut;
         settings.VerticalWheelScrollStep = defaults.VerticalWheelScrollStep;
         settings.HorizontalWheelScrollStep = defaults.HorizontalWheelScrollStep;
+        settings.ArrayInnerSeparator = defaults.ArrayInnerSeparator;
+        settings.ArrayMiddleSeparator = defaults.ArrayMiddleSeparator;
+        settings.ArrayOuterSeparator = defaults.ArrayOuterSeparator;
         isInitializing = true;
         LoadControls();
         isInitializing = false;
@@ -543,6 +550,9 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         settings.AccentColor = NormalizeColor(AccentTextBox.Text, settings.AccentColor);
         settings.BackgroundColor = NormalizeColor(BackgroundTextBox.Text, settings.BackgroundColor);
         settings.ForegroundColor = NormalizeColor(ForegroundTextBox.Text, settings.ForegroundColor);
+        settings.ArrayInnerSeparator = ArrayInnerSeparatorBox.Text;
+        settings.ArrayMiddleSeparator = ArrayMiddleSeparatorBox.Text;
+        settings.ArrayOuterSeparator = ArrayOuterSeparatorBox.Text;
 
         if (!ValidateSettings())
             return;
@@ -555,6 +565,14 @@ public partial class SettingsView : System.Windows.Controls.UserControl
 
     private bool ValidateSettings()
     {
+        if (!new TableTool.Core.Models.ArraySeparatorOptions(
+                settings.ArrayInnerSeparator,
+                settings.ArrayMiddleSeparator,
+                settings.ArrayOuterSeparator).IsValid)
+        {
+            MessageBox.Show("数组分隔符必须是三个互不相同的非空单字符，不能使用空白或逗号。", "设置", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
+        }
         if (string.IsNullOrWhiteSpace(settings.ProjectRootDirectory)
             || string.IsNullOrWhiteSpace(settings.TableDirectory)
             || string.IsNullOrWhiteSpace(settings.ClientOutputDirectory)

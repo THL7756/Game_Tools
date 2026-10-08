@@ -14,13 +14,15 @@ namespace TableTool.Gui.Services;
 
 public sealed record CatalogResult(
     IReadOnlyList<TableModel> Tables,
-    IReadOnlyList<string> Errors);
+    IReadOnlyList<string> Errors,
+    IReadOnlyList<string> Infos);
 
 public sealed class TableCatalogService
 {
     public CatalogResult Load(AppSettings settings)
     {
         var errors = new List<string>();
+        var infos = new List<string>();
         var documents = new List<TableDocument>();
         try
         {
@@ -32,7 +34,15 @@ public sealed class TableCatalogService
             {
                 try
                 {
-                    documents.Add(parser.Parse(grid));
+                    var parsed = parser.ParseWithDiagnostics(grid);
+                    if (parsed.Document is not null)
+                    {
+                        documents.Add(parsed.Document);
+                    }
+                    else
+                    {
+                        infos.Add($"{grid.SourceName}：{parsed.Issues.FirstOrDefault()?.Message ?? "不是正式配置表"}");
+                    }
                 }
                 catch (FormatException error)
                 {
@@ -53,7 +63,7 @@ public sealed class TableCatalogService
             .Select(group => CreateTableModel(settings.TableDirectory, group, favorites, recent))
             .ToArray();
 
-        return new CatalogResult(tables, errors);
+        return new CatalogResult(tables, errors, infos);
     }
 
     private static TableModel CreateTableModel(

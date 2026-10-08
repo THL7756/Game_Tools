@@ -3,25 +3,34 @@
 // 作者：Codex（按用户需求修改）
 
 using System.Globalization;
+using TableTool.Core.Models;
 
 namespace TableTool.Core.Parsing;
 
 public static class ValueParser
 {
-    private static readonly char[] DimensionSeparators = ['#', '|', ';'];
-
-    public static object Parse(string text, TypeDescriptor type)
+    public static object Parse(
+        string text,
+        TypeDescriptor type,
+        ArraySeparatorOptions? separators = null)
     {
+        if (!type.IsValid)
+            throw new FormatException($"字段类型 '{type.RawText ?? type.BaseType}' 无效。");
+
+        separators ??= ArraySeparatorOptions.Default;
+        if (!separators.IsValid)
+            throw new FormatException("数组分隔符设置无效。");
+
         var value = text?.Trim() ?? string.Empty;
         if (type.Dimensions == 0)
-            return ParseScalar(value, type.BaseType);
+            return ParseScalar(value, type);
 
-        return ParseLevel(value, type, 0);
+        return ParseLevel(value, type, separators, 0);
     }
 
-    private static Array ParseLevel(string text, TypeDescriptor type, int level)
+    private static Array ParseLevel(string text, TypeDescriptor type, ArraySeparatorOptions separators, int level)
     {
-        var separator = SeparatorFor(type.Dimensions, level);
+        var separator = SeparatorFor(type.Dimensions, separators, level);
         var parts = text.Split(separator);
         if (parts.Any(string.IsNullOrWhiteSpace))
             throw new FormatException($"Empty element in {type.BaseType} array.");
@@ -30,8 +39,8 @@ public static class ValueParser
         for (var i = 0; i < parts.Length; i++)
         {
             values[i] = level + 1 == type.Dimensions
-                ? ParseLeaf(parts[i], type)
-                : ParseLevel(parts[i], type, level + 1);
+                ? ParseLeaf(parts[i], type, separators)
+                : ParseLevel(parts[i], type, separators, level + 1);
         }
 
         var result = CreateArray(type, level, values.Length);
@@ -41,29 +50,31 @@ public static class ValueParser
         return result;
     }
 
-    private static object ParseLeaf(string text, TypeDescriptor type)
+    private static object ParseLeaf(string text, TypeDescriptor type, ArraySeparatorOptions separators)
     {
-        foreach (var separator in DimensionSeparators.Where(separator => !IsAllowedSeparator(type.Dimensions, separator)))
+        foreach (var separator in new[] { separators.Inner[0], separators.Middle[0], separators.Outer[0] }
+                     .Where(separator => !IsAllowedSeparator(type.Dimensions, separators, separator)))
         {
             if (text.IndexOf(separator) >= 0)
                 throw new FormatException($"Unexpected high-dimensional separator '{separator}' in {type.BaseType} array.");
         }
 
-        return ParseScalar(text.Trim(), type.BaseType);
+        return ParseScalar(text.Trim(), type);
     }
 
-    private static char SeparatorFor(int dimensions, int level)
+    private static char SeparatorFor(int dimensions, ArraySeparatorOptions separators, int level)
     {
         if (dimensions is < 1 or > 3)
             throw new FormatException("Array dimensions must be between one and three.");
-        return DimensionSeparators[dimensions - level - 1];
+        var ordered = new[] { separators.Inner[0], separators.Middle[0], separators.Outer[0] };
+        return ordered[dimensions - level - 1];
     }
 
-    private static bool IsAllowedSeparator(int dimensions, char separator)
+    private static bool IsAllowedSeparator(int dimensions, ArraySeparatorOptions separators, char separator)
     {
         for (var level = 0; level < dimensions; level++)
         {
-            if (SeparatorFor(dimensions, level) == separator)
+            if (SeparatorFor(dimensions, separators, level) == separator)
                 return true;
         }
         return false;
@@ -77,8 +88,9 @@ public static class ValueParser
         return Array.CreateInstance(elementType, length);
     }
 
-    private static object ParseScalar(string text, string baseType)
+    private static object ParseScalar(string text, TypeDescriptor type)
     {
+        var baseType = type.BaseType;
         if (text.Length == 0)
             throw new FormatException($"Empty {baseType} value.");
 
@@ -92,6 +104,7 @@ public static class ValueParser
                 "double" => ParseFloating(text, baseType, isDouble: true),
                 "bool" => ParseBool(text),
                 "string" => text,
+                "enum" => ParseEnum(text, type),
                 "vector2" => ParseComponents(text, baseType, 2),
                 "vector3" => ParseComponents(text, baseType, 3),
                 "vector4" => ParseComponents(text, baseType, 4),
@@ -161,6 +174,13 @@ public static class ValueParser
         _ => throw new FormatException($"Value '{text}' is invalid for type 'bool'.")
     };
 
+    private static string ParseEnum(string text, TypeDescriptor type)
+    {
+        if (type.EnumValues?.Contains(text, StringComparer.Ordinal) == true)
+            return text;
+        throw new FormatException($"值 '{text}' 不在允许的 enum 值列表中。");
+    }
+
     private static Type GetRuntimeType(string baseType) => baseType.ToLowerInvariant() switch
     {
         "int" => typeof(int),
@@ -169,6 +189,7 @@ public static class ValueParser
         "double" => typeof(double),
         "bool" => typeof(bool),
         "string" => typeof(string),
+        "enum" => typeof(string),
         "vector2" or "vector3" or "vector4" or "color" or "quaternion" => typeof(float[]),
         _ => throw new FormatException($"Unknown type '{baseType}'.")
     };

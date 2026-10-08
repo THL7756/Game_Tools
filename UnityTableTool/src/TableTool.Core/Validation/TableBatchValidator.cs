@@ -15,26 +15,15 @@ public static class TableBatchValidator
 {
     public static TableValidationBatch Validate(
         IReadOnlyList<TableDocument> allDocuments,
-        IEnumerable<string> selectedSourceNames)
+        IEnumerable<string> selectedSourceNames,
+        ArraySeparatorOptions? separators = null)
     {
         var selectedDocuments = TableSelectionResolver.Expand(allDocuments, selectedSourceNames).ToArray();
         var issues = selectedDocuments
-            .SelectMany(document => new TableValidator().Validate(document))
+            .SelectMany(document => (document.ParseIssues ?? []).Concat(new TableValidator(separators).Validate(document)))
             .ToList();
 
-        try
-        {
-            TableDocumentMerger.Merge(selectedDocuments);
-        }
-        catch (FormatException error)
-        {
-            issues.Add(new ValidationIssue(
-                ErrorCodes.TableMergeInvalid,
-                ValidationSeverity.Error,
-                error.Message,
-                "当前选择",
-                Suggestion: "检查同名表的字段、类型、默认值和测试列是否一致。"));
-        }
+        issues.AddRange(TableDocumentMerger.FindSchemaConflicts(selectedDocuments));
 
         foreach (var missing in TableSelectionResolver.FindMissingReferenceDetails(allDocuments, selectedDocuments))
         {

@@ -1,3 +1,7 @@
+// 用途：集中定义配置表校验问题代码。
+// 编写日期：2026-10-08
+// 作者：Codex（按用户需求修改）
+
 namespace TableTool.Core.Validation;
 
 public static class ErrorCodes
@@ -11,4 +15,7 @@ public static class ErrorCodes
     public const string SingletonRowCountInvalid = "SINGLETON_ROW_COUNT_INVALID";
     public const string TableReferenceMissing = "TABLE_REFERENCE_MISSING";
     public const string TableMergeInvalid = "TABLE_MERGE_ERROR";
+    public const string EnumValueInvalid = "ENUM_VALUE_INVALID";
+    public const string EnumCSharpInvalid = "ENUM_CSHARP_IDENTIFIER_INVALID";
+    public const string TableNotFormal = "TABLE_NOT_FORMAL";
 }

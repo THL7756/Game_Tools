@@ -1,4 +1,5 @@
 // 用途：验证字段类型、默认值、主键和表引用前提。
+// 用途：验证字段类型、默认值、主键、枚举、数组和数据行。
 // 编写日期：2026-10-08
 // 作者：Codex（按用户需求修改）
 
@@ -9,21 +10,17 @@ namespace TableTool.Core.Validation;
 
 public sealed class TableValidator
 {
+    private readonly ArraySeparatorOptions separators;
+
+    public TableValidator(ArraySeparatorOptions? separators = null)
+    {
+        this.separators = separators ?? ArraySeparatorOptions.Default;
+    }
+
     public IReadOnlyList<ValidationIssue> Validate(TableDocument document)
     {
         var issues = new List<ValidationIssue>();
         var fields = document.Schema.Fields;
-        var formalRows = document.Rows.Where(row => !row.IsTest).ToArray();
-        if (document.Schema.IsSingleton && formalRows.Length != 1)
-        {
-            issues.Add(new ValidationIssue(
-                ErrorCodes.SingletonRowCountInvalid,
-                ValidationSeverity.Error,
-                $"Singleton table must contain exactly one formal data row, found {formalRows.Length}.",
-                document.SourceName,
-                Suggestion: "删除多余数据行，或去掉 type:single 元数据。"));
-        }
-
         var primaryKeyField = fields.FirstOrDefault(field =>
             string.Equals(field.Name, document.Schema.PrimaryKey, StringComparison.OrdinalIgnoreCase));
         if (!document.Schema.IsSingleton && primaryKeyField is null)
@@ -40,19 +37,20 @@ public sealed class TableValidator
         {
             try
             {
-                ValueParser.Parse(field.DefaultValue!, field.Type);
+                ValueParser.Parse(field.DefaultValue!, field.Type, separators);
             }
-            catch (FormatException error)
+            catch (FormatException)
             {
                 invalidDefaults.Add(field.Name);
                 issues.Add(new ValidationIssue(
                     ErrorCodes.FieldDefaultInvalid,
                     ValidationSeverity.Error,
-                    error.Message,
+                    $"字段“{field.Name}”的默认值不符合类型“{field.Type.DisplayText}”。",
                     document.SourceName,
+                    field.DefaultRow,
                     FieldName: field.Name,
                     SourceColumn: field.SourceColumn + 1,
-                    Suggestion: "检查默认值是否符合字段类型。"));
+                    Suggestion: "请按字段类型填写默认值。"));
             }
         }
 
@@ -68,7 +66,7 @@ public sealed class TableValidator
 
                 try
                 {
-                    ValueParser.Parse(text, field.Type);
+                    ValueParser.Parse(text, field.Type, separators);
                 }
                 catch (FormatException error)
                 {
@@ -78,9 +76,10 @@ public sealed class TableValidator
                     issues.Add(new ValidationIssue(
                         field.Type.Dimensions > 0 && error.Message.Contains("separator", StringComparison.OrdinalIgnoreCase)
                             ? ErrorCodes.FieldArraySeparatorInvalid
+                            : field.Type.IsEnum ? ErrorCodes.EnumValueInvalid
                             : string.IsNullOrWhiteSpace(raw) ? ErrorCodes.FieldDefaultInvalid : ErrorCodes.FieldTypeUnknown,
                         row.IsTest ? ValidationSeverity.Error : ValidationSeverity.Error,
-                        error.Message,
+                        BuildValueMessage(field, raw, error),
                         document.SourceName,
                         row.SourceRow,
                         field.SourceColumn + 1,
@@ -106,7 +105,7 @@ public sealed class TableValidator
                 issues.Add(new ValidationIssue(
                     ErrorCodes.PrimaryKeyMissing,
                     ValidationSeverity.Error,
-                    $"Primary key '{document.Schema.PrimaryKey}' is missing.",
+                    $"主键“{document.Schema.PrimaryKey}”不能为空。",
                     document.SourceName,
                     row.SourceRow,
                     primaryKeyField.SourceColumn + 1,
@@ -119,7 +118,7 @@ public sealed class TableValidator
                 issues.Add(new ValidationIssue(
                     ErrorCodes.PrimaryKeyDuplicate,
                     ValidationSeverity.Error,
-                    $"Duplicate primary key '{key}'.",
+                    $"主键“{key}”重复。",
                     document.SourceName,
                     row.SourceRow,
                     primaryKeyField.SourceColumn + 1,
@@ -129,5 +128,14 @@ public sealed class TableValidator
         }
 
         return issues;
+    }
+
+    private static string BuildValueMessage(FieldSchema field, string? raw, FormatException error)
+    {
+        if (field.Type.IsEnum)
+            return $"字段“{field.Name}”的值“{raw}”不在允许的枚举值中。";
+        if (field.Type.Dimensions > 0 && error.Message.Contains("separator", StringComparison.OrdinalIgnoreCase))
+            return $"字段“{field.Name}”的数组分隔符或层级不正确。";
+        return $"字段“{field.Name}”的值“{raw}”不符合类型“{field.Type.DisplayText}”。";
     }
 }

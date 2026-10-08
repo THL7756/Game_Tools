@@ -25,8 +25,8 @@ public sealed record IssueDisplayItem(
             ValidationIssueFormatter.Source(issue),
             ValidationIssueFormatter.Location(issue),
             issue.Code,
-            issue.Message,
-            issue.Suggestion ?? string.Empty,
+            ValidationIssueFormatter.Description(issue),
+            ValidationIssueFormatter.Detail(issue),
             issue.Severity);
     }
 

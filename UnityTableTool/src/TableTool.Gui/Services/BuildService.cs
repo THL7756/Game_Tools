@@ -51,30 +51,63 @@ public sealed class BuildService
         }
 
         TableDocument[] merged;
+        var schemaConflicts = TableDocumentMerger.FindSchemaConflicts(selectedDocuments);
+        if (schemaConflicts.Count > 0)
+        {
+            foreach (var issue in schemaConflicts)
+                logs.Add(Entry("FAIL", ValidationIssueFormatter.LogText(issue)));
+            stopwatch.Stop();
+            return new BuildResult(false, schemaConflicts, logs, selectedDocuments.Length, 0, 0, stopwatch.Elapsed);
+        }
         try
         {
             merged = TableDocumentMerger.Merge(selectedDocuments).ToArray();
         }
-        catch (FormatException error)
+        catch (FormatException)
         {
-            var issue = new ValidationIssue(
+            var mergeIssues = TableDocumentMerger.FindSchemaConflicts(selectedDocuments);
+            var issue = mergeIssues.FirstOrDefault() ?? new ValidationIssue(
                 ErrorCodes.TableMergeInvalid,
                 ValidationSeverity.Error,
-                error.Message,
-                "当前选择",
+                "同名表结构不一致。",
+                selectedDocuments[0].SourceName,
                 Suggestion: "检查同名表的字段、类型、默认值和测试列是否一致。");
-            logs.Add(Entry("FAIL", error.Message));
+            logs.Add(Entry("FAIL", ValidationIssueFormatter.LogText(issue)));
             stopwatch.Stop();
-            return new BuildResult(false, [issue], logs, selectedDocuments.Length, 0, 0, stopwatch.Elapsed);
+            return new BuildResult(false, mergeIssues.Count == 0 ? [issue] : mergeIssues, logs, selectedDocuments.Length, 0, 0, stopwatch.Elapsed);
         }
-        var issues = merged.SelectMany(document => new TableValidator().Validate(document)).ToList();
+        var issues = merged.SelectMany(document => (document.ParseIssues ?? []).Concat(new TableValidator(
+            new ArraySeparatorOptions(
+                settings.ArrayInnerSeparator,
+                settings.ArrayMiddleSeparator,
+                settings.ArrayOuterSeparator)).Validate(document))).ToList();
+        issues.AddRange(TableDocumentMerger.FindSchemaConflicts(selectedDocuments));
+        if (codeTarget != ExportTarget.None)
+        {
+            foreach (var document in merged)
+            foreach (var field in document.Schema.Fields.Where(field => field.Type.IsEnum))
+            foreach (var value in field.Type.EnumValues ?? [])
+            {
+                if (CSharpExporter.IsValidEnumMember(value))
+                    continue;
+                issues.Add(new ValidationIssue(
+                    ErrorCodes.EnumCSharpInvalid,
+                    ValidationSeverity.Error,
+                    $"枚举字段“{field.Name}”的成员“{value}”不是合法的 C# 标识符。",
+                    document.SourceName,
+                    field.TypeRow,
+                    field.SourceColumn + 1,
+                    field.Name,
+                    Suggestion: "请修改 enum 成员名称后再生成 C#。"));
+            }
+        }
         issues.AddRange(GetMissingReferenceIssues(allDocuments, selectedDocuments));
         logs.Add(Entry("INFO", $"开始打表：{merged.Length} 张逻辑表 → 数据：{TargetText(dataTarget)} · 代码：{TargetText(codeTarget)}"));
 
         if (issues.Any(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal))
         {
             foreach (var issue in issues.Where(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal))
-                logs.Add(Entry("FAIL", $"{ValidationIssueFormatter.Headline(issue)}：{ValidationIssueFormatter.Detail(issue)}"));
+                logs.Add(Entry("FAIL", ValidationIssueFormatter.LogText(issue)));
             stopwatch.Stop();
             return new BuildResult(false, issues, logs, merged.Length, 0, 0, stopwatch.Elapsed);
         }
@@ -85,7 +118,7 @@ public sealed class BuildService
         if (warningCount > 0)
         {
             foreach (var issue in issues.Where(issue => issue.Severity == ValidationSeverity.Warning))
-                logs.Add(Entry("WARN", $"{ValidationIssueFormatter.Headline(issue)}：{ValidationIssueFormatter.Detail(issue)}"));
+                logs.Add(Entry("WARN", ValidationIssueFormatter.LogText(issue)));
             logs.Add(Entry("WARN", $"检查通过，保留 {warningCount} 条提示警告"));
         }
 

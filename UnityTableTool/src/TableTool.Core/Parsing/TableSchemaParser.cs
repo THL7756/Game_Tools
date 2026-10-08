@@ -1,4 +1,9 @@
+// 用途：把原始 Sheet 解析为正式表文档，并保留字段级诊断坐标。
+// 编写日期：2026-10-08
+// 作者：Codex（按用户需求修改）
+
 using TableTool.Core.Models;
+using TableTool.Core.Validation;
 
 namespace TableTool.Core.Parsing;
 
@@ -11,15 +16,27 @@ public sealed class TableSchemaParser
 
     public TableDocument Parse(RawTableGrid grid)
     {
-        if (grid.Rows.Count == 0)
-            throw new FormatException("A table must contain at least one row.");
-        if (grid.Rows.Count < (IsSingleton(grid.Rows[0]) ? 5 : 6))
-            throw new FormatException("A table must contain six header rows.");
+        var result = ParseWithDiagnostics(grid);
+        if (result.Document is null)
+            throw new FormatException(result.Issues.FirstOrDefault()?.Message ?? "表格不是正式配置表。");
+        return result.Document;
+    }
 
-        var tableName = ParseTableName(grid.Rows[0]);
+    public TableParseResult ParseWithDiagnostics(RawTableGrid grid)
+    {
+        if (grid.Rows.Count == 0)
+            return TableParseResult.Informal(grid.SourceName, "文件或 Sheet 为空。");
+
+        var tableName = TryParseTableName(grid.Rows[0]);
+        if (tableName is null)
+            return TableParseResult.Informal(grid.SourceName, "缺少 table: 标记或表名为空。");
         var isSingleton = IsSingleton(grid.Rows[0]);
+        var minimumRows = isSingleton ? 5 : 6;
+        if (grid.Rows.Count < minimumRows)
+            return TableParseResult.Informal(grid.SourceName, "正式表定义行不足。");
+
         if (isSingleton)
-            return ParseSingleton(grid, tableName);
+            return ParseSingletonWithDiagnostics(grid, tableName);
 
         var offset = HasHeaderLabel(grid.Rows[3]) ? 1 : 0;
         var descriptions = SliceHeader(grid.Rows[1], offset);
@@ -29,6 +46,7 @@ public sealed class TableSchemaParser
         var defaults = SliceHeader(grid.Rows[5], offset);
         var validationFields = new List<FieldSchema>();
         var fields = new List<FieldSchema>();
+        var issues = new List<ValidationIssue>();
 
         for (var i = 0; i < names.Count; i++)
         {
@@ -38,20 +56,25 @@ public sealed class TableSchemaParser
             var isTestColumn = IsTestColumn(name);
 
             var typeText = Get(types, i)?.Trim() ?? string.Empty;
-            var type = TypeDescriptor.Parse(typeText);
-            var target = ParseTarget(Get(targets, i));
+            var type = ParseType(typeText, grid.SourceName, 3, i + offset, out var typeIssue);
+            if (typeIssue is not null)
+                issues.Add(typeIssue);
+            var target = ParseTarget(Get(targets, i), grid.SourceName, 5, i + offset, out var targetIssue);
+            if (targetIssue is not null)
+                issues.Add(targetIssue);
             var field = new FieldSchema(
                 i + offset,
                 name,
                 Get(descriptions, i)?.Trim() ?? string.Empty,
                 type,
                 target,
-                EmptyToNull(Get(defaults, i)));
+                EmptyToNull(Get(defaults, i)),
+                IsTest: isTestColumn);
             (isTestColumn ? validationFields : fields).Add(field);
         }
 
         if (fields.Count == 0)
-            throw new FormatException("The table must contain at least one named field.");
+            return TableParseResult.Informal(grid.SourceName, "没有正式字段，不算正式表。");
 
         var rows = new List<TableRow>();
         for (var rowIndex = 6; rowIndex < grid.Rows.Count; rowIndex++)
@@ -79,14 +102,18 @@ public sealed class TableSchemaParser
             rows.Add(new TableRow(rowIndex + 1, isTest, values));
         }
 
-        return new TableDocument(grid.SourceName, new TableSchema(tableName, fields, fields[0].Name, false, validationFields), rows);
+        return new TableParseResult(
+            new TableDocument(grid.SourceName, new TableSchema(tableName, fields, fields[0].Name, false, validationFields), rows, issues),
+            issues,
+            true);
     }
 
-    private static TableDocument ParseSingleton(RawTableGrid grid, string tableName)
+    private static TableParseResult ParseSingletonWithDiagnostics(RawTableGrid grid, string tableName)
     {
+        var issues = new List<ValidationIssue>();
         var semanticRowIndex = FindSingletonSemanticRow(grid.Rows);
         if (semanticRowIndex < 0)
-            throw new FormatException("A singleton table must contain semantic columns 'id', 'type' and 'data'.");
+            return TableParseResult.Informal(grid.SourceName, "单例表缺少 id、type、data 语义列。");
 
         var semanticRow = grid.Rows[semanticRowIndex];
         var idColumn = FindSemanticColumn(semanticRow, "id");
@@ -113,23 +140,42 @@ public sealed class TableSchemaParser
                 && string.IsNullOrWhiteSpace(Get(row, GetOptional(dataColumn))?.Trim()))
             {
                 if (targetColumn >= 0 && !string.IsNullOrWhiteSpace(Get(row, targetColumn)))
-                    defaultTarget = ParseTarget(Get(row, targetColumn));
+                {
+                    defaultTarget = ParseTarget(Get(row, targetColumn), grid.SourceName, rowIndex + 1, targetColumn, out var defaultTargetIssue);
+                    if (defaultTargetIssue is not null)
+                        issues.Add(defaultTargetIssue);
+                }
                 continue;
             }
             if (string.IsNullOrWhiteSpace(id))
                 continue;
             var typeText = Get(row, typeColumn)?.Trim() ?? string.Empty;
             var data = EmptyToNull(Get(row, dataColumn));
-            var type = TypeDescriptor.Parse(typeText);
-            var target = targetColumn >= 0 && !string.IsNullOrWhiteSpace(Get(row, targetColumn))
-                ? ParseTarget(Get(row, targetColumn))
-                : defaultTarget;
+            var type = ParseType(typeText, grid.SourceName, rowIndex + 1, typeColumn, out var typeIssue);
+            if (typeIssue is not null)
+                issues.Add(typeIssue with { FieldName = id });
+            ValidationIssue? targetIssue = null;
+            var target = defaultTarget;
+            if (targetColumn >= 0 && !string.IsNullOrWhiteSpace(Get(row, targetColumn)))
+                target = ParseTarget(Get(row, targetColumn), grid.SourceName, rowIndex + 1, targetColumn, out targetIssue);
+            if (targetIssue is not null)
+                issues.Add(targetIssue with { FieldName = id });
             var existingIndex = fields.FindIndex(field => field.Name.Equals(id, StringComparison.Ordinal));
             if (existingIndex >= 0)
             {
                 var existing = fields[existingIndex];
-                if (existing.Type != type)
-                    throw new FormatException($"Duplicate singleton field '{id}' has incompatible types in {grid.SourceName}.");
+                if (!string.Equals(existing.Type.DisplayText, type.DisplayText, StringComparison.Ordinal))
+                {
+                    issues.Add(new ValidationIssue(
+                        ErrorCodes.TableMergeInvalid,
+                        ValidationSeverity.Error,
+                        $"单例字段“{id}”重复定义且类型不一致。",
+                        grid.SourceName,
+                        rowIndex + 1,
+                        typeColumn + 1,
+                        id));
+                    continue;
+                }
                 fields[existingIndex] = existing with { Target = MergeTarget(existing.Target, target) };
                 if (string.IsNullOrWhiteSpace(values[id]) && data is not null)
                     values[id] = data;
@@ -147,10 +193,13 @@ public sealed class TableSchemaParser
         }
 
         if (fields.Count == 0)
-            throw new FormatException("A singleton table must contain at least one data field.");
+            return TableParseResult.Informal(grid.SourceName, "单例表没有正式数据字段。");
 
         rows.Add(new TableRow(semanticRowIndex + 2, false, values));
-        return new TableDocument(grid.SourceName, new TableSchema(tableName, fields, fields[0].Name, true), rows);
+        return new TableParseResult(
+            new TableDocument(grid.SourceName, new TableSchema(tableName, fields, fields[0].Name, true), rows, issues),
+            issues,
+            true);
     }
 
     private static int FindSingletonSemanticRow(IReadOnlyList<IReadOnlyList<string?>> rows)
@@ -207,14 +256,14 @@ public sealed class TableSchemaParser
 
     private static int GetOptional(int index) => index < 0 ? int.MaxValue : index;
 
-    private static string ParseTableName(IReadOnlyList<string?> row)
+    private static string? TryParseTableName(IReadOnlyList<string?> row)
     {
         var lines = row.SelectMany(value => (value ?? string.Empty).Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
             .Select(value => value.Trim())
             .ToArray();
         var tableLine = lines.FirstOrDefault(value => value.StartsWith("table:", StringComparison.OrdinalIgnoreCase)) ?? string.Empty;
         if (tableLine.Length == 0)
-            throw new FormatException("The first row must start with 'table:'.");
+            return null;
         var name = tableLine[6..].Trim();
         var metadataIndex = name.IndexOfAny(['\r', '\n']);
         if (metadataIndex >= 0)
@@ -225,7 +274,7 @@ public sealed class TableSchemaParser
         if (name.Contains(" type:single", StringComparison.OrdinalIgnoreCase))
             name = name[..name.IndexOf(" type:single", StringComparison.OrdinalIgnoreCase)].Trim();
         if (name.Length == 0)
-            throw new FormatException("Table name cannot be empty.");
+            return null;
         return name;
     }
 
@@ -253,13 +302,66 @@ public sealed class TableSchemaParser
         || name.StartsWith("test_", StringComparison.OrdinalIgnoreCase)
         || name.StartsWith("ceshi_", StringComparison.OrdinalIgnoreCase);
 
-    private static FieldTarget ParseTarget(string? value) => value?.Trim().ToLowerInvariant() switch
+    private static FieldTarget ParseTarget(
+        string? value,
+        string sourceName,
+        int row,
+        int column,
+        out ValidationIssue? issue)
     {
-        null or "" or "cs" => FieldTarget.Both,
-        "c" => FieldTarget.Client,
-        "s" => FieldTarget.Server,
-        _ => throw new FormatException($"Unknown field target '{value}'.")
-    };
+        issue = null;
+        return value?.Trim().ToLowerInvariant() switch
+        {
+            null or "" or "cs" => FieldTarget.Both,
+            "c" => FieldTarget.Client,
+            "s" => FieldTarget.Server,
+            _ => InvalidTarget(value, sourceName, row, column, out issue)
+        };
+    }
+
+    private static FieldTarget InvalidTarget(
+        string? value,
+        string sourceName,
+        int row,
+        int column,
+        out ValidationIssue? issue)
+    {
+        issue = new ValidationIssue(
+            ErrorCodes.FieldTargetInvalid,
+            ValidationSeverity.Error,
+            $"客户端/服务器标记“{value}”无效。",
+            sourceName,
+            row,
+            column + 1,
+            Suggestion: "只能填写空值、c、s 或 cs。");
+        return FieldTarget.Both;
+    }
+
+    private static TypeDescriptor ParseType(
+        string typeText,
+        string sourceName,
+        int row,
+        int column,
+        out ValidationIssue? issue)
+    {
+        try
+        {
+            issue = null;
+            return TypeDescriptor.Parse(typeText);
+        }
+        catch (FormatException error)
+        {
+            issue = new ValidationIssue(
+                ErrorCodes.FieldTypeUnknown,
+                ValidationSeverity.Error,
+                $"字段类型“{typeText}”无效。",
+                sourceName,
+                row,
+                column + 1,
+                Suggestion: error.Message);
+            return TypeDescriptor.Invalid(typeText);
+        }
+    }
 
     private static FieldTarget MergeTarget(FieldTarget left, FieldTarget right) =>
         left == right ? left : FieldTarget.Both;

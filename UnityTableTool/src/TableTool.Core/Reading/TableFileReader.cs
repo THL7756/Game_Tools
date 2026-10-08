@@ -36,9 +36,12 @@ public static class TableFileReader
         {
             ConfigureDataTable = _ => new ExcelDataTableConfiguration { UseHeaderRow = false }
         });
-        return dataSet.Tables.Cast<DataTable>().Select(table => new Parsing.RawTableGrid(
+        var grids = dataSet.Tables.Cast<DataTable>().Select(table => new Parsing.RawTableGrid(
             $"{Path.GetFileName(path)}::{table.TableName}",
             table.Rows.Cast<DataRow>().Select(row => (IReadOnlyList<string?>)row.ItemArray.Select(cell => cell == DBNull.Value ? null : Convert.ToString(cell)).ToArray()).ToArray())).ToArray();
+        return grids.Length == 0
+            ? [new Parsing.RawTableGrid(Path.GetFileName(path), [])]
+            : grids;
     }
 
     public static IReadOnlyList<Parsing.RawTableGrid> ReadDirectory(

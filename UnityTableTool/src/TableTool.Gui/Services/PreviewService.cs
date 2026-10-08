@@ -54,10 +54,12 @@ public sealed class PreviewService
 {
     public PreviewViewModel Create(
         TableModel table,
-        IReadOnlyList<ValidationIssue> batchIssues)
+        IReadOnlyList<ValidationIssue> batchIssues,
+        ArraySeparatorOptions? separators = null)
     {
         var document = table.CurrentSheet.Document;
-        var ownIssues = new TableValidator().Validate(document);
+        var ownIssues = (document.ParseIssues ?? [])
+            .Concat(new TableValidator(separators).Validate(document));
         var issues = ownIssues
             .Concat(batchIssues.Where(issue =>
                 string.Equals(issue.SourceName, document.SourceName, StringComparison.OrdinalIgnoreCase)))
@@ -68,7 +70,8 @@ public sealed class PreviewService
             .ToArray();
         var highlights = ValidationHighlightResolver.Resolve(document, issues);
 
-        var fields = document.Schema.Fields.Select(field =>
+        var previewFields = document.Schema.Fields;
+        var fields = previewFields.Select(field =>
         {
             var highlight = highlights.Fields.GetValueOrDefault(field.Name);
             return new PreviewField(
@@ -83,7 +86,7 @@ public sealed class PreviewService
             .Where(row => !row.IsTest)
             .Select(row =>
             {
-                var values = document.Schema.Fields.ToDictionary(
+                var values = previewFields.ToDictionary(
                     field => field.Name,
                     field =>
                     {
@@ -95,7 +98,7 @@ public sealed class PreviewService
                     StringComparer.OrdinalIgnoreCase);
                 var cellLevels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 var cellTooltips = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var field in document.Schema.Fields)
+                foreach (var field in previewFields)
                 {
                     var key = ValidationHighlightResolver.CellKey(row.SourceRow, field.Name);
                     var highlight = highlights.Cells.GetValueOrDefault(key);

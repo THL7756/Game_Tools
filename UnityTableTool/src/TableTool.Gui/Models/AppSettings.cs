@@ -34,6 +34,9 @@ public sealed class AppSettings
     public string RefreshShortcut { get; set; } = "Ctrl+R";
     public int VerticalWheelScrollStep { get; set; } = 12;
     public int HorizontalWheelScrollStep { get; set; } = 12;
+    public string ArrayInnerSeparator { get; set; } = "#";
+    public string ArrayMiddleSeparator { get; set; } = "|";
+    public string ArrayOuterSeparator { get; set; } = ";";
     public ExportTarget OutputTargets { get; set; } = ExportTarget.Both;
     public ExportTarget CodeTargets { get; set; } = ExportTarget.Both;
     public List<string> Favorites { get; set; } = [];
@@ -60,6 +63,9 @@ public sealed class AppSettings
         RefreshShortcut = RefreshShortcut,
         VerticalWheelScrollStep = VerticalWheelScrollStep,
         HorizontalWheelScrollStep = HorizontalWheelScrollStep,
+        ArrayInnerSeparator = ArrayInnerSeparator,
+        ArrayMiddleSeparator = ArrayMiddleSeparator,
+        ArrayOuterSeparator = ArrayOuterSeparator,
         OutputTargets = OutputTargets,
         CodeTargets = CodeTargets,
         Favorites = [.. Favorites],

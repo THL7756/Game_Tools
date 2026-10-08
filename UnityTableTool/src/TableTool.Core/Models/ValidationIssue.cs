@@ -1,3 +1,7 @@
+// 用途：承载配置表校验问题、严重级别和源表定位信息。
+// 编写日期：2026-10-08
+// 作者：Codex（按用户需求修改）
+
 namespace TableTool.Core.Models;
 
 public enum ValidationSeverity

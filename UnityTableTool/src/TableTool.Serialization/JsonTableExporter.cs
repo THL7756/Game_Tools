@@ -1,3 +1,7 @@
+// 用途：把正式配置表序列化为 JSON 数据。
+// 编写日期：2026-10-08
+// 作者：Codex（按用户需求修改）
+
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using TableTool.Core.Models;
@@ -29,7 +33,7 @@ public sealed class JsonTableExporter
             fields = document.Schema.Fields.Select(field => new
             {
                 name = field.Name,
-                type = field.Type.BaseType + string.Concat(Enumerable.Repeat("()", field.Type.Dimensions)),
+                type = field.Type.DisplayText,
                 defaultValue = field.DefaultValue
             }).ToArray(),
             rows = document.Schema.IsSingleton ? Array.Empty<Dictionary<string, string?>>() : rows,

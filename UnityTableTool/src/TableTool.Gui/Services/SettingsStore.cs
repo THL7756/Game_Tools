@@ -33,7 +33,11 @@ public static class SettingsStore
             {
                 var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(SettingsFilePath), JsonOptions);
                 if (settings is not null)
-                    return Normalize(settings);
+                {
+                    Normalize(settings);
+                    Save(settings);
+                    return settings;
+                }
             }
 
             // 兼容上一版保存在 LocalAppData 的配置，首次启动时迁移到工具目录。
@@ -94,6 +98,19 @@ public static class SettingsStore
             settings.ClientCodeOutputDirectory = Path.Combine(root, "Code_c");
         if (string.IsNullOrWhiteSpace(settings.ServerCodeOutputDirectory))
             settings.ServerCodeOutputDirectory = Path.Combine(root, "Code_s");
+        if (settings.VerticalWheelScrollStep == 1)
+            settings.VerticalWheelScrollStep = 12;
+        if (settings.HorizontalWheelScrollStep == 1)
+            settings.HorizontalWheelScrollStep = 12;
+        if (!new TableTool.Core.Models.ArraySeparatorOptions(
+                settings.ArrayInnerSeparator,
+                settings.ArrayMiddleSeparator,
+                settings.ArrayOuterSeparator).IsValid)
+        {
+            settings.ArrayInnerSeparator = "#";
+            settings.ArrayMiddleSeparator = "|";
+            settings.ArrayOuterSeparator = ";";
+        }
         return settings;
     }
 

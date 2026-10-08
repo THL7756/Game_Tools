@@ -491,6 +491,9 @@
                                 <RowDefinition Height="54" />
                                 <RowDefinition Height="54" />
                                 <RowDefinition Height="54" />
+                                <RowDefinition Height="54" />
+                                <RowDefinition Height="54" />
+                                <RowDefinition Height="54" />
                             </Grid.RowDefinitions>
                             <Grid Grid.Row="0" Margin="18,0">
                                 <Grid.ColumnDefinitions>
@@ -540,6 +543,24 @@
                                     <Slider x:Name="HorizontalWheelStepSlider" Minimum="1" Maximum="30" TickFrequency="1" SmallChange="1" LargeChange="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="HorizontalWheelStepSlider_ValueChanged" />
                                     <TextBox x:Name="HorizontalWheelStepBox" Grid.Column="1" Width="52" Height="28" MaxLength="3" Style="{StaticResource TextBox.Field}" VerticalAlignment="Center" PreviewKeyDown="WheelStepBox_PreviewKeyDown" LostFocus="WheelStepBox_LostFocus" />
                                 </Grid>
+                            </Grid>
+                            <Border Grid.Row="4" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
+                            <Grid Grid.Row="4" Margin="18,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /></Grid.ColumnDefinitions>
+                                <TextBlock Text="一维数组分隔符" VerticalAlignment="Center" />
+                                <TextBox x:Name="ArrayInnerSeparatorBox" Grid.Column="1" Width="52" Height="28" Style="{StaticResource TextBox.Field}" VerticalAlignment="Center" MaxLength="1" />
+                            </Grid>
+                            <Border Grid.Row="5" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
+                            <Grid Grid.Row="5" Margin="18,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /></Grid.ColumnDefinitions>
+                                <TextBlock Text="二维数组分隔符" VerticalAlignment="Center" />
+                                <TextBox x:Name="ArrayMiddleSeparatorBox" Grid.Column="1" Width="52" Height="28" Style="{StaticResource TextBox.Field}" VerticalAlignment="Center" MaxLength="1" />
+                            </Grid>
+                            <Border Grid.Row="6" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
+                            <Grid Grid.Row="6" Margin="18,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /></Grid.ColumnDefinitions>
+                                <TextBlock Text="三维数组分隔符" VerticalAlignment="Center" />
+                                <TextBox x:Name="ArrayOuterSeparatorBox" Grid.Column="1" Width="52" Height="28" Style="{StaticResource TextBox.Field}" VerticalAlignment="Center" MaxLength="1" />
                             </Grid>
                         </Grid>
                     </StackPanel>
