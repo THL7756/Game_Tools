@@ -1,6 +1,6 @@
 // 用途：读写工具设置，并校准路径、窗口尺寸和分隔符配置。
 // 编写日期：2026-10-08
-// 最近修改日期：2026-10-06
+// 最近修改日期：2026-10-10
 // 作者：Codex（按用户需求修改）
 
 using System.IO;
@@ -106,6 +106,15 @@ public static class SettingsStore
         settings.WorkbenchDetailHeight = ClampLayoutSize(settings.WorkbenchDetailHeight, 260, 120, 800);
         settings.WorkbenchIssuesHeight = ClampLayoutSize(settings.WorkbenchIssuesHeight, 220, 120, 800);
         settings.SettingsSidebarWidth = ClampLayoutSize(settings.SettingsSidebarWidth, 155, 140, 280);
+        settings.LogFilterLevels = NormalizeList(settings.LogFilterLevels, ToolLogCategories.Levels);
+        settings.LogFilterCategories = NormalizeList(settings.LogFilterCategories, ToolLogCategories.All);
+        settings.LogCollapsedCategories = (settings.LogCollapsedCategories ?? [])
+            .Where(ToolLogCategories.All.Contains)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        settings.LogPanelHeight = double.IsNaN(settings.LogPanelHeight) || double.IsInfinity(settings.LogPanelHeight)
+            ? 320
+            : Math.Clamp(settings.LogPanelHeight, 220, 560);
         if (double.IsNaN(settings.WindowWidth) || double.IsInfinity(settings.WindowWidth))
             settings.WindowWidth = 1024;
         if (double.IsNaN(settings.WindowHeight) || double.IsInfinity(settings.WindowHeight))
@@ -126,6 +135,16 @@ public static class SettingsStore
 
     private static double ClampLayoutSize(double value, double fallback, double minimum, double maximum) =>
         double.IsNaN(value) || double.IsInfinity(value) || value <= 0 ? fallback : Math.Clamp(value, minimum, maximum);
+
+    private static List<string> NormalizeList(IEnumerable<string>? values, IReadOnlyList<string> allowed)
+    {
+        var normalized = (values ?? [])
+            .Where(value => allowed.Contains(value, StringComparer.OrdinalIgnoreCase))
+            .Select(value => allowed.First(item => string.Equals(item, value, StringComparison.OrdinalIgnoreCase)))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        return normalized.Count == 0 ? [.. allowed] : normalized;
+    }
 
     private static string FindProjectRoot()
     {

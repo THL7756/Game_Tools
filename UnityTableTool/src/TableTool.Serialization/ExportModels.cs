@@ -1,3 +1,7 @@
+// 用途：定义数据和代码导出的目录、目标、格式开关及数组分隔符选项。
+// 编写日期：2026-10-10
+// 作者：Codex（按用户需求修改）
+
 using TableTool.Core.Models;
 
 namespace TableTool.Serialization;
@@ -20,7 +24,8 @@ public sealed record ExportOptions
             generateJson,
             generateBytes,
             targets,
-            targets)
+            targets,
+            ArraySeparatorOptions.Default)
     {
     }
 
@@ -33,7 +38,8 @@ public sealed record ExportOptions
         bool generateJson = true,
         bool generateBytes = true,
         ExportTarget targets = ExportTarget.Client,
-        ExportTarget codeTargets = ExportTarget.Client)
+        ExportTarget codeTargets = ExportTarget.Client,
+        ArraySeparatorOptions? arraySeparators = null)
     {
         ClientDataOutputDirectory = clientDataOutputDirectory;
         ServerDataOutputDirectory = serverDataOutputDirectory;
@@ -44,6 +50,7 @@ public sealed record ExportOptions
         GenerateBytes = generateBytes;
         Targets = targets;
         CodeTargets = codeTargets;
+        ArraySeparators = arraySeparators ?? ArraySeparatorOptions.Default;
     }
 
     public string ClientDataOutputDirectory { get; }
@@ -55,6 +62,7 @@ public sealed record ExportOptions
     public bool GenerateBytes { get; }
     public ExportTarget Targets { get; }
     public ExportTarget CodeTargets { get; }
+    public ArraySeparatorOptions ArraySeparators { get; }
 }
 
 public sealed record ExportResult(

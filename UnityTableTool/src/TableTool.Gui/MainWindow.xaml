@@ -283,55 +283,113 @@
         </Border>
 
         <Grid x:Name="LogOverlayHost" Grid.Row="2" Panel.ZIndex="100" Visibility="Collapsed" Background="Transparent" MouseLeftButtonDown="LogOverlayHost_MouseLeftButtonDown">
-            <Border x:Name="LogOverlayPanel" Height="320" MaxHeight="420" Margin="8" VerticalAlignment="Bottom" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="5" ClipToBounds="True">
+            <Border x:Name="LogOverlayPanel" Height="320" MaxHeight="560" MinHeight="220" Margin="8" VerticalAlignment="Bottom" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="5" ClipToBounds="True">
                 <DockPanel>
-                    <Grid DockPanel.Dock="Top" Height="42">
-                        <StackPanel Orientation="Horizontal" Margin="12,0" VerticalAlignment="Center">
-                            <TextBlock Text="日志" Style="{StaticResource Text.Section}" VerticalAlignment="Center" Margin="0,0,14,0" />
-                            <Button x:Name="LogFilterAllButton" Tag="all" Style="{StaticResource Button.Icon}" Content="全部" Click="LogFilter_Click" Padding="9,5" />
-                            <Button x:Name="LogFilterErrorButton" Tag="error" Style="{StaticResource Button.Icon}" Content="报错" Click="LogFilter_Click" Padding="9,5" />
-                            <Button x:Name="LogFilterWarningButton" Tag="warning" Style="{StaticResource Button.Icon}" Content="警告" Click="LogFilter_Click" Padding="9,5" />
-                            <Button x:Name="LogFilterInfoButton" Tag="log" Style="{StaticResource Button.Icon}" Content="日志" Click="LogFilter_Click" Padding="9,5" />
+                    <Thumb x:Name="LogPanelResizeThumb" DockPanel.Dock="Top" Height="5" Cursor="SizeNS" DragDelta="LogPanelResizeThumb_DragDelta" Background="Transparent" ToolTip="拖动调整日志高度" />
+                    <Grid DockPanel.Dock="Top" MinHeight="38" Margin="8,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="日志" Style="{StaticResource Text.Section}" VerticalAlignment="Center" Margin="4,0,10,0" />
+                            <TextBlock x:Name="LogSummaryText" Text="0 条" Style="{StaticResource Text.Muted}" VerticalAlignment="Center" />
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,8,0" VerticalAlignment="Center">
-                            <Button Style="{StaticResource Button.Icon}" Width="28" Height="28" Click="CopyLogs_Click" ToolTip="复制全部日志">
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Style="{StaticResource Button.Icon}" Width="30" Height="28" Click="ExpandAllLogGroups_Click" ToolTip="展开全部分类">
+                                <TextBlock Text="+" FontSize="15" />
+                            </Button>
+                            <Button Style="{StaticResource Button.Icon}" Width="30" Height="28" Click="CollapseAllLogGroups_Click" ToolTip="收起全部分类">
+                                <TextBlock Text="−" FontSize="15" />
+                            </Button>
+                            <Button Style="{StaticResource Button.Icon}" Width="30" Height="28" Click="CopyLogs_Click" ToolTip="复制筛选后的日志">
                                 <Image Source="/UnityTableTool;component/Assets/Icons/copy.png" Width="14" Height="14" />
                             </Button>
-                            <Button Style="{StaticResource Button.Icon}" Width="28" Height="28" Click="ClearLogs_Click" ToolTip="清空日志">
+                            <Button Style="{StaticResource Button.Icon}" Width="30" Height="28" Click="ClearLogs_Click" ToolTip="清空日志">
                                 <Image Source="/UnityTableTool;component/Assets/Icons/trash2.png" Width="14" Height="14" />
                             </Button>
-                            <Button Style="{StaticResource Button.Icon}" Width="28" Height="28" Click="CloseLogs_Click" ToolTip="收起日志">
+                            <Button Style="{StaticResource Button.Icon}" Width="30" Height="28" Click="CloseLogs_Click" ToolTip="收起日志">
                                 <Image Source="/UnityTableTool;component/Assets/Icons/x.png" Width="13" Height="13" />
                             </Button>
                         </StackPanel>
                     </Grid>
-                    <ScrollViewer x:Name="LogsScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" ScrollChanged="LogsScrollViewer_ScrollChanged">
+                    <Grid DockPanel.Dock="Top" Margin="12,0,12,7">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="32" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <TextBox x:Name="LogSearchBox" Grid.Row="0" Height="28" Style="{StaticResource TextBox.Field}" Padding="9,0" TextChanged="LogSearchBox_TextChanged" ToolTip="搜索分类、来源或消息">
+                            <TextBox.Tag>搜索日志</TextBox.Tag>
+                        </TextBox>
+                        <WrapPanel Grid.Row="1" Margin="0,5,0,0" VerticalAlignment="Center">
+                            <Button x:Name="LogFilterAllButton" Tag="all" Style="{StaticResource Button.Icon}" Content="全部" Click="LogFilter_Click" Padding="9,4" Margin="0,0,4,0" />
+                            <Button x:Name="LogFilterInfoButton" Tag="INFO" Style="{StaticResource Button.Icon}" Content="信息" Click="LogFilter_Click" Padding="9,4" Margin="0,0,4,0" />
+                            <Button x:Name="LogFilterSuccessButton" Tag="SUCCESS" Style="{StaticResource Button.Icon}" Content="成功" Click="LogFilter_Click" Padding="9,4" Margin="0,0,4,0" />
+                            <Button x:Name="LogFilterWarningButton" Tag="WARNING" Style="{StaticResource Button.Icon}" Content="警告" Click="LogFilter_Click" Padding="9,4" Margin="0,0,4,0" />
+                            <Button x:Name="LogFilterErrorButton" Tag="ERROR" Style="{StaticResource Button.Icon}" Content="错误" Click="LogFilter_Click" Padding="9,4" Margin="0,0,8,0" />
+                            <ItemsControl x:Name="LogCategoryFilters" Loaded="LogCategoryFilters_Loaded">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox Style="{StaticResource CheckBox.Tool}" Content="{Binding Label}" Tag="{Binding Category}" IsChecked="True" Click="LogCategoryFilter_Click" Margin="0,0,9,0" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </WrapPanel>
+                    </Grid>
+                    <ScrollViewer x:Name="LogsScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" ScrollChanged="LogsScrollViewer_ScrollChanged">
                         <ItemsControl x:Name="LogsList" Margin="12,0,12,10">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Margin="0,4">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="64" />
-                                            <ColumnDefinition Width="72" />
-                                            <ColumnDefinition Width="120" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBox Style="{StaticResource Text.Selectable}" Text="{Binding TimeText}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" />
-                                        <TextBox Grid.Column="1" Text="{Binding Level}" FontWeight="SemiBold" VerticalAlignment="Center">
-                                            <TextBox.Style>
-                                                <Style TargetType="TextBox" BasedOn="{StaticResource Text.Selectable}">
-                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Level}" Value="SUCCESS"><Setter Property="Foreground" Value="{DynamicResource Brush.Success}" /></DataTrigger>
-                                                        <DataTrigger Binding="{Binding Level}" Value="WARNING"><Setter Property="Foreground" Value="{DynamicResource Brush.Warning}" /></DataTrigger>
-                                                        <DataTrigger Binding="{Binding Level}" Value="ERROR"><Setter Property="Foreground" Value="{DynamicResource Brush.Error}" /></DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBox.Style>
-                                        </TextBox>
-                                        <TextBox Grid.Column="2" Style="{StaticResource Text.Selectable}" Text="{Binding Source}" Margin="0,0,8,0" VerticalAlignment="Center" />
-                                        <TextBox Grid.Column="3" Style="{StaticResource Text.Selectable}" Text="{Binding Message}" Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center" />
-                                    </Grid>
+                                    <StackPanel>
+                                        <Button Style="{StaticResource Button.Icon}" HorizontalContentAlignment="Left" Click="LogGroupToggle_Click" Tag="{Binding}" Padding="5,4" Margin="0,2">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding ToggleGlyph}" Width="18" Foreground="{DynamicResource Brush.Accent}" />
+                                                <TextBlock Text="{Binding Category}" FontWeight="SemiBold" Margin="0,0,8,0" />
+                                                <TextBlock Text="{Binding Count, StringFormat={}({0})}" Style="{StaticResource Text.Muted}" />
+                                                <TextBlock Text="{Binding ErrorCount, StringFormat={} · 错误 {0}}" Foreground="{DynamicResource Brush.Error}" Margin="8,0,0,0" />
+                                                <TextBlock Text="{Binding WarningCount, StringFormat={} · 警告 {0}}" Foreground="{DynamicResource Brush.Warning}" Margin="8,0,0,0" />
+                                            </StackPanel>
+                                        </Button>
+                                        <ItemsControl ItemsSource="{Binding Entries}" Visibility="{Binding IsExpanded, Converter={StaticResource BooleanToVisibility}}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1" Padding="0,5">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="64" />
+                                                                <ColumnDefinition Width="70" />
+                                                                <ColumnDefinition Width="82" />
+                                                                <ColumnDefinition Width="105" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBox Style="{StaticResource Text.Selectable}" Text="{Binding TimeText}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" />
+                                                            <Border Grid.Column="1" Padding="6,2" CornerRadius="3" HorizontalAlignment="Left">
+                                                                <Border.Style>
+                                                                    <Style TargetType="Border">
+                                                                        <Setter Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding Level}" Value="SUCCESS"><Setter Property="Background" Value="{DynamicResource Brush.SuccessSoft}" /></DataTrigger>
+                                                                            <DataTrigger Binding="{Binding Level}" Value="WARNING"><Setter Property="Background" Value="{DynamicResource Brush.WarningSoft}" /></DataTrigger>
+                                                                            <DataTrigger Binding="{Binding Level}" Value="ERROR"><Setter Property="Background" Value="{DynamicResource Brush.ErrorSoft}" /></DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Border.Style>
+                                                                <TextBlock Text="{Binding Level}" FontWeight="SemiBold" FontSize="10" />
+                                                            </Border>
+                                                            <TextBox Grid.Column="2" Style="{StaticResource Text.Selectable}" Text="{Binding Category}" Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center" />
+                                                            <TextBox Grid.Column="3" Style="{StaticResource Text.Selectable}" Text="{Binding Source}" Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center" />
+                                                            <TextBox Grid.Column="4" Style="{StaticResource Text.Selectable}" Text="{Binding Message}" Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center" />
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

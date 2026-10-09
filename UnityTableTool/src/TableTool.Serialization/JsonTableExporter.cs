@@ -1,5 +1,6 @@
 // 用途：把正式配置表序列化为 JSON 数据。
 // 编写日期：2026-10-08
+// 最近修改日期：2026-10-10
 // 作者：Codex（按用户需求修改）
 
 using System.Text.Json;
@@ -17,8 +18,9 @@ public sealed class JsonTableExporter
         DefaultIgnoreCondition = JsonIgnoreCondition.Never
     };
 
-    public string Export(TableDocument document)
+    public string Export(TableDocument document, ArraySeparatorOptions? separators = null)
     {
+        separators ??= ArraySeparatorOptions.Default;
         var rows = document.Rows.Where(row => !row.IsTest).Select(row => document.Schema.Fields.ToDictionary(
             field => field.Name,
             field => GetEffectiveValue(row, field),
@@ -36,6 +38,12 @@ public sealed class JsonTableExporter
                 type = field.Type.DisplayText,
                 defaultValue = field.DefaultValue
             }).ToArray(),
+            arraySeparators = new
+            {
+                inner = separators.Inner,
+                middle = separators.Middle,
+                outer = separators.Outer
+            },
             rows = document.Schema.IsSingleton ? Array.Empty<Dictionary<string, string?>>() : rows,
             data = document.Schema.IsSingleton ? rows.SingleOrDefault() : null
         };

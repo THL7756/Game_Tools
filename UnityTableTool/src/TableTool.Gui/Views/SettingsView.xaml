@@ -556,7 +556,7 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="52" />
                                     </Grid.ColumnDefinitions>
-                                    <Slider x:Name="VerticalWheelStepSlider" Minimum="1" Maximum="10" TickFrequency="1" SmallChange="1" LargeChange="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="VerticalWheelStepSlider_ValueChanged" ToolTip="每次滚轮移动的内容行数" />
+                                    <Slider x:Name="VerticalWheelStepSlider" Style="{StaticResource Slider.Tool}" Minimum="1" Maximum="10" TickFrequency="1" SmallChange="1" LargeChange="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="VerticalWheelStepSlider_ValueChanged" ToolTip="每次滚轮移动的内容行数" />
                                     <TextBox x:Name="VerticalWheelStepBox" Grid.Column="1" Width="52" Height="28" MaxLength="3" Style="{StaticResource TextBox.Field}" VerticalAlignment="Center" PreviewKeyDown="WheelStepBox_PreviewKeyDown" LostFocus="WheelStepBox_LostFocus" />
                                 </Grid>
                             </Grid>
@@ -572,7 +572,7 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="52" />
                                     </Grid.ColumnDefinitions>
-                                    <Slider x:Name="HorizontalWheelStepSlider" Minimum="1" Maximum="10" TickFrequency="1" SmallChange="1" LargeChange="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="HorizontalWheelStepSlider_ValueChanged" ToolTip="每次滚轮移动的内容列数" />
+                                    <Slider x:Name="HorizontalWheelStepSlider" Style="{StaticResource Slider.Tool}" Minimum="1" Maximum="10" TickFrequency="1" SmallChange="1" LargeChange="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="HorizontalWheelStepSlider_ValueChanged" ToolTip="每次滚轮移动的内容列数" />
                                     <TextBox x:Name="HorizontalWheelStepBox" Grid.Column="1" Width="52" Height="28" MaxLength="3" Style="{StaticResource TextBox.Field}" VerticalAlignment="Center" PreviewKeyDown="WheelStepBox_PreviewKeyDown" LostFocus="WheelStepBox_LostFocus" />
                                 </Grid>
                             </Grid>

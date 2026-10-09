@@ -1,6 +1,6 @@
 // 用途：保存工具路径、界面主题、字体缩放、快捷键和滚动配置。
 // 编写日期：2026-10-08
-// 最近修改日期：2026-10-08
+// 最近修改日期：2026-10-10
 // 作者：Codex（按用户需求修改）
 
 using TableTool.Core.Models;
@@ -49,6 +49,10 @@ public sealed class AppSettings
     public ExportTarget CodeTargets { get; set; } = ExportTarget.Both;
     public List<string> Favorites { get; set; } = [];
     public List<string> RecentTables { get; set; } = [];
+    public List<string> LogFilterLevels { get; set; } = ["INFO", "SUCCESS", "WARNING", "ERROR"];
+    public List<string> LogFilterCategories { get; set; } = ["系统", "配置表", "校验", "设置", "打表", "工作台"];
+    public List<string> LogCollapsedCategories { get; set; } = [];
+    public double LogPanelHeight { get; set; } = 320;
 
     public AppSettings Clone() => new()
     {
@@ -84,6 +88,10 @@ public sealed class AppSettings
         OutputTargets = OutputTargets,
         CodeTargets = CodeTargets,
         Favorites = [.. Favorites],
-        RecentTables = [.. RecentTables]
+        RecentTables = [.. RecentTables],
+        LogFilterLevels = [.. LogFilterLevels],
+        LogFilterCategories = [.. LogFilterCategories],
+        LogCollapsedCategories = [.. LogCollapsedCategories],
+        LogPanelHeight = LogPanelHeight
     };
 }

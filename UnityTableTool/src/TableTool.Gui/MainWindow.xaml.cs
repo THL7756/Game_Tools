@@ -1,6 +1,6 @@
 // 用途：承载工具主窗口、模块切换、设置恢复和关闭保存逻辑。
 // 编写日期：2026-10-08
-// 最近修改日期：2026-10-06
+// 最近修改日期：2026-10-10
 // 作者：Codex（按用户需求修改）
 
 using System.Diagnostics;
@@ -8,6 +8,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using TableTool.Gui.Models;
@@ -23,14 +24,27 @@ public partial class MainWindow : Window
 private bool isInitializing = true;
 private bool isApplyingLanguage;
     private bool isSwitchingContent;
-    private string activeLogFilter = "all";
+    private readonly HashSet<string> activeLogLevels = new(ToolLogCategories.Levels, StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> activeLogCategories = new(ToolLogCategories.All, StringComparer.Ordinal);
+    private readonly HashSet<string> collapsedLogCategories = new(StringComparer.Ordinal);
     private bool isLogAtBottom = true;
+    private string logSearchText = string.Empty;
 
     public MainWindow()
     {
         InitializeComponent();
         settings = SettingsStore.Load();
         ApplyLayoutSizes();
+        activeLogLevels.Clear();
+        activeLogLevels.UnionWith(settings.LogFilterLevels);
+        activeLogCategories.Clear();
+        activeLogCategories.UnionWith(settings.LogFilterCategories);
+        collapsedLogCategories.UnionWith(settings.LogCollapsedCategories);
+        LogCategoryFilters.ItemsSource = ToolLogCategories.All
+            .Select(category => new LogCategoryFilterItem(category, 0))
+            .ToArray();
+        Dispatcher.BeginInvoke(UpdateLogCategoryFilterStates);
+        LogOverlayPanel.Height = settings.LogPanelHeight;
         ToolLogService.EntryAdded += ToolLogService_EntryAdded;
         ToolLogService.Cleared += ToolLogService_Cleared;
         Width = Math.Max(MinWidth, settings.WindowWidth);
@@ -360,39 +374,148 @@ App.LogUiError("切换界面语言失败", error);
     {
         if (sender is not FrameworkElement element)
             return;
-        activeLogFilter = element.Tag?.ToString() ?? "all";
+        var filter = element.Tag?.ToString() ?? "all";
+        if (filter.Equals("all", StringComparison.OrdinalIgnoreCase))
+        {
+            activeLogLevels.Clear();
+            activeLogLevels.UnionWith(ToolLogCategories.Levels);
+        }
+        else if (ToolLogCategories.Levels.Contains(filter, StringComparer.OrdinalIgnoreCase))
+        {
+            if (!activeLogLevels.Add(filter))
+                activeLogLevels.Remove(filter);
+        }
+        SaveLogState();
         UpdateLogFilterButtons();
         ReloadLogs();
     }
 
     private void UpdateLogFilterButtons()
     {
-        var buttons = new[] { LogFilterAllButton, LogFilterErrorButton, LogFilterWarningButton, LogFilterInfoButton };
-        foreach (var button in buttons)
+        SetLogFilterButtonState(LogFilterAllButton, activeLogLevels.Count == ToolLogCategories.Levels.Count);
+        SetLogFilterButtonState(LogFilterInfoButton, activeLogLevels.Contains("INFO"));
+        SetLogFilterButtonState(LogFilterSuccessButton, activeLogLevels.Contains("SUCCESS"));
+        SetLogFilterButtonState(LogFilterWarningButton, activeLogLevels.Contains("WARNING"));
+        SetLogFilterButtonState(LogFilterErrorButton, activeLogLevels.Contains("ERROR"));
+    }
+
+    private void UpdateLogCategoryFilterStates()
+    {
+        for (var index = 0; index < LogCategoryFilters.Items.Count; index++)
         {
-            var active = string.Equals(button.Tag?.ToString(), activeLogFilter, StringComparison.OrdinalIgnoreCase);
-            if (active)
-            {
-                button.SetResourceReference(BackgroundProperty, "Brush.AccentSoft");
-                button.SetResourceReference(ForegroundProperty, "Brush.Accent");
-            }
-            else
-            {
-                button.ClearValue(BackgroundProperty);
-                button.ClearValue(ForegroundProperty);
-            }
+            if (LogCategoryFilters.ItemContainerGenerator.ContainerFromIndex(index) is not DependencyObject container)
+                continue;
+            var category = (LogCategoryFilters.Items[index] as LogCategoryFilterItem)?.Category;
+            var checkBox = FindVisualChild<CheckBox>(container);
+            if (checkBox is not null && category is not null)
+                checkBox.IsChecked = activeLogCategories.Contains(category);
         }
+    }
+
+    private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(parent); index++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, index);
+            if (child is T match)
+                return match;
+            var descendant = FindVisualChild<T>(child);
+            if (descendant is not null)
+                return descendant;
+        }
+        return null;
+    }
+
+    private void LogCategoryFilters_Loaded(object sender, RoutedEventArgs e) => UpdateLogCategoryFilterStates();
+
+    private static void SetLogFilterButtonState(Button button, bool active)
+    {
+        if (active)
+        {
+            button.SetResourceReference(BackgroundProperty, "Brush.AccentSoft");
+            button.SetResourceReference(ForegroundProperty, "Brush.Accent");
+            return;
+        }
+
+        button.SetResourceReference(BackgroundProperty, "Brush.Window");
+        button.SetResourceReference(ForegroundProperty, "Brush.TextSecondary");
     }
 
     private void CopyLogs_Click(object sender, RoutedEventArgs e)
     {
-        var items = LogsList.ItemsSource as IEnumerable<LogDisplayItem> ?? [];
+        var items = (LogsList.ItemsSource as IEnumerable<LogGroupDisplayItem> ?? [])
+            .SelectMany(group => group.Entries);
         var text = string.Join(Environment.NewLine, items.Select(item => item.CopyText));
         if (text.Length > 0)
             Clipboard.SetText(text);
     }
 
     private void ClearLogs_Click(object sender, RoutedEventArgs e) => ToolLogService.Clear();
+
+    private void LogCategoryFilter_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not CheckBox checkBox || checkBox.Tag is not string category)
+            return;
+        if (checkBox.IsChecked == true)
+            activeLogCategories.Add(category);
+        else
+            activeLogCategories.Remove(category);
+        SaveLogState();
+        ReloadLogs();
+    }
+
+    private void LogSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        logSearchText = LogSearchBox.Text.Trim();
+        ReloadLogs();
+    }
+
+    private void LogGroupToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is not LogGroupDisplayItem group)
+            return;
+        if (!collapsedLogCategories.Add(group.Category))
+            collapsedLogCategories.Remove(group.Category);
+        SaveLogState();
+        ReloadLogs();
+    }
+
+    private void ExpandAllLogGroups_Click(object sender, RoutedEventArgs e)
+    {
+        collapsedLogCategories.Clear();
+        SaveLogState();
+        ReloadLogs();
+    }
+
+    private void CollapseAllLogGroups_Click(object sender, RoutedEventArgs e)
+    {
+        collapsedLogCategories.Clear();
+        collapsedLogCategories.UnionWith(ToolLogCategories.All);
+        SaveLogState();
+        ReloadLogs();
+    }
+
+    private void LogPanelResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
+    {
+        var height = Math.Clamp(LogOverlayPanel.Height - e.VerticalChange, 220, 560);
+        LogOverlayPanel.Height = height;
+        settings.LogPanelHeight = height;
+        SettingsStore.Save(settings);
+    }
+
+    private void SaveLogState()
+    {
+        settings.LogFilterLevels = activeLogLevels
+            .OrderBy(level => Array.IndexOf(ToolLogCategories.Levels.ToArray(), level))
+            .ToList();
+        settings.LogFilterCategories = activeLogCategories
+            .Where(ToolLogCategories.All.Contains)
+            .ToList();
+        settings.LogCollapsedCategories = collapsedLogCategories
+            .Where(ToolLogCategories.All.Contains)
+            .ToList();
+        SettingsStore.Save(settings);
+    }
 
     private void ToolLogService_EntryAdded(object? sender, ToolLogEntry entry) =>
         Dispatcher.BeginInvoke(ReloadLogs);
@@ -406,14 +529,40 @@ App.LogUiError("切换界面语言失败", error);
     private void ReloadLogs()
     {
         var followBottom = isLogAtBottom || LogOverlayHost.Visibility != Visibility.Visible;
-        var entries = ToolLogService.Snapshot().Select(LogDisplayItem.FromEntry).Where(item => activeLogFilter switch
-        {
-            "error" => item.Level == "ERROR",
-            "warning" => item.Level == "WARNING",
-            "log" => item.Level is "INFO" or "SUCCESS",
-            _ => true
-        }).ToArray();
-        LogsList.ItemsSource = entries;
+        var allEntries = ToolLogService.Snapshot().Select(LogDisplayItem.FromEntry).ToArray();
+        var categoryCounts = allEntries
+            .GroupBy(item => item.Category, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+        LogCategoryFilters.ItemsSource = ToolLogCategories.All
+            .Select(category => new LogCategoryFilterItem(category, categoryCounts.GetValueOrDefault(category)))
+            .ToArray();
+        LogFilterAllButton.Content = $"全部 ({allEntries.Length})";
+        LogFilterInfoButton.Content = $"信息 ({allEntries.Count(item => item.Level == "INFO")})";
+        LogFilterSuccessButton.Content = $"成功 ({allEntries.Count(item => item.Level == "SUCCESS")})";
+        LogFilterWarningButton.Content = $"警告 ({allEntries.Count(item => item.Level == "WARNING")})";
+        LogFilterErrorButton.Content = $"错误 ({allEntries.Count(item => item.Level == "ERROR")})";
+        var entries = allEntries
+            .Where(item => activeLogLevels.Contains(item.Level)
+                && activeLogCategories.Contains(item.Category)
+                && (logSearchText.Length == 0
+                    || item.Category.Contains(logSearchText, StringComparison.OrdinalIgnoreCase)
+                    || item.Source.Contains(logSearchText, StringComparison.OrdinalIgnoreCase)
+                    || item.Message.Contains(logSearchText, StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
+        var groups = entries
+            .GroupBy(item => item.Category, StringComparer.Ordinal)
+            .OrderBy(group => Array.IndexOf(ToolLogCategories.All.ToArray(), group.Key))
+            .Select(group => new LogGroupDisplayItem(
+                group.Key,
+                group.ToArray(),
+                !collapsedLogCategories.Contains(group.Key)))
+            .ToArray();
+        LogsList.ItemsSource = groups;
+        Dispatcher.BeginInvoke(UpdateLogCategoryFilterStates);
+        var totalErrors = allEntries.Count(item => item.Level == "ERROR");
+        var totalWarnings = allEntries.Count(item => item.Level == "WARNING");
+        LogSummaryText.Text = $"{entries.Length}/{allEntries.Length} 条 · 错误 {totalErrors} · 警告 {totalWarnings}";
+        LogToggleButton.ToolTip = $"打开日志（错误 {totalErrors} · 警告 {totalWarnings}）";
         if (followBottom)
             Dispatcher.BeginInvoke(() => LogsScrollViewer.ScrollToEnd());
     }
@@ -498,6 +647,9 @@ Environment.Exit(0);
 
 private void MainWindow_Closing(object? sender, CancelEventArgs e)
 {
+        if (LogOverlayPanel is not null && LogOverlayPanel.Height > 0)
+            settings.LogPanelHeight = Math.Clamp(LogOverlayPanel.Height, 220, 560);
+        SaveLogState();
     if (WindowState == WindowState.Normal)
     {
         settings.MainSidebarWidth = MainSidebarColumn.Width.IsAbsolute ? MainSidebarColumn.Width.Value : settings.MainSidebarWidth;

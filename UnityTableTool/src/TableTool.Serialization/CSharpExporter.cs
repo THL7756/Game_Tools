@@ -1,5 +1,5 @@
-// 用途：将当前逻辑表结构导出为可直接纳入 Unity 项目的 C# 数据类。
-// 编写日期：2026-10-06
+// 用途：将逻辑表生成客户端/服务器 C# 数据类，并为客户端生成 Runtime 行转换适配器。
+// 编写日期：2026-10-10
 // 作者：Codex（按用户需求修改）
 
 using System.Text;
@@ -10,9 +10,20 @@ namespace TableTool.Serialization;
 
 public static class CSharpExporter
 {
-    public static string Export(TableDocument document)
+    public static string Export(TableDocument document, bool includeRuntimeAdapter = false)
     {
         var builder = new StringBuilder();
+        var hasUnityTypes = document.Schema.Fields.Any(field => IsUnityType(field.Type.BaseType));
+        if (includeRuntimeAdapter)
+        {
+            builder.AppendLine("using Company.UnityTableRuntime;");
+            builder.AppendLine("using System.Linq;");
+        }
+        if (hasUnityTypes)
+            builder.AppendLine("using UnityEngine;");
+        if (includeRuntimeAdapter || hasUnityTypes)
+            builder.AppendLine();
+
         builder.AppendLine("// 用途：由 UnityTableTool 根据配置表结构生成的数据类。");
         builder.AppendLine("// 编写日期：由打表时生成。");
         builder.AppendLine("// 作者：UnityTableTool。");
@@ -24,23 +35,93 @@ public static class CSharpExporter
             builder.AppendLine("{");
             foreach (var value in field.Type.EnumValues ?? [])
             {
-                if (!IsIdentifier(value)
-                    || IsCSharpKeyword(value))
+                if (!IsValidEnumMember(value))
                     throw new InvalidOperationException($"枚举字段“{field.Name}”的值“{value}”不是合法的 C# 标识符。");
                 builder.AppendLine($"    {value},");
             }
             builder.AppendLine("}");
         }
+
         builder.AppendLine($"public sealed class {document.Schema.Name}Data");
         builder.AppendLine("{");
         foreach (var field in document.Schema.Fields)
             builder.AppendLine($"    public {ToCSharpType(field)} {ToPascal(field.Name)};");
         builder.AppendLine("}");
+
+        if (includeRuntimeAdapter)
+            AppendRuntimeAdapter(builder, document);
         return builder.ToString();
     }
 
     public static bool IsValidEnumMember(string value) =>
         IsIdentifier(value) && !IsCSharpKeyword(value);
+
+    private static void AppendRuntimeAdapter(StringBuilder builder, TableDocument document)
+    {
+        var typeName = $"{document.Schema.Name}Data";
+        var adapterName = $"{document.Schema.Name}TableAdapter";
+        builder.AppendLine();
+        builder.AppendLine($"public static class {adapterName}");
+        builder.AppendLine("{");
+        builder.AppendLine($"    public static {typeName} FromRow(TableRowView row) => new {typeName}()");
+        builder.AppendLine("    {");
+        foreach (var field in document.Schema.Fields)
+            builder.AppendLine($"        {ToPascal(field.Name)} = {ToReadExpression(field)},");
+        builder.AppendLine("    };");
+
+        foreach (var group in document.Schema.Fields
+                     .Where(field => IsUnityType(field.Type.BaseType))
+                     .Select(field => (field.Type.BaseType, field.Type.Dimensions))
+                     .Distinct())
+            AppendUnityReaders(builder, group.BaseType, group.Dimensions);
+        builder.AppendLine("}");
+    }
+
+    private static string ToReadExpression(FieldSchema field)
+    {
+        var key = field.Name.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        if (IsUnityType(field.Type.BaseType))
+        {
+            var method = $"Read{field.Type.BaseType}{(field.Type.Dimensions == 0 ? string.Empty : field.Type.Dimensions.ToString())}";
+            return $"{method}(row.Read<{ToComponentArrayType(field.Type.Dimensions)}>(\"{key}\"))";
+        }
+
+        return $"row.Read<{ToCSharpType(field)}>(\"{key}\")";
+    }
+
+    private static void AppendUnityReaders(StringBuilder builder, string baseType, int dimensions)
+    {
+        if (dimensions > 0)
+        {
+            AppendUnityReaders(builder, baseType, dimensions - 1);
+            var sourceType = ToComponentArrayType(dimensions);
+            var outputType = ToUnityArrayType(baseType, dimensions);
+            var innerMethod = $"Read{baseType}{(dimensions == 1 ? string.Empty : (dimensions - 1).ToString())}";
+            builder.AppendLine();
+            builder.AppendLine($"    private static {outputType} Read{baseType}{dimensions}({sourceType} value) => value.Select(item => {innerMethod}(item)).ToArray();");
+            return;
+        }
+
+        var components = baseType switch
+        {
+            "Vector2" => "value[0], value[1]",
+            "Vector3" => "value[0], value[1], value[2]",
+            "Vector4" => "value[0], value[1], value[2], value[3]",
+            "Quaternion" => "value[0], value[1], value[2], value[3]",
+            "Color" => "value[0], value[1], value[2], value.Length > 3 ? value[3] : 1f",
+            _ => throw new InvalidOperationException($"Unsupported Unity type '{baseType}'.")
+        };
+        builder.AppendLine();
+        builder.AppendLine($"    private static {baseType} Read{baseType}(float[] value) => new {baseType}({components});");
+    }
+
+    private static string ToComponentArrayType(int dimensions) =>
+        "float" + string.Concat(Enumerable.Repeat("[]", dimensions + 1));
+
+    private static string ToUnityArrayType(string baseType, int dimensions) =>
+        baseType + string.Concat(Enumerable.Repeat("[]", dimensions));
+
+    private static bool IsUnityType(string baseType) => baseType is "Vector2" or "Vector3" or "Vector4" or "Color" or "Quaternion";
 
     private static string ToCSharpType(FieldSchema field)
     {
@@ -73,5 +154,6 @@ public static class CSharpExporter
         && (char.IsLetter(value[0]) || value[0] == '_')
         && value.Skip(1).All(character => char.IsLetterOrDigit(character) || character == '_');
 
-    private static string ToPascal(string name) => string.IsNullOrEmpty(name) ? name : char.ToUpperInvariant(name[0]) + name[1..];
+    private static string ToPascal(string name) =>
+        string.IsNullOrEmpty(name) ? name : char.ToUpperInvariant(name[0]) + name[1..];
 }

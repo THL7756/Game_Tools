@@ -1,5 +1,6 @@
 // 用途：按客户端、服务器和代码目录输出配置表文件，并以暂存目录安全替换旧输出。
 // 编写日期：2026-10-06
+// 最近修改日期：2026-10-10
 // 作者：Codex（按用户需求修改）
 
 using TableTool.Core.Models;
@@ -58,11 +59,11 @@ public sealed class ExportService
             foreach (var document in targetDocuments)
             {
                 if (dataRoot is not null && options.GenerateJson)
-                    files.Add(Write(dataRoot, document.Schema.Name + ".json", new JsonTableExporter().Export(document)));
+                    files.Add(Write(dataRoot, document.Schema.Name + ".json", new JsonTableExporter().Export(document, options.ArraySeparators)));
                 if (dataRoot is not null && options.GenerateBytes)
-                    files.Add(WriteBytes(dataRoot, document.Schema.Name + ".bytes", new BinaryTableExporter().Export(document)));
+                    files.Add(WriteBytes(dataRoot, document.Schema.Name + ".bytes", new BinaryTableExporter().Export(document, options.ArraySeparators)));
                 if (codeRoot is not null && options.GenerateCode)
-                    files.Add(Write(codeRoot, document.Schema.Name + "Data.cs", CSharpExporter.Export(document)));
+                    files.Add(Write(codeRoot, document.Schema.Name + "Data.cs", CSharpExporter.Export(document, target == ExportTarget.Client)));
                 hashes.Add(SchemaHasher.Compute(document.Schema));
             }
         }

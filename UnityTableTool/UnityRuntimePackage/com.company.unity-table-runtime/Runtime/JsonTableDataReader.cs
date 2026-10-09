@@ -1,6 +1,11 @@
+// 用途：读取工具导出的客户端 JSON，并保留字段定义、默认值和诊断 schema hash。
+// 编写日期：2026-10-10
+// 作者：Codex（按用户需求修改）
+
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using Company.UnityTableRuntime.Shared;
 
 namespace Company.UnityTableRuntime;
 
@@ -31,6 +36,23 @@ public static class JsonTableDataReader
         var primaryKey = root.TryGetProperty("primaryKey", out var primaryKeyProperty) && primaryKeyProperty.ValueKind != JsonValueKind.Null
             ? primaryKeyProperty.GetString()
             : null;
+        var fields = new List<RuntimeFieldDefinition>();
+        if (root.TryGetProperty("fields", out var fieldArray) && fieldArray.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var field in fieldArray.EnumerateArray())
+            {
+                var name = field.GetProperty("name").GetString() ?? string.Empty;
+                var type = field.GetProperty("type").GetString() ?? string.Empty;
+                var defaultValue = field.TryGetProperty("defaultValue", out var defaultProperty)
+                    && defaultProperty.ValueKind != JsonValueKind.Null
+                    ? defaultProperty.GetString()
+                    : null;
+                if (name.Length > 0 && type.Length > 0)
+                    fields.Add(new RuntimeFieldDefinition(name, type, defaultValue));
+            }
+        }
+
+        var separators = ReadSeparators(root);
         var rows = new List<IReadOnlyDictionary<string, string?>>();
         if (isSingleton && root.TryGetProperty("data", out var singletonData) && singletonData.ValueKind == JsonValueKind.Object)
             rows.Add(ReadRow(singletonData));
@@ -39,7 +61,26 @@ public static class JsonTableDataReader
             foreach (var row in rowArray.EnumerateArray())
                 rows.Add(ReadRow(row));
         }
-        return new TableRuntimeDocument(tableName, schemaHash, rows, primaryKey, isSingleton);
+        return new TableRuntimeDocument(tableName, schemaHash, rows, primaryKey, isSingleton, fields, separators);
+    }
+
+    private static RuntimeArraySeparators ReadSeparators(JsonElement root)
+    {
+        if (!root.TryGetProperty("arraySeparators", out var separatorObject)
+            || separatorObject.ValueKind != JsonValueKind.Object)
+            return RuntimeArraySeparators.Default;
+
+        var inner = separatorObject.TryGetProperty("inner", out var innerProperty)
+            ? innerProperty.GetString() ?? "#"
+            : "#";
+        var middle = separatorObject.TryGetProperty("middle", out var middleProperty)
+            ? middleProperty.GetString() ?? "|"
+            : "|";
+        var outer = separatorObject.TryGetProperty("outer", out var outerProperty)
+            ? outerProperty.GetString() ?? ";"
+            : ";";
+        var separators = new RuntimeArraySeparators(inner, middle, outer);
+        return separators.IsValid ? separators : RuntimeArraySeparators.Default;
     }
 
     private static IReadOnlyDictionary<string, string?> ReadRow(JsonElement row)

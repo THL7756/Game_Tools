@@ -1,6 +1,6 @@
 // 用途：执行选中配置表的关联展开、校验和 JSON/C# 分端打表。
 // 编写日期：2026-10-08
-// 最近修改日期：2026-10-08
+// 最近修改日期：2026-10-10
 
 // 作者：Codex（按用户需求修改）
 
@@ -140,7 +140,11 @@ public sealed class BuildService
                 generateJson: true,
                 generateBytes: false,
                 targets: dataTarget,
-                codeTargets: codeTarget);
+                codeTargets: codeTarget,
+                arraySeparators: new ArraySeparatorOptions(
+                    settings.ArrayInnerSeparator,
+                    settings.ArrayMiddleSeparator,
+                    settings.ArrayOuterSeparator));
             var exportResult = new ExportService().ExportAll(merged, options);
             if (dataTarget.HasFlag(ExportTarget.Client))
                 logs.Add(Entry("PASS", $"客户端：{CountFilesUnder(exportResult.Files, settings.ClientOutputDirectory)} 个 JSON 文件写入"));

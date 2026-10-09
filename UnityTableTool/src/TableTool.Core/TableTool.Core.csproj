@@ -1,3 +1,4 @@
+<!-- 用途：定义工具核心项目，并链接 Runtime Package 的共享类型和值解析源码。编写日期：2026-10-10；作者：Codex。 -->
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -8,6 +9,10 @@
   <ItemGroup>
     <PackageReference Include="ExcelDataReader" Version="3.6.0" />
     <PackageReference Include="ExcelDataReader.DataSet" Version="3.6.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\UnityRuntimePackage\com.company.unity-table-runtime\Runtime\Shared\*.cs"
+             Link="RuntimeShared\%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>
 

@@ -1,3 +1,7 @@
+// 用途：读取带 UTB1 magic、版本、长度和 CRC 的客户端二进制表数据。
+// 编写日期：2026-10-10
+// 作者：Codex（按用户需求修改）
+
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
@@ -20,13 +24,15 @@ public static class BinaryTableDataReader
         var tableName = ReadString(data, ref offset);
         _ = ReadString(data, ref offset);
         var payloadLength = ReadInt(data, ref offset);
-        if (payloadLength < 0 || offset + payloadLength + 4 > data.Length)
+        if (payloadLength < 0 || payloadLength > data.Length - offset - 4)
             throw new FormatException("UTB1 payload length is invalid.");
         var payload = data.AsSpan(offset, payloadLength).ToArray();
         offset += payloadLength;
         var expectedCrc = BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(offset, 4));
         if (Crc32.Compute(payload) != expectedCrc)
             throw new FormatException("UTB1 payload CRC does not match.");
+        if (offset + 4 != data.Length)
+            throw new FormatException("UTB1 contains trailing data.");
         return JsonTableDataReader.Read(payload);
     }
 
@@ -42,7 +48,7 @@ public static class BinaryTableDataReader
     private static string ReadString(byte[] data, ref int offset)
     {
         var length = ReadInt(data, ref offset);
-        if (length < 0 || offset + length > data.Length)
+        if (length < 0 || length > data.Length - offset)
             throw new FormatException("UTB1 string length is invalid.");
         var value = Encoding.UTF8.GetString(data, offset, length);
         offset += length;

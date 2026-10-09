@@ -1,5 +1,5 @@
 // 用途：根据设置更新应用颜色、字体和缩放资源。
-// 最近修改日期：2026-10-08
+// 最近修改日期：2026-10-10
 // 作者：Codex（按用户需求修改）
 
 using System.Windows;
@@ -52,6 +52,9 @@ public static class ThemeManager
             SetBrush("Brush.SelectionCell", accent);
             SetBrush("Brush.SelectionCross", Blend(accent, background, 0.22));
             SetBrush("Brush.Overlay", "#111317");
+            SetBrush("Brush.ScrollbarTrack", "#17191D");
+            SetBrush("Brush.ScrollbarThumb", "#667181");
+            SetBrush("Brush.ScrollbarThumbHover", "#8D99AA");
         }
         else
         {
@@ -78,6 +81,9 @@ public static class ThemeManager
             SetBrush("Brush.SelectionCell", accent);
             SetBrush("Brush.SelectionCross", Blend(accent, background, 0.12));
             SetBrush("Brush.Overlay", "#E8ECF2");
+            SetBrush("Brush.ScrollbarTrack", "#E9EDF3");
+            SetBrush("Brush.ScrollbarThumb", "#A5AFBE");
+            SetBrush("Brush.ScrollbarThumbHover", "#788698");
         }
 
         ApplySystemMenuBrushes(dark);
