@@ -35,8 +35,13 @@ public sealed class AppSettings
     public string Language { get; set; } = "zh-CN";
     public string BuildShortcut { get; set; } = "Ctrl+B";
     public string RefreshShortcut { get; set; } = "Ctrl+R";
-    public int VerticalWheelScrollStep { get; set; } = 12;
-    public int HorizontalWheelScrollStep { get; set; } = 12;
+    public int VerticalWheelScrollStep { get; set; } = 3;
+    public int HorizontalWheelScrollStep { get; set; } = 3;
+    public double MainSidebarWidth { get; set; } = 120;
+    public double WorkbenchTableListWidth { get; set; } = 215;
+    public double WorkbenchDetailHeight { get; set; } = 260;
+    public double WorkbenchIssuesHeight { get; set; } = 220;
+    public double SettingsSidebarWidth { get; set; } = 155;
     public string ArrayInnerSeparator { get; set; } = "#";
     public string ArrayMiddleSeparator { get; set; } = "|";
     public string ArrayOuterSeparator { get; set; } = ";";
@@ -68,6 +73,11 @@ public sealed class AppSettings
         RefreshShortcut = RefreshShortcut,
         VerticalWheelScrollStep = VerticalWheelScrollStep,
         HorizontalWheelScrollStep = HorizontalWheelScrollStep,
+        MainSidebarWidth = MainSidebarWidth,
+        WorkbenchTableListWidth = WorkbenchTableListWidth,
+        WorkbenchDetailHeight = WorkbenchDetailHeight,
+        WorkbenchIssuesHeight = WorkbenchIssuesHeight,
+        SettingsSidebarWidth = SettingsSidebarWidth,
         ArrayInnerSeparator = ArrayInnerSeparator,
         ArrayMiddleSeparator = ArrayMiddleSeparator,
         ArrayOuterSeparator = ArrayOuterSeparator,

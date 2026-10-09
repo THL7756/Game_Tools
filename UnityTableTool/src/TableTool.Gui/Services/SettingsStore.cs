@@ -99,10 +99,13 @@ public static class SettingsStore
             settings.ClientCodeOutputDirectory = Path.Combine(root, "Code_c");
         if (string.IsNullOrWhiteSpace(settings.ServerCodeOutputDirectory))
             settings.ServerCodeOutputDirectory = Path.Combine(root, "Code_s");
-        if (settings.VerticalWheelScrollStep == 1)
-            settings.VerticalWheelScrollStep = 12;
-        if (settings.HorizontalWheelScrollStep == 1)
-            settings.HorizontalWheelScrollStep = 12;
+        settings.VerticalWheelScrollStep = settings.VerticalWheelScrollStep is > 0 and <= 10 ? settings.VerticalWheelScrollStep : 3;
+        settings.HorizontalWheelScrollStep = settings.HorizontalWheelScrollStep is > 0 and <= 10 ? settings.HorizontalWheelScrollStep : 3;
+        settings.MainSidebarWidth = ClampLayoutSize(settings.MainSidebarWidth, 120, 104, 240);
+        settings.WorkbenchTableListWidth = ClampLayoutSize(settings.WorkbenchTableListWidth, 215, 180, 360);
+        settings.WorkbenchDetailHeight = ClampLayoutSize(settings.WorkbenchDetailHeight, 260, 120, 800);
+        settings.WorkbenchIssuesHeight = ClampLayoutSize(settings.WorkbenchIssuesHeight, 220, 120, 800);
+        settings.SettingsSidebarWidth = ClampLayoutSize(settings.SettingsSidebarWidth, 155, 140, 280);
         if (double.IsNaN(settings.WindowWidth) || double.IsInfinity(settings.WindowWidth))
             settings.WindowWidth = 1024;
         if (double.IsNaN(settings.WindowHeight) || double.IsInfinity(settings.WindowHeight))
@@ -120,6 +123,9 @@ public static class SettingsStore
         }
         return settings;
     }
+
+    private static double ClampLayoutSize(double value, double fallback, double minimum, double maximum) =>
+        double.IsNaN(value) || double.IsInfinity(value) || value <= 0 ? fallback : Math.Clamp(value, minimum, maximum);
 
     private static string FindProjectRoot()
     {

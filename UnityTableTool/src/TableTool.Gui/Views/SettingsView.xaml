@@ -57,47 +57,56 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="155" />
+            <ColumnDefinition x:Name="SettingsNavColumn" Width="155" MinWidth="140" MaxWidth="280" />
+            <ColumnDefinition x:Name="SettingsSplitterColumn" Width="6" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="{DynamicResource Brush.Chrome}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,1,1">
+        <Border Grid.Column="0" Background="{DynamicResource Brush.Chrome}">
             <StackPanel>
                 <TextBlock Text="设置" FontWeight="SemiBold" FontSize="17" Margin="20,18,0,16" />
                 <RadioButton x:Name="AppearanceNav" GroupName="SettingsPage" Style="{StaticResource SettingsNavButton}" IsChecked="True" Checked="SettingsNav_Checked" Tag="appearance">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="/UnityTableTool;component/Assets/Icons/palette.png" Width="15" Height="15" Margin="0,0,10,0" />
-                        <TextBlock Text="外观风格" FontSize="12" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                        <TextBlock Text="外观风格" FontSize="12" TextTrimming="CharacterEllipsis" ToolTip="外观风格" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
                     </StackPanel>
                 </RadioButton>
                 <RadioButton x:Name="PathsNav" GroupName="SettingsPage" Style="{StaticResource SettingsNavButton}" Checked="SettingsNav_Checked" Tag="paths">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="/UnityTableTool;component/Assets/Icons/folder1.png" Width="15" Height="15" Margin="0,0,10,0" />
-                        <TextBlock Text="项目路径" FontSize="12" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                        <TextBlock Text="项目路径" FontSize="12" TextTrimming="CharacterEllipsis" ToolTip="项目路径" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
                     </StackPanel>
                 </RadioButton>
                 <RadioButton x:Name="ShortcutsNav" GroupName="SettingsPage" Style="{StaticResource SettingsNavButton}" Checked="SettingsNav_Checked" Tag="shortcuts">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="/UnityTableTool;component/Assets/Icons/keyboard.png" Width="15" Height="15" Margin="0,0,10,0" />
-                        <TextBlock Text="快捷键" FontSize="12" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                        <TextBlock Text="快捷键" FontSize="12" TextTrimming="CharacterEllipsis" ToolTip="快捷键" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
                     </StackPanel>
                 </RadioButton>
                 <RadioButton x:Name="AboutNav" GroupName="SettingsPage" Style="{StaticResource SettingsNavButton}" Checked="SettingsNav_Checked" Tag="about">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="/UnityTableTool;component/Assets/Icons/info.png" Width="15" Height="15" Margin="0,0,10,0" />
-                        <TextBlock Text="关于" FontSize="12" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                        <TextBlock Text="关于" FontSize="12" TextTrimming="CharacterEllipsis" ToolTip="关于" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
                     </StackPanel>
                 </RadioButton>
             </StackPanel>
         </Border>
 
-        <Grid Grid.Column="1">
+        <GridSplitter Grid.Column="1"
+                      Style="{StaticResource Splitter.Grip}"
+                      ResizeDirection="Columns"
+                      ResizeBehavior="PreviousAndNext"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"
+                      DragCompleted="LayoutSplitter_DragCompleted" />
+
+        <Grid Grid.Column="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
                 <RowDefinition Height="52" />
             </Grid.RowDefinitions>
 
-            <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Hidden">
+            <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <Grid>
                 <Grid x:Name="AppearancePanel">
                     <Grid.RowDefinitions>
@@ -541,13 +550,13 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="140" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="上下滚轮步长" VerticalAlignment="Center" />
+                                <TextBlock Text="上下滚轮行数" VerticalAlignment="Center" />
                                 <Grid Grid.Column="1" Margin="10,0,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="52" />
                                     </Grid.ColumnDefinitions>
-                                    <Slider x:Name="VerticalWheelStepSlider" Minimum="1" Maximum="30" TickFrequency="1" SmallChange="1" LargeChange="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="VerticalWheelStepSlider_ValueChanged" />
+                                    <Slider x:Name="VerticalWheelStepSlider" Minimum="1" Maximum="10" TickFrequency="1" SmallChange="1" LargeChange="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="VerticalWheelStepSlider_ValueChanged" ToolTip="每次滚轮移动的内容行数" />
                                     <TextBox x:Name="VerticalWheelStepBox" Grid.Column="1" Width="52" Height="28" MaxLength="3" Style="{StaticResource TextBox.Field}" VerticalAlignment="Center" PreviewKeyDown="WheelStepBox_PreviewKeyDown" LostFocus="WheelStepBox_LostFocus" />
                                 </Grid>
                             </Grid>
@@ -557,13 +566,13 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="140" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="左右滚轮步长" VerticalAlignment="Center" />
+                                <TextBlock Text="左右滚轮列数" VerticalAlignment="Center" />
                                 <Grid Grid.Column="1" Margin="10,0,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="52" />
                                     </Grid.ColumnDefinitions>
-                                    <Slider x:Name="HorizontalWheelStepSlider" Minimum="1" Maximum="30" TickFrequency="1" SmallChange="1" LargeChange="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="HorizontalWheelStepSlider_ValueChanged" />
+                                    <Slider x:Name="HorizontalWheelStepSlider" Minimum="1" Maximum="10" TickFrequency="1" SmallChange="1" LargeChange="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="HorizontalWheelStepSlider_ValueChanged" ToolTip="每次滚轮移动的内容列数" />
                                     <TextBox x:Name="HorizontalWheelStepBox" Grid.Column="1" Width="52" Height="28" MaxLength="3" Style="{StaticResource TextBox.Field}" VerticalAlignment="Center" PreviewKeyDown="WheelStepBox_PreviewKeyDown" LostFocus="WheelStepBox_LostFocus" />
                                 </Grid>
                             </Grid>

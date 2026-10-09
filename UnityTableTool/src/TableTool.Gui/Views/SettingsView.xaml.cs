@@ -28,6 +28,7 @@ public partial class SettingsView : System.Windows.Controls.UserControl
     {
         this.settings = settings;
         InitializeComponent();
+        ApplyLayoutSizes();
         LoadControls();
         ShowPage(initialPage);
         isInitializing = false;
@@ -332,8 +333,8 @@ public partial class SettingsView : System.Windows.Controls.UserControl
 
     private static void SetWheelStepControls(Slider slider, TextBox box, int value)
     {
-        var normalized = Math.Clamp(value, 1, 200);
-        slider.Value = Math.Min(normalized, 30);
+        var normalized = Math.Clamp(value, 1, 10);
+        slider.Value = normalized;
         box.Text = normalized.ToString();
     }
 
@@ -362,10 +363,10 @@ public partial class SettingsView : System.Windows.Controls.UserControl
 
     private void CommitWheelStep(TextBox? box, bool showError)
     {
-        if (box is null || !int.TryParse(box.Text, out var value) || value < 1 || value > 200)
+        if (box is null || !int.TryParse(box.Text, out var value) || value < 1 || value > 10)
         {
             if (showError)
-                MessageBox.Show("滚轮步长必须是 1–200 之间的整数。", "设置", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("滚轮行/列数必须是 1–10 之间的整数。", "设置", MessageBoxButton.OK, MessageBoxImage.Warning);
             LoadWheelStepControls();
             return;
         }
@@ -374,18 +375,18 @@ public partial class SettingsView : System.Windows.Controls.UserControl
 
     private void SetWheelStep(bool vertical, int value)
     {
-        value = Math.Clamp(value, 1, 200);
+        value = Math.Clamp(value, 1, 10);
         if (vertical)
         {
             settings.VerticalWheelScrollStep = value;
             VerticalWheelStepBox.Text = value.ToString();
-            VerticalWheelStepSlider.Value = Math.Min(value, 30);
+            VerticalWheelStepSlider.Value = value;
         }
         else
         {
             settings.HorizontalWheelScrollStep = value;
             HorizontalWheelStepBox.Text = value.ToString();
-            HorizontalWheelStepSlider.Value = Math.Min(value, 30);
+            HorizontalWheelStepSlider.Value = value;
         }
         PersistSettings();
     }
@@ -511,6 +512,12 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         settings.RefreshShortcut = defaults.RefreshShortcut;
         settings.VerticalWheelScrollStep = defaults.VerticalWheelScrollStep;
         settings.HorizontalWheelScrollStep = defaults.HorizontalWheelScrollStep;
+        settings.MainSidebarWidth = defaults.MainSidebarWidth;
+        settings.WorkbenchTableListWidth = defaults.WorkbenchTableListWidth;
+        settings.WorkbenchDetailHeight = defaults.WorkbenchDetailHeight;
+        settings.WorkbenchIssuesHeight = defaults.WorkbenchIssuesHeight;
+        settings.SettingsSidebarWidth = defaults.SettingsSidebarWidth;
+        ApplyLayoutSizes();
         settings.ArrayInnerSeparator = defaults.ArrayInnerSeparator;
         settings.ArrayMiddleSeparator = defaults.ArrayMiddleSeparator;
         settings.ArrayOuterSeparator = defaults.ArrayOuterSeparator;
@@ -632,27 +639,17 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         }
     }
 
-    private void SettingsView_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-    {
-        var source = e.OriginalSource as DependencyObject;
-        var scrollViewer = FindVisualParent<ScrollViewer>(source);
-        if (scrollViewer is null)
-            return;
+    private void SettingsView_PreviewMouseWheel(object sender, MouseWheelEventArgs e) =>
+        ScrollWheelService.Handle(e, e.OriginalSource as DependencyObject, settings);
 
-        var step = Math.Clamp((double)settings.VerticalWheelScrollStep, 1d, 200d);
-        scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset - Math.Sign(e.Delta) * step);
-        e.Handled = true;
+    private void ApplyLayoutSizes()
+    {
+        SettingsNavColumn.Width = new GridLength(Math.Clamp(settings.SettingsSidebarWidth, 140, 280));
     }
 
-    private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
+    private void LayoutSplitter_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
     {
-        while (child is not null)
-        {
-            if (child is T result)
-                return result;
-            child = VisualTreeHelper.GetParent(child);
-        }
-
-        return null;
+        settings.SettingsSidebarWidth = SettingsNavColumn.Width.IsAbsolute ? SettingsNavColumn.Width.Value : 155;
+        SettingsStore.Save(settings);
     }
 }

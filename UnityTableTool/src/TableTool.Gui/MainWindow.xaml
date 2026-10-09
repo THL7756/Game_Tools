@@ -23,6 +23,26 @@
         <shell:WindowChrome CaptionHeight="32" ResizeBorderThickness="6" GlassFrameThickness="0" UseAeroCaptionButtons="False" />
     </shell:WindowChrome.WindowChrome>
     <Window.Resources>
+        <Style x:Key="Text.Selectable" TargetType="TextBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+            <Setter Property="SelectionBrush" Value="{DynamicResource Brush.SelectionCell}" />
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="IsReadOnlyCaretVisible" Value="False" />
+            <Setter Property="IsUndoEnabled" Value="False" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Cursor" Value="IBeam" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <ScrollViewer x:Name="PART_ContentHost" Focusable="False" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="WindowControlButton" TargetType="Button" BasedOn="{StaticResource Button.Icon}">
             <Setter Property="Width" Value="36" />
             <Setter Property="Height" Value="32" />
@@ -191,11 +211,12 @@
 </Grid>
 <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="120" />
+                <ColumnDefinition x:Name="MainSidebarColumn" Width="120" MinWidth="104" MaxWidth="240" />
+                <ColumnDefinition x:Name="MainSidebarSplitterColumn" Width="6" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Background="{DynamicResource Brush.Chrome}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,1,0">
+            <Border Grid.Column="0" Background="{DynamicResource Brush.Chrome}">
                 <DockPanel>
                     <TextBlock Text="工作台" Style="{StaticResource Text.Muted}" Margin="16,14,0,8" DockPanel.Dock="Top" />
                     <StackPanel>
@@ -233,15 +254,91 @@
                 </DockPanel>
             </Border>
 
-            <ContentControl x:Name="MainContent" Grid.Column="1" />
+            <GridSplitter Grid.Column="1"
+                          Style="{StaticResource Splitter.Grip}"
+                          ResizeDirection="Columns"
+                          ResizeBehavior="PreviousAndNext"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          DragCompleted="LayoutSplitter_DragCompleted" />
+            <ContentControl x:Name="MainContent" Grid.Column="2" />
         </Grid>
 
         <Border Grid.Row="3" Background="{DynamicResource Brush.Chrome}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0">
             <Grid Margin="12,0">
-                <TextBlock x:Name="StatusPathText" Text="" Style="{StaticResource Text.Muted}" VerticalAlignment="Center" />
-                <TextBlock Text="UTF-8 · v2.4.0" Style="{StaticResource Text.Muted}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="StatusPathText" Text="" Style="{StaticResource Text.Muted}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                <Button x:Name="LogToggleButton" Grid.Column="1" Style="{StaticResource Button.Icon}" Height="20" MinWidth="52" Padding="8,0" Margin="10,0" Click="LogToggleButton_Click" ToolTip="打开日志">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="/UnityTableTool;component/Assets/Icons/notebook-text.png" Width="12" Height="12" Margin="0,0,5,0" />
+                        <TextBlock Text="日志" FontSize="10" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <TextBlock Grid.Column="2" Text="UTF-8 · v2.4.0" Style="{StaticResource Text.Muted}" VerticalAlignment="Center" />
             </Grid>
         </Border>
+
+        <Grid x:Name="LogOverlayHost" Grid.Row="2" Panel.ZIndex="100" Visibility="Collapsed" Background="Transparent" MouseLeftButtonDown="LogOverlayHost_MouseLeftButtonDown">
+            <Border x:Name="LogOverlayPanel" Height="320" MaxHeight="420" Margin="8" VerticalAlignment="Bottom" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="5" ClipToBounds="True">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" Height="42">
+                        <StackPanel Orientation="Horizontal" Margin="12,0" VerticalAlignment="Center">
+                            <TextBlock Text="日志" Style="{StaticResource Text.Section}" VerticalAlignment="Center" Margin="0,0,14,0" />
+                            <Button x:Name="LogFilterAllButton" Tag="all" Style="{StaticResource Button.Icon}" Content="全部" Click="LogFilter_Click" Padding="9,5" />
+                            <Button x:Name="LogFilterErrorButton" Tag="error" Style="{StaticResource Button.Icon}" Content="报错" Click="LogFilter_Click" Padding="9,5" />
+                            <Button x:Name="LogFilterWarningButton" Tag="warning" Style="{StaticResource Button.Icon}" Content="警告" Click="LogFilter_Click" Padding="9,5" />
+                            <Button x:Name="LogFilterInfoButton" Tag="log" Style="{StaticResource Button.Icon}" Content="日志" Click="LogFilter_Click" Padding="9,5" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,8,0" VerticalAlignment="Center">
+                            <Button Style="{StaticResource Button.Icon}" Width="28" Height="28" Click="CopyLogs_Click" ToolTip="复制全部日志">
+                                <Image Source="/UnityTableTool;component/Assets/Icons/copy.png" Width="14" Height="14" />
+                            </Button>
+                            <Button Style="{StaticResource Button.Icon}" Width="28" Height="28" Click="ClearLogs_Click" ToolTip="清空日志">
+                                <Image Source="/UnityTableTool;component/Assets/Icons/trash2.png" Width="14" Height="14" />
+                            </Button>
+                            <Button Style="{StaticResource Button.Icon}" Width="28" Height="28" Click="CloseLogs_Click" ToolTip="收起日志">
+                                <Image Source="/UnityTableTool;component/Assets/Icons/x.png" Width="13" Height="13" />
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                    <ScrollViewer x:Name="LogsScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" ScrollChanged="LogsScrollViewer_ScrollChanged">
+                        <ItemsControl x:Name="LogsList" Margin="12,0,12,10">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="64" />
+                                            <ColumnDefinition Width="72" />
+                                            <ColumnDefinition Width="120" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Style="{StaticResource Text.Selectable}" Text="{Binding TimeText}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" />
+                                        <TextBox Grid.Column="1" Text="{Binding Level}" FontWeight="SemiBold" VerticalAlignment="Center">
+                                            <TextBox.Style>
+                                                <Style TargetType="TextBox" BasedOn="{StaticResource Text.Selectable}">
+                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Level}" Value="SUCCESS"><Setter Property="Foreground" Value="{DynamicResource Brush.Success}" /></DataTrigger>
+                                                        <DataTrigger Binding="{Binding Level}" Value="WARNING"><Setter Property="Foreground" Value="{DynamicResource Brush.Warning}" /></DataTrigger>
+                                                        <DataTrigger Binding="{Binding Level}" Value="ERROR"><Setter Property="Foreground" Value="{DynamicResource Brush.Error}" /></DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBox.Style>
+                                        </TextBox>
+                                        <TextBox Grid.Column="2" Style="{StaticResource Text.Selectable}" Text="{Binding Source}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                        <TextBox Grid.Column="3" Style="{StaticResource Text.Selectable}" Text="{Binding Message}" Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
     </Grid>
     </Border>
 </Window>

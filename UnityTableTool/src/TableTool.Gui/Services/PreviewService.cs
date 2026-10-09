@@ -1,5 +1,6 @@
 // 用途：生成配置表预览、字段标题和校验高亮映射。
 // 编写日期：2026-10-08
+// 最近修改日期：2026-10-09
 // 作者：Codex（按用户需求修改）
 
 using System.IO;
@@ -10,6 +11,7 @@ using TableTool.Gui.Views;
 namespace TableTool.Gui.Services;
 
 public sealed record PreviewField(
+    string Key,
     string Name,
     string Header,
     string TypeLabel,
@@ -37,7 +39,7 @@ public sealed class PreviewRow
     internal int SourceRow { get; }
     public IReadOnlyDictionary<string, string> CellLevels => cellLevels;
     public IReadOnlyDictionary<string, string> CellTooltips => cellTooltips;
-    public string? this[string fieldName] => values.GetValueOrDefault(fieldName);
+    public string? this[string key] => values.GetValueOrDefault(key);
 }
 
 public sealed record PreviewViewModel(
@@ -52,6 +54,13 @@ public sealed record PreviewViewModel(
 
 public sealed class PreviewService
 {
+    private sealed record PreviewContext(
+        string Title,
+        string ModifiedText,
+        string SourceText,
+        IReadOnlyList<string> SheetNames,
+        IReadOnlyList<ValidationIssue> Issues);
+
     public PreviewViewModel Create(
         TableModel table,
         IReadOnlyList<ValidationIssue> batchIssues,
@@ -69,12 +78,32 @@ public sealed class PreviewService
             .ThenBy(issue => issue.SourceColumn ?? 0)
             .ToArray();
         var highlights = ValidationHighlightResolver.Resolve(document, issues);
+        var context = new PreviewContext(
+            table.DisplayName,
+            string.Format("修改于 {0}", GetModifiedTime(table.SourcePath).ToString("HH:mm")),
+            $"{GetRelativeSource(table.SourcePath)} · {table.CurrentSheet.LogicalTableName}",
+            table.Sheets.Select(sheet => sheet.SheetName).ToArray(),
+            issues);
 
-        var previewFields = document.Schema.Fields;
+        return document.Schema.IsSingleton
+            ? CreateSingletonPreview(document, highlights, context)
+            : CreateTablePreview(document, highlights, context);
+    }
+
+    private static PreviewViewModel CreateTablePreview(
+        TableDocument document,
+        ValidationHighlightMap highlights,
+        PreviewContext context)
+    {
+        var previewFields = document.Schema.Fields
+            .OrderBy(field => field.Name.Equals(document.Schema.PrimaryKey, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(field => field.SourceColumn)
+            .ToArray();
         var fields = previewFields.Select(field =>
         {
             var highlight = highlights.Fields.GetValueOrDefault(field.Name);
             return new PreviewField(
+                field.Name,
                 field.Name,
                 field.Name,
                 GetTypeLabel(field, document.Schema),
@@ -100,8 +129,8 @@ public sealed class PreviewService
                 var cellTooltips = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var field in previewFields)
                 {
-                    var key = ValidationHighlightResolver.CellKey(row.SourceRow, field.Name);
-                    var highlight = highlights.Cells.GetValueOrDefault(key);
+                    var highlight = highlights.Cells.GetValueOrDefault(
+                        ValidationHighlightResolver.CellKey(row.SourceRow, field.Name));
                     if (highlight is null)
                         continue;
                     cellLevels[field.Name] = ToHighlightName(highlight.Level);
@@ -112,20 +141,95 @@ public sealed class PreviewService
             })
             .ToArray();
 
-        var errors = issues.Count(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal);
-        var warnings = issues.Count(issue => issue.Severity == ValidationSeverity.Warning);
-        var sheetNames = table.Sheets
-            .Select(sheet => sheet.SheetName)
-            .ToArray();
+        return BuildViewModel(context, fields, rows);
+    }
 
+    private static PreviewViewModel CreateSingletonPreview(
+        TableDocument document,
+        ValidationHighlightMap highlights,
+        PreviewContext context)
+    {
+        var definitions = document.Schema.Fields
+            .Where(field => !field.IsTest
+                && !field.Name.Equals("values", StringComparison.OrdinalIgnoreCase)
+                && !field.Name.Equals("默认值", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(field => field.NameRow)
+            .ToArray();
+        if (definitions.Length == 0)
+            return BuildViewModel(context, [], []);
+
+        var singletonValues = document.Rows
+            .FirstOrDefault(row => !row.IsTest)?.RawValues
+            ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        var includeDescription = definitions.Any(field => !string.IsNullOrWhiteSpace(field.Description));
+        var displayKeys = includeDescription
+            ? new[] { "name", "description", "type", "value", "target" }
+            : new[] { "name", "type", "value", "target" };
+
+        string DefinitionValue(FieldSchema field, string key) => key switch
+        {
+            "name" => field.Name,
+            "description" => field.Description,
+            "type" => GetSingletonTypeLabel(field),
+            "value" => singletonValues.GetValueOrDefault(field.Name) ?? string.Empty,
+            "target" => GetTargetLabel(field.Target),
+            _ => string.Empty
+        };
+
+        var headerDefinition = definitions[0];
+        var fields = displayKeys.Select((key, index) =>
+        {
+            var highlight = index == 0 ? highlights.Fields.GetValueOrDefault(headerDefinition.Name) : null;
+            return new PreviewField(
+                key,
+                key,
+                DefinitionValue(headerDefinition, key),
+                string.Empty,
+                ToHighlightName(highlight?.Level ?? ValidationHighlightLevel.None),
+                highlight is null ? string.Empty : $"{highlight.Code}：{highlight.Reason}");
+        }).ToArray();
+
+        var rows = definitions.Skip(1).Select(definition =>
+        {
+            var values = displayKeys.ToDictionary(
+                key => key,
+                key => DefinitionValue(definition, key),
+                StringComparer.OrdinalIgnoreCase);
+            var sourceHighlight = highlights.Cells.GetValueOrDefault(
+                    ValidationHighlightResolver.CellKey(definition.NameRow, definition.Name))
+                ?? highlights.Fields.GetValueOrDefault(definition.Name);
+            var cellLevels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var cellTooltips = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (sourceHighlight is not null)
+            {
+                foreach (var key in displayKeys)
+                {
+                    cellLevels[key] = ToHighlightName(sourceHighlight.Level);
+                    cellTooltips[key] = $"{sourceHighlight.Code}：{sourceHighlight.Reason}";
+                }
+            }
+
+            return new PreviewRow(definition.NameRow, values, cellLevels, cellTooltips);
+        }).ToArray();
+
+        return BuildViewModel(context, fields, rows);
+    }
+
+    private static PreviewViewModel BuildViewModel(
+        PreviewContext context,
+        IReadOnlyList<PreviewField> fields,
+        IReadOnlyList<PreviewRow> rows)
+    {
+        var errors = context.Issues.Count(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal);
+        var warnings = context.Issues.Count(issue => issue.Severity == ValidationSeverity.Warning);
         return new PreviewViewModel(
-            table.DisplayName,
-            string.Format("修改于 {0}", GetModifiedTime(table.SourcePath).ToString("HH:mm")),
-            $"{GetRelativeSource(table.SourcePath)} · {table.CurrentSheet.SheetName}",
-            sheetNames,
+            context.Title,
+            context.ModifiedText,
+            context.SourceText,
+            context.SheetNames,
             fields,
             rows,
-            issues,
+            context.Issues,
             $"{errors} 错误 / {warnings} 警告");
     }
 
@@ -146,6 +250,16 @@ public sealed class PreviewService
             return $"{type} · 引用";
         return type;
     }
+
+    private static string GetSingletonTypeLabel(FieldSchema field) =>
+        field.Type.BaseType + string.Concat(Enumerable.Repeat("()", field.Type.Dimensions));
+
+    private static string GetTargetLabel(FieldTarget target) => target switch
+    {
+        FieldTarget.Client => "c",
+        FieldTarget.Server => "s",
+        _ => "cs"
+    };
 
     private static DateTime GetModifiedTime(string path) =>
         File.Exists(path) ? File.GetLastWriteTime(path) : DateTime.Now;

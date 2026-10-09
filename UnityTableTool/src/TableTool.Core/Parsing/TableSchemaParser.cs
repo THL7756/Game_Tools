@@ -168,6 +168,8 @@ public sealed class TableSchemaParser
         for (var rowIndex = startRow; rowIndex < grid.Rows.Count; rowIndex++)
         {
             var row = grid.Rows[rowIndex];
+            if (IsSingletonMetadataRow(row, idColumn, typeColumn, dataColumn, targetColumn, rowIndex == startRow))
+                continue;
             var directName = Get(row, idColumn)?.Trim() ?? string.Empty;
             var directType = Get(row, typeColumn)?.Trim() ?? string.Empty;
             var directValue = Get(row, dataColumn);
@@ -182,6 +184,8 @@ public sealed class TableSchemaParser
             var typeColumnForRow = useShifted ? dataColumn : typeColumn;
             var valueColumnForRow = useShifted ? dataColumn + 1 : dataColumn;
             var id = useShifted ? shiftedName : directName;
+            if (IsSingletonDefaultValuesRow(id, row))
+                continue;
             var typeText = useShifted ? shiftedType : directType;
             var data = EmptyToNull(useShifted ? shiftedValue : directValue);
             if (id.StartsWith("##", StringComparison.Ordinal))
@@ -298,6 +302,33 @@ public sealed class TableSchemaParser
         return new SingletonLayout(idColumn, typeColumn, dataColumn, targetColumn, -1);
     }
 
+    private static bool IsSingletonMetadataRow(IReadOnlyList<string?> row, int idColumn, int typeColumn, int dataColumn, int targetColumn, bool isFirstRow)
+    {
+        var marker = row.Count > 0 ? row[0]?.Trim() ?? string.Empty : string.Empty;
+        if (marker.Equals("默认值", StringComparison.OrdinalIgnoreCase)
+            || marker.Equals("default", StringComparison.OrdinalIgnoreCase)
+            || marker.Equals("default value", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var hasDefinition = !string.IsNullOrWhiteSpace(Get(row, idColumn))
+            || !string.IsNullOrWhiteSpace(Get(row, typeColumn))
+            || !string.IsNullOrWhiteSpace(Get(row, dataColumn));
+        var hasTarget = targetColumn >= 0 && !string.IsNullOrWhiteSpace(Get(row, targetColumn));
+        return !hasDefinition && (hasTarget || (isFirstRow && row.Any(value => !string.IsNullOrWhiteSpace(value))));
+    }
+
+    private static bool IsSingletonDefaultValuesRow(string id, IReadOnlyList<string?> row)
+    {
+        if (id.Equals("values", StringComparison.OrdinalIgnoreCase)
+            || id.Equals("默认值", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var marker = row.Count > 0 ? row[0]?.Trim() ?? string.Empty : string.Empty;
+        return marker.Equals("默认值", StringComparison.OrdinalIgnoreCase)
+            || marker.Equals("default", StringComparison.OrdinalIgnoreCase)
+            || marker.Equals("default value", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool IsTargetValue(string value) => value.Equals("c", StringComparison.OrdinalIgnoreCase)
         || value.Equals("s", StringComparison.OrdinalIgnoreCase)
         || value.Equals("cs", StringComparison.OrdinalIgnoreCase)
@@ -351,6 +382,8 @@ public sealed class TableSchemaParser
         IReadOnlyList<string?> semanticRow)
     {
         var semanticTarget = FindSemanticColumn(semanticRow, "target");
+        if (semanticTarget < 0)
+            semanticTarget = FindSemanticTargetValueColumn(semanticRow);
         if (semanticTarget >= 0)
             return semanticTarget;
 

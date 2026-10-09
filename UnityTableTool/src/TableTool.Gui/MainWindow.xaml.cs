@@ -23,11 +23,16 @@ public partial class MainWindow : Window
 private bool isInitializing = true;
 private bool isApplyingLanguage;
     private bool isSwitchingContent;
+    private string activeLogFilter = "all";
+    private bool isLogAtBottom = true;
 
     public MainWindow()
     {
         InitializeComponent();
         settings = SettingsStore.Load();
+        ApplyLayoutSizes();
+        ToolLogService.EntryAdded += ToolLogService_EntryAdded;
+        ToolLogService.Cleared += ToolLogService_Cleared;
         Width = Math.Max(MinWidth, settings.WindowWidth);
         Height = Math.Max(MinHeight, settings.WindowHeight);
         Closing += MainWindow_Closing;
@@ -52,7 +57,9 @@ ThemeManager.ThemeChanged += (_, _) => Dispatcher.BeginInvoke(() =>
     UpdateThemeButtons();
     ApplyZoom();
 });
-ApplyLanguageSafely();
+        ApplyLanguageSafely();
+        ReloadLogs();
+        UpdateLogFilterButtons();
 
     }
 
@@ -67,6 +74,7 @@ ApplyLanguageSafely();
             if (workbenchView is null)
             {
                 workbenchView = new WorkbenchView(settings);
+                workbenchView.OpenLogsRequested += (_, _) => Dispatcher.BeginInvoke(() => SetLogsExpanded(true));
                 workbenchView.StatusChanged += (_, text) => StatusPathText.Text = text;
             }
 
@@ -100,7 +108,6 @@ ApplyLanguageSafely();
                 ThemeManager.Apply(settings);
                 ApplyZoom();
                 workbenchView?.RefreshTables(selectAll: false);
-                ShowWorkbench();
             };
             MainContent.Content = view;
             ConfigNav.IsChecked = false;
@@ -313,7 +320,105 @@ App.LogUiError("切换界面语言失败", error);
 }
 }
 
-private void ExecuteFocusedCommand(RoutedCommand command)
+    private void ApplyLayoutSizes()
+    {
+        MainSidebarColumn.Width = new GridLength(Math.Clamp(settings.MainSidebarWidth, 104, 240));
+    }
+
+    private void LayoutSplitter_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+    {
+        settings.MainSidebarWidth = MainSidebarColumn.Width.IsAbsolute ? MainSidebarColumn.Width.Value : 120;
+        SettingsStore.Save(settings);
+    }
+
+    private void LogToggleButton_Click(object sender, RoutedEventArgs e) =>
+        SetLogsExpanded(LogOverlayHost.Visibility != Visibility.Visible);
+
+    private void CloseLogs_Click(object sender, RoutedEventArgs e) => SetLogsExpanded(false);
+
+    private void LogOverlayHost_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (!LogOverlayPanel.IsMouseOver)
+            SetLogsExpanded(false);
+    }
+
+    private void SetLogsExpanded(bool expanded)
+    {
+        LogOverlayHost.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
+        if (!expanded)
+            return;
+
+        isLogAtBottom = true;
+        Dispatcher.BeginInvoke(() =>
+        {
+            LogOverlayHost.UpdateLayout();
+            LogsScrollViewer.ScrollToEnd();
+        });
+    }
+
+    private void LogFilter_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement element)
+            return;
+        activeLogFilter = element.Tag?.ToString() ?? "all";
+        UpdateLogFilterButtons();
+        ReloadLogs();
+    }
+
+    private void UpdateLogFilterButtons()
+    {
+        var buttons = new[] { LogFilterAllButton, LogFilterErrorButton, LogFilterWarningButton, LogFilterInfoButton };
+        foreach (var button in buttons)
+        {
+            var active = string.Equals(button.Tag?.ToString(), activeLogFilter, StringComparison.OrdinalIgnoreCase);
+            if (active)
+            {
+                button.SetResourceReference(BackgroundProperty, "Brush.AccentSoft");
+                button.SetResourceReference(ForegroundProperty, "Brush.Accent");
+            }
+            else
+            {
+                button.ClearValue(BackgroundProperty);
+                button.ClearValue(ForegroundProperty);
+            }
+        }
+    }
+
+    private void CopyLogs_Click(object sender, RoutedEventArgs e)
+    {
+        var items = LogsList.ItemsSource as IEnumerable<LogDisplayItem> ?? [];
+        var text = string.Join(Environment.NewLine, items.Select(item => item.CopyText));
+        if (text.Length > 0)
+            Clipboard.SetText(text);
+    }
+
+    private void ClearLogs_Click(object sender, RoutedEventArgs e) => ToolLogService.Clear();
+
+    private void ToolLogService_EntryAdded(object? sender, ToolLogEntry entry) =>
+        Dispatcher.BeginInvoke(ReloadLogs);
+
+    private void ToolLogService_Cleared(object? sender, EventArgs e) =>
+        Dispatcher.BeginInvoke(ReloadLogs);
+
+    private void LogsScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e) =>
+        isLogAtBottom = LogsScrollViewer.ScrollableHeight <= 0 || LogsScrollViewer.VerticalOffset >= LogsScrollViewer.ScrollableHeight - 2;
+
+    private void ReloadLogs()
+    {
+        var followBottom = isLogAtBottom || LogOverlayHost.Visibility != Visibility.Visible;
+        var entries = ToolLogService.Snapshot().Select(LogDisplayItem.FromEntry).Where(item => activeLogFilter switch
+        {
+            "error" => item.Level == "ERROR",
+            "warning" => item.Level == "WARNING",
+            "log" => item.Level is "INFO" or "SUCCESS",
+            _ => true
+        }).ToArray();
+        LogsList.ItemsSource = entries;
+        if (followBottom)
+            Dispatcher.BeginInvoke(() => LogsScrollViewer.ScrollToEnd());
+    }
+
+    private void ExecuteFocusedCommand(RoutedCommand command)
     {
         if (command.CanExecute(null, Keyboard.FocusedElement))
             command.Execute(null, Keyboard.FocusedElement);
@@ -395,6 +500,7 @@ private void MainWindow_Closing(object? sender, CancelEventArgs e)
 {
     if (WindowState == WindowState.Normal)
     {
+        settings.MainSidebarWidth = MainSidebarColumn.Width.IsAbsolute ? MainSidebarColumn.Width.Value : settings.MainSidebarWidth;
         settings.WindowWidth = Math.Max(MinWidth, Width);
         settings.WindowHeight = Math.Max(MinHeight, Height);
     }

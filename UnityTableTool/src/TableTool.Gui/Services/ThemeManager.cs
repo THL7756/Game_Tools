@@ -48,7 +48,9 @@ public static class ThemeManager
             SetBrush("Brush.Text", darkForeground);
             SetBrush("Brush.TextSecondary", Blend(darkForeground, background, 0.68));
             SetBrush("Brush.TextMuted", Blend(darkForeground, background, 0.45));
-            SetBrush("Brush.RowSelected", "#3A3321");
+            SetBrush("Brush.RowSelected", Blend(accent, background, 0.18));
+            SetBrush("Brush.SelectionCell", accent);
+            SetBrush("Brush.SelectionCross", Blend(accent, background, 0.22));
             SetBrush("Brush.Overlay", "#111317");
         }
         else
@@ -72,7 +74,9 @@ public static class ThemeManager
             SetBrush("Brush.Text", lightForeground);
             SetBrush("Brush.TextSecondary", Blend(lightForeground, background, 0.68));
             SetBrush("Brush.TextMuted", Blend(lightForeground, background, 0.45));
-            SetBrush("Brush.RowSelected", "#FFF1C9");
+            SetBrush("Brush.RowSelected", Blend(accent, background, 0.18));
+            SetBrush("Brush.SelectionCell", accent);
+            SetBrush("Brush.SelectionCross", Blend(accent, background, 0.12));
             SetBrush("Brush.Overlay", "#E8ECF2");
         }
 

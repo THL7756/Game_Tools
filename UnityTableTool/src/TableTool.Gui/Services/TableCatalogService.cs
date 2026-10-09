@@ -193,7 +193,7 @@ public sealed class TableModel : INotifyPropertyChanged
     public string FileKey { get; }
     public string FavoriteKey => FileKey;
     public string DisplayName { get; }
-    public string DisplayLabel => TruncateDisplayName(DisplayName, 7);
+    public string DisplayLabel => DisplayName;
     public string SourcePath { get; }
     public bool IsRecent { get; }
     public IReadOnlyList<TableSheetModel> Sheets { get; }

@@ -1,10 +1,10 @@
-<!-- 用途：定义配置表工作台的列表、Sheet 预览、问题和日志区域。编写日期：2026-10-06；作者：Codex。 -->
-<!-- 用途：定义配置表工作台、表列表、预览表格和日志区域。编写日期：2026-10-06；作者：Codex。 -->
+<!-- 用途：定义配置表工作台的可调整模块、表详情和表问题区域。 -->
 <UserControl x:Class="TableTool.Gui.Views.WorkbenchView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="{DynamicResource Brush.Window}"
-             PreviewMouseWheel="WorkbenchView_PreviewMouseWheel">
+             PreviewMouseWheel="WorkbenchView_PreviewMouseWheel"
+             PreviewKeyDown="WorkbenchView_PreviewKeyDown">
     <UserControl.Resources>
         <Style x:Key="TableListItem" TargetType="ListBoxItem">
             <Setter Property="Height" Value="48" />
@@ -14,17 +14,42 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderThickness="0" BorderBrush="Transparent">
+                        <Border x:Name="Chrome" Background="{TemplateBinding Background}">
                             <ContentPresenter />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.SelectionCross}" />
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.SurfaceHover}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Text.Selectable" TargetType="TextBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource Brush.Accent}" />
+            <Setter Property="SelectionBrush" Value="{DynamicResource Brush.SelectionCell}" />
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="IsReadOnlyCaretVisible" Value="False" />
+            <Setter Property="IsUndoEnabled" Value="False" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Cursor" Value="IBeam" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      Focusable="False"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Hidden" />
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -40,16 +65,19 @@
             <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource Brush.Border}" />
             <Setter Property="RowBackground" Value="{DynamicResource Brush.Surface}" />
             <Setter Property="AlternatingRowBackground" Value="{DynamicResource Brush.Surface}" />
-            <Setter Property="HorizontalScrollBarVisibility" Value="Hidden" />
-            <Setter Property="VerticalScrollBarVisibility" Value="Hidden" />
+            <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
             <Setter Property="CanUserAddRows" Value="False" />
             <Setter Property="AutoGenerateColumns" Value="False" />
             <Setter Property="IsReadOnly" Value="True" />
-            <Setter Property="SelectionUnit" Value="FullRow" />
+            <Setter Property="SelectionUnit" Value="Cell" />
+            <Setter Property="SelectionMode" Value="Extended" />
+            <Setter Property="FrozenColumnCount" Value="1" />
             <Setter Property="HeadersVisibility" Value="Column" />
+            <Setter Property="ClipboardCopyMode" Value="ExcludeHeader" />
         </Style>
         <Style TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+            <Setter Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
             <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
             <Setter Property="BorderThickness" Value="0,0,1,1" />
@@ -64,21 +92,24 @@
             <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
             <Setter Property="BorderThickness" Value="0,0,0,1" />
             <Setter Property="Height" Value="27" />
-            <Style.Triggers>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource Brush.RowSelected}" />
-                    <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
-                </Trigger>
-            </Style.Triggers>
         </Style>
         <Style TargetType="DataGridCell">
-            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Padding" Value="10,0" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
             <Setter Property="FontSize" Value="11" />
+            <Style.Triggers>
+                <Trigger Property="Tag" Value="Cross">
+                    <Setter Property="Background" Value="{DynamicResource Brush.SelectionCross}" />
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource Brush.SelectionCell}" />
+                    <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
     </UserControl.Resources>
 
@@ -94,21 +125,27 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <StackPanel Orientation="Horizontal" Margin="18,0" VerticalAlignment="Center">
-                <TextBlock Text="配置工具" Style="{StaticResource Text.Title}" FontSize="17" />
-            </StackPanel>
+            <TextBlock Text="配置工具"
+                       Style="{StaticResource Text.Title}"
+                       FontSize="17"
+                       Margin="18,0"
+                       VerticalAlignment="Center" />
             <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,16,0" VerticalAlignment="Center">
-                <TextBlock x:Name="SyncText" Text="已同步 14:31" Style="{StaticResource Text.Muted}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                <TextBlock x:Name="SyncText"
+                           Text="已同步 14:31"
+                           Style="{StaticResource Text.Muted}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,12,0" />
                 <Button Style="{StaticResource Button.Secondary}" Height="30" MinWidth="100" Padding="12,6" Click="Refresh_Click">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="/UnityTableTool;component/Assets/Icons/refresh-cw.png" Width="14" Height="14" Margin="0,0,6,0" />
-                        <TextBlock Text="刷新表列表" FontSize="11"/>
+                        <TextBlock Text="刷新表列表" FontSize="11" />
                     </StackPanel>
                 </Button>
                 <Button Style="{StaticResource Button.Secondary}" Height="30" MinWidth="100" Margin="10,0,0,0" Padding="12,6" Click="OpenTableDirectory_Click">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="/UnityTableTool;component/Assets/Icons/folder-open.png" Width="14" Height="14" Margin="0,0,6,0" />
-                        <TextBlock Text="配置表目录" FontSize="11"/>
+                        <TextBlock Text="配置表目录" FontSize="11" />
                     </StackPanel>
                 </Button>
             </StackPanel>
@@ -116,32 +153,56 @@
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="215" />
+                <ColumnDefinition x:Name="TableListColumn" Width="215" MinWidth="180" MaxWidth="360" />
+                <ColumnDefinition x:Name="TableListSplitterColumn" Width="6" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Background="{DynamicResource Brush.Chrome}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,1,1">
+            <Grid Grid.Column="0" Background="{DynamicResource Brush.Chrome}">
                 <DockPanel>
                     <Grid DockPanel.Dock="Top" Height="44" Margin="12,8">
-                        <Border Background="{DynamicResource Brush.Window}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="5">
+                        <Border Background="{DynamicResource Brush.Window}"
+                                BorderBrush="{DynamicResource Brush.Border}"
+                                BorderThickness="1"
+                                CornerRadius="5">
                             <Grid Margin="9,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="16" />
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <Image Source="/UnityTableTool;component/Assets/Icons/search.png" Width="14" Height="14" VerticalAlignment="Center" />
-<TextBox x:Name="SearchBox" Grid.Column="1" Style="{StaticResource TextBox.Field}" BorderThickness="0" Background="Transparent" Padding="8,6" FontSize="11" Foreground="{DynamicResource Brush.TextMuted}" TextOptions.TextFormattingMode="Display" TextChanged="SearchBox_TextChanged" />
-                                <TextBlock x:Name="SearchPlaceholder" Grid.Column="1" Text="搜索表名或文件名" FontSize="11" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" Margin="8,0" TextOptions.TextFormattingMode="Display" IsHitTestVisible="False" />
+                                <TextBox x:Name="SearchBox"
+                                         Grid.Column="1"
+                                         Style="{StaticResource TextBox.Field}"
+                                         BorderThickness="0"
+                                         Background="Transparent"
+                                         Padding="8,6"
+                                         FontSize="11"
+                                         TextChanged="SearchBox_TextChanged" />
+                                <TextBlock x:Name="SearchPlaceholder"
+                                           Grid.Column="1"
+                                           Text="搜索表名或文件名"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource Brush.TextMuted}"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0"
+                                           IsHitTestVisible="False" />
                             </Grid>
                         </Border>
                     </Grid>
 
                     <Grid DockPanel.Dock="Top" Height="36" Margin="12,0">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <CheckBox x:Name="SelectAllCheckBox" Style="{StaticResource CheckBox.Tool}" Content="全选" FontSize="11" Click="SelectAll_Click" />
-                        </StackPanel>
-                        <TextBlock x:Name="SelectionCountText" Text="已勾选 0 / 0" Foreground="{DynamicResource Brush.Accent}" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        <CheckBox x:Name="SelectAllCheckBox"
+                                  Style="{StaticResource CheckBox.Tool}"
+                                  Content="全选"
+                                  FontSize="11"
+                                  Click="SelectAll_Click" />
+                        <TextBlock x:Name="SelectionCountText"
+                                   Text="已勾选 0 / 0"
+                                   Foreground="{DynamicResource Brush.Accent}"
+                                   FontSize="10"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Center" />
                     </Grid>
 
                     <Grid DockPanel.Dock="Top" Height="38" Margin="9,0">
@@ -151,17 +212,23 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Button x:Name="FavoritesFilterButton" Grid.Column="2" Tag="favorites" Style="{StaticResource Button.Icon}" Click="Filter_Click" Margin="3,4">
-                            <TextBlock x:Name="FavoritesFilterText" Text="收藏表 0" FontSize="10" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                            <TextBlock x:Name="FavoritesFilterText" Text="收藏表 0" FontSize="10" TextTrimming="CharacterEllipsis" />
                         </Button>
                         <Button x:Name="RecentFilterButton" Grid.Column="1" Tag="recent" Style="{StaticResource Button.Icon}" Click="Filter_Click" Margin="3,4">
-                            <TextBlock x:Name="RecentFilterText" Text="最近表 0" FontSize="10" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                            <TextBlock x:Name="RecentFilterText" Text="最近表 0" FontSize="10" TextTrimming="CharacterEllipsis" />
                         </Button>
                         <Button x:Name="AllFilterButton" Grid.Column="0" Tag="all" Style="{StaticResource Button.Icon}" Click="Filter_Click" Margin="3,4">
-                            <TextBlock x:Name="AllFilterText" Text="所有表 0" FontSize="10" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                            <TextBlock x:Name="AllFilterText" Text="所有表 0" FontSize="10" TextTrimming="CharacterEllipsis" />
                         </Button>
                     </Grid>
 
-                    <ListBox x:Name="TableList" ItemContainerStyle="{StaticResource TableListItem}" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Hidden" SelectionChanged="TableList_SelectionChanged">
+                    <ListBox x:Name="TableList"
+                             ItemContainerStyle="{StaticResource TableListItem}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             SelectionChanged="TableList_SelectionChanged">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Grid Height="48">
@@ -171,12 +238,35 @@
                                         <ColumnDefinition Width="36" />
                                         <ColumnDefinition Width="36" />
                                     </Grid.ColumnDefinitions>
-                                    <CheckBox Style="{StaticResource CheckBox.Tool}" Margin="8,0,0,0" IsChecked="{Binding IsSelected, Mode=TwoWay}" Click="TableCheck_Click" Tag="{Binding}" />
-                                    <TextBlock Grid.Column="1" Text="{Binding DisplayLabel}" ToolTip="{Binding DisplayName}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="10,0" />
-                                    <Button Grid.Column="2" Style="{StaticResource Button.Icon}" Width="32" Height="28" Padding="5" Click="OpenTable_Click" Tag="{Binding}" ToolTip="打开源文件">
+                                    <CheckBox Style="{StaticResource CheckBox.Tool}"
+                                              Margin="8,0,0,0"
+                                              IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                              Click="TableCheck_Click"
+                                              Tag="{Binding}" />
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding DisplayName}"
+                                               ToolTip="{Binding DisplayName}"
+                                               TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Center"
+                                               Margin="10,0" />
+                                    <Button Grid.Column="2"
+                                            Style="{StaticResource Button.Icon}"
+                                            Width="32"
+                                            Height="28"
+                                            Padding="5"
+                                            Click="OpenTable_Click"
+                                            Tag="{Binding}"
+                                            ToolTip="打开源文件">
                                         <Image Source="/UnityTableTool;component/Assets/Icons/external-link1.png" Width="14" Height="14" />
                                     </Button>
-                                    <Button Grid.Column="3" Style="{StaticResource Button.Icon}" Width="28" Height="28" Padding="5" Click="Favorite_Click" Tag="{Binding}" ToolTip="收藏">
+                                    <Button Grid.Column="3"
+                                            Style="{StaticResource Button.Icon}"
+                                            Width="28"
+                                            Height="28"
+                                            Padding="5"
+                                            Click="Favorite_Click"
+                                            Tag="{Binding}"
+                                            ToolTip="收藏">
                                         <Grid>
                                             <Image Source="/UnityTableTool;component/Assets/Icons/star1.png" Width="14" Height="14" />
                                             <Image Source="/UnityTableTool;component/Assets/Icons/star.png" Width="14" Height="14">
@@ -198,261 +288,280 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
                 </DockPanel>
-            </Border>
+            </Grid>
 
-            <Grid Grid.Column="1" Margin="8">
+            <GridSplitter Grid.Column="1"
+                          Style="{StaticResource Splitter.Grip}"
+                          ResizeDirection="Columns"
+                          ResizeBehavior="PreviousAndNext"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          DragCompleted="LayoutSplitter_DragCompleted" />
+
+            <Grid Grid.Column="2" Margin="8,0">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="260" />
-                    <RowDefinition Height="8" />
-                    <RowDefinition Height="*" />
+                    <RowDefinition x:Name="TableDetailRow" Height="260" MinHeight="160" />
+                    <RowDefinition x:Name="DetailIssuesSplitterRow" Height="6" />
+                    <RowDefinition x:Name="TableIssuesRow" Height="*" MinHeight="120" />
                 </Grid.RowDefinitions>
 
-                <Border Grid.Row="0" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="5">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="62" />
-                            <RowDefinition Height="32" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-
-                        <Grid Grid.Row="0" Margin="8,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <Grid Grid.Column="0" Margin="4,6,12,5">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock x:Name="PreviewTitleText" Text="配置表预览" Style="{StaticResource Text.Section}" Margin="4,0,6,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock x:Name="ModifiedText" Text="" Style="{StaticResource Text.Muted}" VerticalAlignment="Center" />
-                                </StackPanel>
-                                <TextBlock x:Name="SourceText" Grid.Row="1" Text="" Style="{StaticResource Text.Muted}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="4,3,0,0" TextTrimming="CharacterEllipsis" />
-                            </Grid>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                <Button Style="{StaticResource Button.Secondary}" Height="28" MinWidth="80" Margin="0,0,8,0" Padding="10,5" Click="RefreshCurrentTable_Click">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/refresh-cw.png" Width="13" Height="13" Margin="0,0,5,0" />
-                                        <TextBlock Text="刷新内容" FontSize="10"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button Style="{StaticResource Button.Secondary}" Height="28" MinWidth="80" Padding="10,5" Click="OpenInExcel_Click">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/external-link2.png" Width="14" Height="14" Margin="0,0,6,0" />
-                                        <TextBlock Text="打开 Excel" FontSize="10"/>
-                                    </StackPanel>
-                                </Button>
-                            </StackPanel>
-                        </Grid>
-
-                        <Grid Grid.Row="1" Background="{DynamicResource Brush.Surface}">
-                            <StackPanel Orientation="Horizontal" Margin="8,0">
-                                <ItemsControl x:Name="SheetTabs">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <StackPanel Orientation="Horizontal" />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Button Tag="{Binding}" Click="SheetTab_Click" MinWidth="40" Padding="12,7" Margin="5,0" ToolTip="{Binding ValidationTooltip}">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="{Binding SheetName}" FontSize="10" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
-                                                    <Border Margin="6,0,0,0" Padding="3,1" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding ValidationMarker}" FontSize="9" FontWeight="SemiBold" Foreground="White" />
-                                                        <Border.Style>
-                                                            <Style TargetType="Border">
-                                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                                <Setter Property="CornerRadius" Value="3" />
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding ValidationLevel}" Value="Error">
-                                                                        <Setter Property="Visibility" Value="Visible" />
-                                                                        <Setter Property="Background" Value="{DynamicResource Brush.Error}" />
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding ValidationLevel}" Value="Warning">
-                                                                        <Setter Property="Visibility" Value="Visible" />
-                                                                        <Setter Property="Background" Value="{DynamicResource Brush.Warning}" />
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </Border.Style>
-                                                    </Border>
-                                                </StackPanel>
-                                                <Button.Style>
-                                                    <Style TargetType="Button" BasedOn="{StaticResource Button.Icon}">
-                                                        <Setter Property="Padding" Value="18,7" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsCurrent}" Value="True">
-                                                                <Setter Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
-                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding ValidationLevel}" Value="Error">
-                                                                <Setter Property="Background" Value="{DynamicResource Brush.ErrorSoft}" />
-                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Error}" />
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding ValidationLevel}" Value="Warning">
-                                                                <Setter Property="Background" Value="{DynamicResource Brush.WarningSoft}" />
-                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Warning}" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Button.Style>
-                                            </Button>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                            <TextBlock x:Name="ReadOnlyText" Text="只读预览 · 0 个字段" Style="{StaticResource Text.Muted}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0" />
-                        </Grid>
-
-                        <DataGrid x:Name="PreviewGrid" Grid.Row="2" />
-                    </Grid>
-                </Border>
-
-                <Grid Grid.Row="2">
+                <Grid Grid.Row="0" Background="{DynamicResource Brush.Panel}">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="62" />
+                        <RowDefinition Height="32" />
                         <RowDefinition Height="*" />
-                        <RowDefinition x:Name="LogsRow" Height="38" />
                     </Grid.RowDefinitions>
 
-                    <Border Grid.Row="0" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="5" ClipToBounds="True">
-                        <DockPanel>
-                            <Grid DockPanel.Dock="Top" Height="38">
-                                <StackPanel Orientation="Horizontal" Margin="12,0" VerticalAlignment="Center">
-                                    <TextBlock Text="表问题" Style="{StaticResource Text.Section}" />
-                                    <StackPanel Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center">
-                                        <TextBlock x:Name="ErrorSummaryText" Text="0 错误" Foreground="{DynamicResource Brush.Error}" FontSize="10" />
-                                        <TextBlock x:Name="WarningSummaryText" Text="0 警告" Foreground="{DynamicResource Brush.Warning}" FontSize="10" Margin="10,0,0,0" />
-                                    </StackPanel>
+                    <Grid Grid.Row="0" Margin="8,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Grid Grid.Column="0" Margin="4,6,12,5">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock x:Name="PreviewTitleText"
+                                           Text="配置表预览"
+                                           Style="{StaticResource Text.Section}"
+                                           Margin="4,0,6,0"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock x:Name="ModifiedText"
+                                           Text=""
+                                           Style="{StaticResource Text.Muted}"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                            <TextBlock x:Name="SourceText"
+                                       Grid.Row="1"
+                                       Text=""
+                                       Style="{StaticResource Text.Muted}"
+                                       HorizontalAlignment="Left"
+                                       VerticalAlignment="Center"
+                                       Margin="4,3,0,0"
+                                       TextTrimming="CharacterEllipsis"
+                                       ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                        </Grid>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button Style="{StaticResource Button.Secondary}" Height="28" MinWidth="80" Margin="0,0,8,0" Padding="10,5" Click="RefreshCurrentTable_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <Image Source="/UnityTableTool;component/Assets/Icons/refresh-cw.png" Width="13" Height="13" Margin="0,0,5,0" />
+                                    <TextBlock Text="刷新内容" FontSize="10" />
                                 </StackPanel>
-                                <Button Style="{StaticResource Button.Icon}" Width="28" Height="26" HorizontalAlignment="Right" Margin="0,0,8,0" Click="CopyIssues_Click" ToolTip="复制问题">
-                                    <Image Source="/UnityTableTool;component/Assets/Icons/copy.png" Width="14" Height="14" />
-                                </Button>
-                            </Grid>
-                            <ScrollViewer VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Hidden">
-                                <ItemsControl x:Name="IssuesList" Margin="12,0,12,10">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1" Padding="0,6">
-    <Grid MinHeight="36">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" MinWidth="54" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
-        
-        <!-- 1. 级别标签：背景拉伸适配整行 -->
-        <Border Grid.Column="0" Padding="8,0" CornerRadius="4" 
-                HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
-                Margin="0,0,12,0">
-            <TextBlock Text="{Binding Level}" FontWeight="SemiBold" 
-                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-            <Border.Style>
-                <Style TargetType="Border">
-                    <Setter Property="Background" Value="{DynamicResource Brush.ErrorSoft}" />
-                    <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.Error}" />
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding Severity}" Value="Warning">
-                            <Setter Property="Background" Value="{DynamicResource Brush.WarningSoft}" />
-                            <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.Warning}" />
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
-        </Border>
+                            </Button>
+                            <Button Style="{StaticResource Button.Secondary}" Height="28" MinWidth="80" Padding="10,5" Click="OpenInExcel_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <Image Source="/UnityTableTool;component/Assets/Icons/external-link2.png" Width="13" Height="13" Margin="0,0,5,0" />
+                                    <TextBlock Text="打开 Excel" FontSize="10" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
 
-        <!-- 右侧内容区：紧凑两行排版 -->
-        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-            
-            <!-- 第一行：表名（不换行） + 位置（默认颜色） -->
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,2">
-                <TextBlock Text="{Binding Source}" ToolTip="{Binding Source}" Margin="0,0,8,0" VerticalAlignment="Center" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                <TextBlock Text="{Binding Location}" ToolTip="{Binding Location}" Margin="0,0,8,0" VerticalAlignment="Center" />
-            </StackPanel>
-            
-            <!-- 第二行：修复提示（淡灰色） -->
-            <TextBlock Text="{Binding Detail}" Foreground="{DynamicResource Brush.TextSecondary}" TextWrapping="Wrap" />
-            
-        </StackPanel>
-    </Grid>
-</Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </DockPanel>
-                    </Border>
-
-                    <Border x:Name="LogsPanel" Grid.Row="1" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="5">
-                        <DockPanel>
-                            <Grid DockPanel.Dock="Top" Height="38">
-                                <StackPanel Orientation="Horizontal" Margin="12,0" VerticalAlignment="Center">
-                                    <TextBlock Text="日志" Style="{StaticResource Text.Section}" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,8,0">
-                                    <Button x:Name="ToggleLogsButton" Style="{StaticResource Button.Icon}" Width="54" Height="26" Click="ToggleLogs_Click" Content="展开" FontSize="10" />
-                                    <Button Style="{StaticResource Button.Icon}" Width="28" Height="26" Click="CopyLogs_Click" ToolTip="复制日志">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/copy.png" Width="14" Height="14" />
-                                    </Button>
-                                    <Button Style="{StaticResource Button.Icon}" Width="28" Height="26" Click="ClearLogs_Click" ToolTip="清空日志">
-                                        <Image Source="/UnityTableTool;component/Assets/Icons/trash2.png" Width="14" Height="14" />
-                                    </Button>
-                                </StackPanel>
-                            </Grid>
-                            <ScrollViewer x:Name="LogsScrollViewer" Visibility="Collapsed" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Hidden">
-                                <ItemsControl x:Name="LogsList" Margin="12,0,12,10">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                                <Grid Margin="0,4">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="58" />
-                                                    <ColumnDefinition Width="64" />
-                                                    <ColumnDefinition Width="110" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding TimeText}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Level}" FontWeight="SemiBold" VerticalAlignment="Center">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                    <Grid Grid.Row="1" Margin="8,0">
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                            <ItemsControl x:Name="SheetTabs">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Margin="0,0,6,0"
+                                                Padding="12,6"
+                                                Click="SheetTab_Click"
+                                                Tag="{Binding}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding SheetName}"
+                                                           FontSize="10"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           MaxWidth="160"
+                                                           ToolTip="{Binding SheetName}" />
+                                                <Border Width="6" Height="6" CornerRadius="3" Margin="6,0,0,0">
+                                                    <TextBlock Text="{Binding ValidationMarker}"
+                                                               FontSize="8"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="White"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center" />
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                            <Setter Property="Background" Value="{DynamicResource Brush.Error}" />
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding Level}" Value="SUCCESS">
-                                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Success}" />
+                                                                <DataTrigger Binding="{Binding ValidationLevel}" Value="Error">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                    <Setter Property="Background" Value="{DynamicResource Brush.Error}" />
                                                                 </DataTrigger>
-                                                                <DataTrigger Binding="{Binding Level}" Value="WARNING">
-                                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Warning}" />
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding Level}" Value="ERROR">
-                                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Error}" />
+                                                                <DataTrigger Binding="{Binding ValidationLevel}" Value="Warning">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                    <Setter Property="Background" Value="{DynamicResource Brush.Warning}" />
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                                <TextBlock Grid.Column="2" Text="{Binding Source}" Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center" TextWrapping="Wrap" TextTrimming="None" Margin="0,0,8,0" />
-                                                <TextBlock Grid.Column="3" Text="{Binding Message}" Foreground="{DynamicResource Brush.TextSecondary}" TextWrapping="Wrap" />
+                                                    </Border.Style>
+                                                </Border>
+                                            </StackPanel>
+                                            <Button.Style>
+                                                <Style TargetType="Button" BasedOn="{StaticResource Button.Icon}">
+                                                    <Setter Property="Padding" Value="12,6" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                            <Setter Property="Background" Value="{DynamicResource Brush.SelectionCross}" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ValidationLevel}" Value="Error">
+                                                            <Setter Property="Background" Value="{DynamicResource Brush.ErrorSoft}" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource Brush.Error}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ValidationLevel}" Value="Warning">
+                                                            <Setter Property="Background" Value="{DynamicResource Brush.WarningSoft}" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource Brush.Warning}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <TextBlock x:Name="ReadOnlyText"
+                                   Text="只读预览 · 0 个字段"
+                                   Style="{StaticResource Text.Muted}"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,12,0" />
+                    </Grid>
+
+                    <DataGrid x:Name="PreviewGrid" Grid.Row="2" />
+                </Grid>
+
+                <GridSplitter Grid.Row="1"
+                              Style="{StaticResource Splitter.Grip}"
+                              ResizeDirection="Rows"
+                              ResizeBehavior="PreviousAndNext"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch"
+                              DragCompleted="LayoutSplitter_DragCompleted" />
+
+                <Grid Grid.Row="2" Background="{DynamicResource Brush.Panel}">
+                    <DockPanel>
+                        <Grid DockPanel.Dock="Top" Height="38">
+                            <StackPanel Orientation="Horizontal" Margin="12,0" VerticalAlignment="Center">
+                                <TextBlock Text="表问题" Style="{StaticResource Text.Section}" />
+                                <StackPanel Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="ErrorSummaryText" Text="0 错误" Foreground="{DynamicResource Brush.Error}" FontSize="10" />
+                                    <TextBlock x:Name="WarningSummaryText" Text="0 警告" Foreground="{DynamicResource Brush.Warning}" FontSize="10" Margin="10,0,0,0" />
+                                </StackPanel>
+                            </StackPanel>
+                            <Button Style="{StaticResource Button.Icon}"
+                                    Width="28"
+                                    Height="26"
+                                    HorizontalAlignment="Right"
+                                    Margin="0,0,8,0"
+                                    Click="CopyIssues_Click"
+                                    ToolTip="复制全部问题">
+                                <Image Source="/UnityTableTool;component/Assets/Icons/copy.png" Width="14" Height="14" />
+                            </Button>
+                        </Grid>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl x:Name="IssuesList" Margin="12,0,12,10">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="{DynamicResource Brush.Border}"
+                                                BorderThickness="0,0,0,1"
+                                                Padding="0,6">
+                                            <Grid MinHeight="38">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" MinWidth="54" />
+                                                    <ColumnDefinition Width="190" />
+                                                    <ColumnDefinition Width="110" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Padding="8,0"
+                                                        CornerRadius="4"
+                                                        Margin="0,0,12,0"
+                                                        VerticalAlignment="Stretch">
+                                                    <TextBox Text="{Binding Level}"
+                                                             FontWeight="SemiBold"
+                                                             HorizontalAlignment="Center"
+                                                             VerticalAlignment="Center">
+                                                        <TextBox.Style>
+                                                            <Style TargetType="TextBox" BasedOn="{StaticResource Text.Selectable}">
+                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Error}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Warning}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBox.Style>
+                                                    </TextBox>
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="{DynamicResource Brush.ErrorSoft}" />
+                                                            <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.Error}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                                                                    <Setter Property="Background" Value="{DynamicResource Brush.WarningSoft}" />
+                                                                    <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.Warning}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                </Border>
+                                                <TextBox Grid.Column="1"
+                                                         Style="{StaticResource Text.Selectable}"
+                                                         Text="{Binding Source}"
+                                                         Margin="0,0,8,0"
+                                                         VerticalAlignment="Center" />
+                                                <TextBox Grid.Column="2"
+                                                         Style="{StaticResource Text.Selectable}"
+                                                         Text="{Binding Location}"
+                                                         Margin="0,0,8,0"
+                                                         VerticalAlignment="Center" />
+                                                <TextBox Grid.Column="3"
+                                                         Style="{StaticResource Text.Selectable}"
+                                                         Text="{Binding Detail}"
+                                                         VerticalAlignment="Center" />
                                             </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </DockPanel>
-                    </Border>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
                 </Grid>
             </Grid>
         </Grid>
 
-        <Border Grid.Row="2" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0">
+        <Border Grid.Row="2"
+                Background="{DynamicResource Brush.Panel}"
+                BorderBrush="{DynamicResource Brush.Border}"
+                BorderThickness="0,1,0,0">
             <Grid Margin="18,0">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="输出范围" FontSize="11" Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                    <TextBlock Text="输出范围"
+                               FontSize="11"
+                               Foreground="{DynamicResource Brush.TextSecondary}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0" />
                     <CheckBox x:Name="ClientCheckBox" Style="{StaticResource CheckBox.Tool}" Content="客户端数据" IsChecked="True" Checked="OutputTarget_Changed" Unchecked="OutputTarget_Changed" />
                     <CheckBox x:Name="ClientCodeCheckBox" Style="{StaticResource CheckBox.Tool}" Content="客户端代码" IsChecked="True" Margin="18,0,0,0" Checked="OutputTarget_Changed" Unchecked="OutputTarget_Changed" />
                     <CheckBox x:Name="ServerCheckBox" Style="{StaticResource CheckBox.Tool}" Content="服务器数据" IsChecked="True" Margin="18,0,0,0" Checked="OutputTarget_Changed" Unchecked="OutputTarget_Changed" />
                     <CheckBox x:Name="ServerCodeCheckBox" Style="{StaticResource CheckBox.Tool}" Content="服务器代码" IsChecked="True" Margin="18,0,0,0" Checked="OutputTarget_Changed" Unchecked="OutputTarget_Changed" />
                 </StackPanel>
-                <Button x:Name="BuildButton" Style="{StaticResource Button.Primary}" Width="140" Height="36" HorizontalAlignment="Right" VerticalAlignment="Center" Click="Build_Click">
+                <Button x:Name="BuildButton"
+                        Style="{StaticResource Button.Primary}"
+                        Width="140"
+                        Height="36"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Click="Build_Click">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="/UnityTableTool;component/Assets/Icons/play.png" Width="14" Height="14" Margin="0,0,8,0" />
                         <TextBlock x:Name="BuildButtonText" Text="开始打表" Foreground="White" FontWeight="SemiBold" />

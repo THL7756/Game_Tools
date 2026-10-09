@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -33,8 +34,11 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
     private string activeFilter = "all";
     private DateTime lastSyncTime = DateTime.Now;
     private bool isInitializing = true;
+    private PreviewViewModel? currentPreview;
+    private bool isRefreshingPreview;
 
     public event EventHandler<string>? StatusChanged;
+    public event EventHandler? OpenLogsRequested;
 
     public WorkbenchView(AppSettings settings)
     {
@@ -45,10 +49,9 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         ClientCodeCheckBox.IsChecked = settings.CodeTargets.HasFlag(ExportTarget.Client);
         ServerCodeCheckBox.IsChecked = settings.CodeTargets.HasFlag(ExportTarget.Server);
         Loaded += (_, _) => RefreshTables(selectAll: false);
-        ThemeManager.ThemeChanged += (_, _) => Dispatcher.BeginInvoke(UpdateFilterButtons);
-        ToolLogService.EntryAdded += ToolLogService_EntryAdded;
-        ToolLogService.Cleared += ToolLogService_Cleared;
-        ReloadLogs();
+        ThemeManager.ThemeChanged += (_, _) => Dispatcher.BeginInvoke(RefreshTheme);
+        PreviewGrid.SelectedCellsChanged += (_, _) => ApplyPreviewSelectionVisuals();
+        ApplyLayoutSizes();
         isInitializing = false;
     }
 
@@ -201,6 +204,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             .ToArray();
         batchIssues = TableBatchValidator.Validate(allDocuments, validationSources, GetArraySeparators()).Issues;
         var preview = previewService.Create(table, batchIssues, GetArraySeparators());
+        currentPreview = preview;
         var displayIssues = batchIssues
             .Concat(preview.Issues)
             .Distinct()
@@ -209,7 +213,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         ModifiedText.Text = preview.ModifiedText;
         SourceText.Text = preview.SourceText;
         SheetTabs.ItemsSource = table.Sheets;
-        ReadOnlyText.Text = string.Format("只读预览 · {0} 个字段", preview.Fields.Count);
+        ReadOnlyText.Text = string.Format("只读预览 · {0} 行 · {1} 列", preview.Rows.Count, preview.Fields.Count);
         var errorCount = displayIssues.Count(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal)
             + catalogErrors.Count;
         var warningCount = displayIssues.Count(issue => issue.Severity == ValidationSeverity.Warning);
@@ -262,11 +266,14 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
                 TextAlignment = TextAlignment.Center
             });
 
-            var cellStyle = new Style(typeof(DataGridCell));
-            cellStyle.Setters.Add(new Setter(ToolTipProperty, new Binding($"CellTooltips[{field.Name}]")));
+            var cellStyle = new Style(typeof(DataGridCell))
+            {
+                BasedOn = (Style)FindResource(typeof(DataGridCell))
+            };
+            cellStyle.Setters.Add(new Setter(ToolTipProperty, new Binding($"CellTooltips[{field.Key}]")));
             var errorTrigger = new DataTrigger
             {
-                Binding = new Binding($"CellLevels[{field.Name}]"),
+                Binding = new Binding($"CellLevels[{field.Key}]"),
                 Value = "Error"
             };
             errorTrigger.Setters.Add(new Setter(BackgroundProperty, FindResource("Brush.ErrorSoft")));
@@ -274,7 +281,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             cellStyle.Triggers.Add(errorTrigger);
             var warningTrigger = new DataTrigger
             {
-                Binding = new Binding($"CellLevels[{field.Name}]"),
+                Binding = new Binding($"CellLevels[{field.Key}]"),
                 Value = "Warning"
             };
             warningTrigger.Setters.Add(new Setter(BackgroundProperty, FindResource("Brush.WarningSoft")));
@@ -284,7 +291,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             PreviewGrid.Columns.Add(new DataGridTextColumn
             {
                 Header = header,
-                Binding = new Binding($"[{field.Name}]"),
+                Binding = new Binding($"[{field.Key}]"),
                 Width = GetColumnWidth(field.Name),
                 CanUserSort = false,
                 CellStyle = cellStyle,
@@ -300,6 +307,153 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
                 }
             });
         }
+    }
+
+    private void RefreshTheme()
+    {
+        UpdateFilterButtons();
+        if (currentPreview is null)
+            return;
+
+        var selection = CapturePreviewSelection();
+        isRefreshingPreview = true;
+        BuildPreviewColumns(currentPreview);
+        PreviewGrid.ItemsSource = currentPreview.Rows;
+        isRefreshingPreview = false;
+        RestorePreviewSelection(selection);
+    }
+
+    private List<(int SourceRow, string Key)> CapturePreviewSelection() =>
+        PreviewGrid.SelectedCells
+            .Select(cell => (SourceRow: (cell.Item as PreviewRow)?.SourceRow ?? -1, Key: GetColumnKey(cell.Column) ?? string.Empty))
+            .Where(item => item.SourceRow >= 0 && item.Key.Length > 0)
+            .Distinct()
+            .ToList();
+
+    private void RestorePreviewSelection(IReadOnlyList<(int SourceRow, string Key)> selection)
+    {
+        foreach (var (sourceRow, key) in selection)
+        {
+            var row = PreviewGrid.Items.OfType<PreviewRow>().FirstOrDefault(item => item.SourceRow == sourceRow);
+            var column = PreviewGrid.Columns.FirstOrDefault(item => GetColumnKey(item) == key);
+            if (row is not null && column is not null)
+                PreviewGrid.SelectedCells.Add(new DataGridCellInfo(row, column));
+        }
+        ApplyPreviewSelectionVisuals();
+    }
+
+    private void ApplyPreviewSelectionVisuals()
+    {
+        if (isRefreshingPreview)
+            return;
+
+        var selectedRows = PreviewGrid.SelectedCells.Select(cell => PreviewGrid.Items.IndexOf(cell.Item)).ToHashSet();
+        var selectedColumns = PreviewGrid.SelectedCells.Select(cell => cell.Column.DisplayIndex).ToHashSet();
+        foreach (var cell in FindVisualDescendants<DataGridCell>(PreviewGrid))
+        {
+            var rowIndex = PreviewGrid.Items.IndexOf(cell.DataContext);
+            if (cell.IsSelected)
+            {
+                cell.SetResourceReference(BackgroundProperty, "Brush.SelectionCell");
+                cell.SetResourceReference(ForegroundProperty, "Brush.Text");
+            }
+            else if (selectedRows.Contains(rowIndex) || selectedColumns.Contains(cell.Column.DisplayIndex))
+            {
+                cell.SetResourceReference(BackgroundProperty, "Brush.SelectionCross");
+                cell.SetResourceReference(ForegroundProperty, "Brush.TextSecondary");
+            }
+            else
+            {
+                cell.ClearValue(BackgroundProperty);
+                cell.ClearValue(ForegroundProperty);
+            }
+        }
+    }
+
+    private void WorkbenchView_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.C && Keyboard.Modifiers == ModifierKeys.Control && PreviewGrid.IsKeyboardFocusWithin)
+        {
+            CopyPreviewSelection();
+            e.Handled = true;
+        }
+    }
+
+    private void CopyPreviewSelection()
+    {
+        if (PreviewGrid.SelectedCells.Count == 0)
+            return;
+
+        var cells = PreviewGrid.SelectedCells.Select(cell => new
+        {
+            Row = PreviewGrid.Items.IndexOf(cell.Item),
+            Column = cell.Column.DisplayIndex,
+            Key = GetColumnKey(cell.Column) ?? string.Empty,
+            RowData = cell.Item as PreviewRow
+        }).Where(cell => cell.RowData is not null && cell.Key.Length > 0).ToArray();
+        if (cells.Length == 0)
+            return;
+
+        var minRow = cells.Min(cell => cell.Row);
+        var maxRow = cells.Max(cell => cell.Row);
+        var minColumn = cells.Min(cell => cell.Column);
+        var maxColumn = cells.Max(cell => cell.Column);
+        var keys = PreviewGrid.Columns
+            .OrderBy(column => column.DisplayIndex)
+            .Select(column => GetColumnKey(column) ?? string.Empty)
+            .ToArray();
+        var lines = new List<string>();
+        for (var rowIndex = minRow; rowIndex <= maxRow; rowIndex++)
+        {
+            var row = PreviewGrid.Items[rowIndex] as PreviewRow;
+            var values = new List<string>();
+            for (var columnIndex = minColumn; columnIndex <= maxColumn; columnIndex++)
+                values.Add(columnIndex < keys.Length ? row?[keys[columnIndex]] ?? string.Empty : string.Empty);
+            lines.Add(string.Join('\t', values));
+        }
+
+        try
+        {
+            Clipboard.SetText(string.Join(Environment.NewLine, lines));
+        }
+        catch (Exception error)
+        {
+            ToolLogService.Error("工作台", $"复制表格内容失败：{error.Message}");
+        }
+    }
+
+    private static string? GetColumnKey(DataGridColumn column)
+    {
+        if ((column.Header as FrameworkElement)?.Tag is string tag)
+            return tag;
+        return (column as DataGridBoundColumn)?.Binding is Binding binding ? binding.Path?.Path?.Trim('[', ']') : null;
+    }
+
+    private static IEnumerable<T> FindVisualDescendants<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(parent); index++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, index);
+            if (child is T match)
+                yield return match;
+            foreach (var descendant in FindVisualDescendants<T>(child))
+                yield return descendant;
+        }
+    }
+
+    private void ApplyLayoutSizes()
+    {
+        TableListColumn.Width = new GridLength(Math.Clamp(settings.WorkbenchTableListWidth, 180, 360));
+        TableDetailRow.Height = new GridLength(Math.Clamp(settings.WorkbenchDetailHeight, 120, 800), GridUnitType.Star);
+        TableIssuesRow.Height = new GridLength(Math.Clamp(settings.WorkbenchIssuesHeight, 120, 800), GridUnitType.Star);
+    }
+
+    private void LayoutSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        settings.WorkbenchTableListWidth = TableListColumn.Width.IsAbsolute ? TableListColumn.Width.Value : 215;
+        settings.WorkbenchDetailHeight = Math.Max(1, TableDetailRow.Height.Value);
+        settings.WorkbenchIssuesHeight = Math.Max(1, TableIssuesRow.Height.Value);
+        SettingsStore.Save(settings);
     }
 
     private void UpdateSheetValidationStates(TableModel table, IReadOnlyList<ValidationIssue> previewIssues)
@@ -348,6 +502,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
 
     private void ClearPreview()
     {
+        currentPreview = null;
         PreviewTitleText.Text = "配置表预览";
         ModifiedText.Text = string.Empty;
         SourceText.Text = string.Empty;
@@ -377,49 +532,8 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         SearchBox.SelectAll();
     }
 
-    private void WorkbenchView_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-    {
-        var source = e.OriginalSource as DependencyObject;
-        var scrollViewer = source is null ? null : FindVisualParent<ScrollViewer>(source);
-        scrollViewer ??= FindVisualChild<ScrollViewer>(PreviewGrid);
-        if (scrollViewer is null)
-            return;
-
-        var step = Math.Clamp((double)settings.VerticalWheelScrollStep, 1d, 200d);
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
-            scrollViewer.ScrollToHorizontalOffset(scrollViewer.HorizontalOffset - Math.Sign(e.Delta) * Math.Clamp((double)settings.HorizontalWheelScrollStep, 1d, 200d));
-        else
-            scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset - Math.Sign(e.Delta) * step);
-
-        e.Handled = true;
-    }
-
-    private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
-    {
-        while (child is not null)
-        {
-            if (child is T result)
-                return result;
-            child = VisualTreeHelper.GetParent(child);
-        }
-
-        return null;
-    }
-
-    private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
-    {
-        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(parent); index++)
-        {
-            var child = VisualTreeHelper.GetChild(parent, index);
-            if (child is T result)
-                return result;
-            var nested = FindVisualChild<T>(child);
-            if (nested is not null)
-                return nested;
-        }
-
-        return null;
-    }
+    private void WorkbenchView_PreviewMouseWheel(object sender, MouseWheelEventArgs e) =>
+        ScrollWheelService.Handle(e, e.OriginalSource as DependencyObject, settings, PreviewGrid);
 
     private void Filter_Click(object sender, RoutedEventArgs e)
     {
@@ -555,7 +669,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
                 .Select(IssueDisplayItem.CatalogError)
                 .ToArray();
             ToolLogService.Error("打表", "存在无法读取的表，已停止打表。");
-            SetLogsExpanded(true);
+            OpenLogsRequested?.Invoke(this, EventArgs.Empty);
             ShowBuildResultDialog(success: false);
             StatusChanged?.Invoke(this, "存在无法读取的表，已停止打表");
             return;
@@ -580,7 +694,6 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             .Select(IssueDisplayItem.FromIssue)
             .Concat(catalogErrors.Select(error => IssueDisplayItem.CatalogError(error)))
             .ToArray();
-        ReloadLogs();
 
         if (result.Success)
         {
@@ -600,7 +713,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         }
         else
         {
-            SetLogsExpanded(true);
+            OpenLogsRequested?.Invoke(this, EventArgs.Empty);
             ShowBuildResultDialog(success: false);
             StatusChanged?.Invoke(this, "打表未完成，请检查日志");
         }
@@ -622,35 +735,12 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         dialog.ShowDialog();
     }
 
-    private void CopyLogs_Click(object sender, RoutedEventArgs e)
-    {
-        var items = LogsList.ItemsSource as IEnumerable<LogDisplayItem> ?? [];
-        var text = string.Join(Environment.NewLine, items.Select(item => item.CopyText));
-        if (text.Length > 0)
-            Clipboard.SetText(text);
-    }
-
     private void CopyIssues_Click(object sender, RoutedEventArgs e)
     {
         var items = IssuesList.ItemsSource as IEnumerable<IssueDisplayItem> ?? [];
         var text = string.Join(Environment.NewLine, items.Select(item => item.CopyText));
         if (text.Length > 0)
             Clipboard.SetText(text);
-    }
-
-    private void ClearLogs_Click(object sender, RoutedEventArgs e) => ToolLogService.Clear();
-
-    private void ToolLogService_EntryAdded(object? sender, ToolLogEntry entry) =>
-        Dispatcher.BeginInvoke(ReloadLogs);
-
-    private void ToolLogService_Cleared(object? sender, EventArgs e) =>
-        Dispatcher.BeginInvoke(ReloadLogs);
-
-    private void ReloadLogs()
-    {
-        LogsList.ItemsSource = ToolLogService.Snapshot()
-            .Select(LogDisplayItem.FromEntry)
-            .ToArray();
     }
 
     private static string NormalizeBuildLevel(string level) => level switch
@@ -660,19 +750,6 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         "FAIL" => "ERROR",
         _ => "INFO"
     };
-
-    private void ToggleLogs_Click(object sender, RoutedEventArgs e)
-    {
-        var collapsed = LogsScrollViewer.Visibility == Visibility.Collapsed;
-        SetLogsExpanded(collapsed);
-    }
-
-    private void SetLogsExpanded(bool expanded)
-    {
-        LogsScrollViewer.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
-        LogsRow.Height = expanded ? new GridLength(170) : new GridLength(38);
-        ToggleLogsButton.Content = expanded ? "收起" : "展开";
-    }
 
     private static void OpenPath(string path)
     {

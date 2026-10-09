@@ -6,6 +6,37 @@
     <Application.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
 
+        <Style x:Key="Splitter.Grip" TargetType="GridSplitter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Cursor" Value="SizeWE" />
+            <Setter Property="ToolTip" Value="拖动调整大小" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="GridSplitter">
+                        <Grid Background="{TemplateBinding Background}">
+                            <Border Background="{DynamicResource Brush.Border}" />
+                            <Border x:Name="GripChrome" Background="Transparent" CornerRadius="2" Margin="1">
+                                <TextBlock x:Name="Grip" Text="⋮" FontSize="12" Foreground="{DynamicResource Brush.TextMuted}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="ResizeDirection" Value="Rows">
+                                <Setter TargetName="Grip" Property="Text" Value="⋯" />
+                                <Setter Property="Cursor" Value="SizeNS" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="GripChrome" Property="Background" Value="{DynamicResource Brush.AccentMuted}" />
+                                <Setter TargetName="Grip" Property="Foreground" Value="{DynamicResource Brush.Accent}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{DynamicResource Font.Interface}" />
             <Setter Property="FontSize" Value="{DynamicResource Size.Interface}" />
@@ -332,12 +363,21 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="18" />
                                     </Grid.ColumnDefinitions>
-                                    <ContentPresenter Grid.Column="0"
+                                    <ContentPresenter x:Name="SelectionPresenter" Grid.Column="0"
+                                                      Visibility="Visible"
                                                       Content="{TemplateBinding SelectionBoxItem}"
                                                       ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                                       ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
                                                       TextElement.Foreground="{DynamicResource Brush.Text}"
                                                       VerticalAlignment="Center" />
+                                    <TextBox x:Name="PART_EditableTextBox" Grid.Column="0"
+                                             Text="{Binding Text, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                             Foreground="{DynamicResource Brush.Text}"
+                                             Background="Transparent"
+                                             BorderThickness="0"
+                                             Padding="0"
+                                             VerticalContentAlignment="Center"
+                                             Visibility="Collapsed" />
                                     <Path Grid.Column="1" Data="M 0 0 L 4 4 L 8 0" Stroke="{DynamicResource Brush.TextSecondary}" StrokeThickness="1.5" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Grid>
                             </Border>
@@ -373,6 +413,10 @@ BorderThickness="0"
                             </Popup>
                         </Grid>
                         <ControlTemplate.Triggers>
+                            <Trigger Property="IsEditable" Value="True">
+                                <Setter TargetName="SelectionPresenter" Property="Visibility" Value="Collapsed" />
+                                <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible" />
+                            </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="DropDownButton" Property="Opacity" Value="0.45" />
                             </Trigger>
