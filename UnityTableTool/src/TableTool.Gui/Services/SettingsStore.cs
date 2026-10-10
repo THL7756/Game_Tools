@@ -115,9 +115,6 @@ public static class SettingsStore
             .Where(ToolLogCategories.All.Contains)
             .Distinct(StringComparer.Ordinal)
             .ToList();
-        settings.LogPanelHeight = double.IsNaN(settings.LogPanelHeight) || double.IsInfinity(settings.LogPanelHeight)
-            ? 320
-            : Math.Clamp(settings.LogPanelHeight, 220, 560);
         if (double.IsNaN(settings.WindowWidth) || double.IsInfinity(settings.WindowWidth))
             settings.WindowWidth = 1024;
         if (double.IsNaN(settings.WindowHeight) || double.IsInfinity(settings.WindowHeight))

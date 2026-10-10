@@ -30,6 +30,7 @@ private bool isApplyingLanguage;
     private int pendingNewLogCount;
     private string logSearchText = string.Empty;
     private IReadOnlyList<LogDisplayItem> visibleLogEntries = Array.Empty<LogDisplayItem>();
+    private ScrollViewer? logsScrollViewer;
 
     public MainWindow()
     {
@@ -45,7 +46,6 @@ private bool isApplyingLanguage;
             .ToArray();
         UpdateLogCollapseDuplicatesButton();
         UpdateLogCategoryButtonState();
-        LogOverlayPanel.Height = settings.LogPanelHeight;
         ToolLogService.EntryAdded += ToolLogService_EntryAdded;
         ToolLogService.Cleared += ToolLogService_Cleared;
         Width = Math.Max(MinWidth, settings.WindowWidth);
@@ -368,8 +368,7 @@ App.LogUiError("切换界面语言失败", error);
         NewLogsButton.Visibility = Visibility.Collapsed;
         Dispatcher.BeginInvoke(() =>
         {
-            LogOverlayHost.UpdateLayout();
-            LogsScrollViewer.ScrollToEnd();
+            GetLogsScrollViewer()?.ScrollToEnd();
         });
     }
 
@@ -463,12 +462,7 @@ App.LogUiError("切换界面语言失败", error);
 
     private void UpdateLogCategoryButtonState()
     {
-        LogCategoryButton.Content = activeLogCategories.Count switch
-        {
-            0 => "分类 0",
-            var count when count == ToolLogCategories.All.Count => "分类",
-            var count => $"分类 {count}"
-        };
+        LogCategoryButton.Content = $"分类 {activeLogCategories.Count}/{ToolLogCategories.All.Count}";
         LogCategorySelectionText.Text = $"已选 {activeLogCategories.Count} / {ToolLogCategories.All.Count}";
         SetLogFilterButtonState(LogCategoryButton, activeLogCategories.Count != ToolLogCategories.All.Count);
     }
@@ -491,14 +485,6 @@ App.LogUiError("切换界面语言失败", error);
     {
         logSearchText = LogSearchBox.Text.Trim();
         ReloadLogs();
-    }
-
-    private void LogPanelResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
-    {
-        var height = Math.Clamp(LogOverlayPanel.Height - e.VerticalChange, 220, 560);
-        LogOverlayPanel.Height = height;
-        settings.LogPanelHeight = height;
-        SettingsStore.Save(settings);
     }
 
     private void SaveLogState()
@@ -530,8 +516,12 @@ App.LogUiError("切换界面语言失败", error);
 
     private void LogsScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
     {
-        var atBottom = LogsScrollViewer.ScrollableHeight <= 0
-            || LogsScrollViewer.VerticalOffset >= LogsScrollViewer.ScrollableHeight - 2;
+        var scrollViewer = sender as ScrollViewer ?? logsScrollViewer;
+        if (scrollViewer is null)
+            return;
+
+        var atBottom = scrollViewer.ScrollableHeight <= 0
+            || scrollViewer.VerticalOffset >= scrollViewer.ScrollableHeight - 2;
         if (atBottom && !isLogAtBottom)
         {
             pendingNewLogCount = 0;
@@ -545,7 +535,14 @@ App.LogUiError("切换界面语言失败", error);
         pendingNewLogCount = 0;
         isLogAtBottom = true;
         NewLogsButton.Visibility = Visibility.Collapsed;
-        LogsScrollViewer.ScrollToEnd();
+        GetLogsScrollViewer()?.ScrollToEnd();
+    }
+
+    private void LogsList_Loaded(object sender, RoutedEventArgs e)
+    {
+        logsScrollViewer ??= FindVisualChild<ScrollViewer>(LogsList);
+        if (logsScrollViewer is not null)
+            logsScrollViewer.ScrollChanged += LogsScrollViewer_ScrollChanged;
     }
 
     private void ReloadLogs()
@@ -574,6 +571,7 @@ App.LogUiError("切换界面语言失败", error);
             : entries;
         visibleLogEntries = visibleEntries;
         LogsList.ItemsSource = visibleEntries;
+        LogEmptyStateHost.IsHitTestVisible = allEntries.Length > 0 && entries.Length == 0;
         LogNoLogsState.Visibility = allEntries.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
         LogNoMatchState.Visibility = allEntries.Length > 0 && entries.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
         LogFilteredCountText.Text = $"当前 {entries.Length} 条";
@@ -587,13 +585,30 @@ App.LogUiError("切换界面语言失败", error);
         {
             pendingNewLogCount = 0;
             NewLogsButton.Visibility = Visibility.Collapsed;
-            Dispatcher.BeginInvoke(() => LogsScrollViewer.ScrollToEnd());
+            Dispatcher.BeginInvoke(() => GetLogsScrollViewer()?.ScrollToEnd());
         }
         else if (pendingNewLogCount > 0)
         {
             NewLogsButton.Content = $"新增 {pendingNewLogCount} 条";
             NewLogsButton.Visibility = Visibility.Visible;
         }
+    }
+
+    private ScrollViewer? GetLogsScrollViewer() => logsScrollViewer ??= FindVisualChild<ScrollViewer>(LogsList);
+
+    private static T? FindVisualChild<T>(DependencyObject parent)
+        where T : DependencyObject
+    {
+        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(parent); index++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, index);
+            if (child is T match)
+                return match;
+            if (FindVisualChild<T>(child) is { } nested)
+                return nested;
+        }
+
+        return null;
     }
 
     private void ExecuteFocusedCommand(RoutedCommand command)
@@ -676,8 +691,6 @@ Environment.Exit(0);
 
 private void MainWindow_Closing(object? sender, CancelEventArgs e)
 {
-        if (LogOverlayPanel is not null && LogOverlayPanel.Height > 0)
-            settings.LogPanelHeight = Math.Clamp(LogOverlayPanel.Height, 220, 560);
         SaveLogState();
     if (WindowState == WindowState.Normal)
     {

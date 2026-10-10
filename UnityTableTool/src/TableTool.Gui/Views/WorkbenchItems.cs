@@ -65,6 +65,8 @@ public sealed record LogDisplayItem(
 
     public string DisplayMessage => DuplicateCount > 1 ? $"{Message} ×{DuplicateCount}" : Message;
 
+    public string DisplayLine => string.Join("  ", TimeText, DisplayLevel, Category, Source, DisplayMessage);
+
     public string CopyText => DuplicateCount > 1
         ? $"{TimeText}\t{DisplayLevel}\t{Category}\t{Source}\t{Message}\t×{DuplicateCount}"
         : $"{TimeText}\t{DisplayLevel}\t{Category}\t{Source}\t{Message}";

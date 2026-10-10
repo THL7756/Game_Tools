@@ -482,7 +482,7 @@
                                 CornerRadius="4"
                                 Margin="0,0,12,0"
                                 VerticalAlignment="Stretch">
-                            <TextBox Text="{Binding Level}"
+                            <TextBox Text="{Binding Level, Mode=OneWay}"
                                      FontWeight="SemiBold"
                                      HorizontalAlignment="Center"
                                      VerticalAlignment="Center">
@@ -525,7 +525,7 @@
                                      VerticalAlignment="Center"
                                      ToolTip="{Binding SourceTooltip}">
                                 <TextBox.Text>
-                                    <MultiBinding StringFormat="{}{0}   {1}">
+                                    <MultiBinding Mode="OneWay" StringFormat="{}{0}   {1}">
                                         <Binding Path="Source" />
                                         <Binding Path="Location" />
                                     </MultiBinding>
@@ -535,7 +535,7 @@
                             <!-- 第二行：详细说明 -->
                             <TextBox Grid.Row="1"
                                      Style="{StaticResource Text.Selectable}"
-                                     Text="{Binding Detail}"
+                                     Text="{Binding Detail, Mode=OneWay}"
                                      VerticalAlignment="Center"
                                      Foreground="{DynamicResource Brush.TextSecondary}" />
                         </Grid>

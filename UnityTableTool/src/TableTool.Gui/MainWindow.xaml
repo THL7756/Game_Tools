@@ -49,31 +49,6 @@
             <Setter Property="Padding" Value="0" />
         </Style>
 
-        <Style x:Key="LogResizeGrip" TargetType="Thumb">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Cursor" Value="SizeNS" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Thumb">
-                        <Grid Background="Transparent">
-                            <Border x:Name="Line"
-                                    Height="1"
-                                    VerticalAlignment="Bottom"
-                                    Background="{DynamicResource Brush.Border}" />
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Line" Property="Background" Value="{DynamicResource Brush.Accent}" />
-                            </Trigger>
-                            <Trigger Property="IsDragging" Value="True">
-                                <Setter TargetName="Line" Property="Background" Value="{DynamicResource Brush.Accent}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
 <Style x:Key="MenuText" TargetType="MenuItem" BasedOn="{StaticResource MenuItem.Base}">
             <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
             <Setter Property="Background" Value="Transparent" />
@@ -310,9 +285,8 @@
 
         <Grid x:Name="LogOverlayHost" Grid.Row="2" Panel.ZIndex="100" Visibility="Collapsed" Background="#01000000" MouseLeftButtonDown="LogOverlayHost_MouseLeftButtonDown">
             <Border Background="{DynamicResource Brush.Overlay}" Opacity="0.12" IsHitTestVisible="False" />
-            <Border x:Name="LogOverlayPanel" Height="320" MaxHeight="560" MinHeight="220" Margin="8,0,8,0" VerticalAlignment="Bottom" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="5,5,0,0" ClipToBounds="True">
+            <Border x:Name="LogOverlayPanel" Height="320" Margin="8,0,8,0" VerticalAlignment="Bottom" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="5,5,0,0" ClipToBounds="True">
                 <DockPanel>
-                    <Thumb x:Name="LogPanelResizeThumb" DockPanel.Dock="Top" Height="5" Style="{StaticResource LogResizeGrip}" DragDelta="LogPanelResizeThumb_DragDelta" ToolTip="拖动调整日志高度" />
                     <Grid DockPanel.Dock="Top" MinHeight="38" Margin="8,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -414,62 +388,78 @@
                         </Popup>
                     </Grid>
                     <Grid>
-                        <ScrollViewer x:Name="LogsScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" ScrollChanged="LogsScrollViewer_ScrollChanged">
-                            <Grid MinHeight="120">
-                                <ItemsControl x:Name="LogsList" Margin="12,0,12,10">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Height="30"
-                                                    BorderBrush="{DynamicResource Brush.Border}"
-                                                    BorderThickness="0,0,0,1">
-                                                <Border.Style>
-                                                    <Style TargetType="Border">
-                                                        <Setter Property="Background" Value="Transparent" />
-                                                        <Style.Triggers>
-                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter Property="Background" Value="{DynamicResource Brush.SurfaceHover}" />
-                                                            </Trigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Border.Style>
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="70" />
-                                                        <ColumnDefinition Width="58" />
-                                                        <ColumnDefinition Width="70" />
-                                                        <ColumnDefinition Width="145" />
-                                                        <ColumnDefinition Width="*" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock Text="{Binding TimeText}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" Margin="6,0" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayLevel}" FontWeight="SemiBold" FontSize="10" VerticalAlignment="Center" Margin="6,0">
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding Level}" Value="SUCCESS"><Setter Property="Foreground" Value="{DynamicResource Brush.Success}" /></DataTrigger>
-                                                                    <DataTrigger Binding="{Binding Level}" Value="WARNING"><Setter Property="Foreground" Value="{DynamicResource Brush.Warning}" /></DataTrigger>
-                                                                    <DataTrigger Binding="{Binding Level}" Value="ERROR"><Setter Property="Foreground" Value="{DynamicResource Brush.Error}" /></DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-                                                    <TextBlock Grid.Column="2" Text="{Binding Category}" Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center" Margin="6,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding Category}" />
-                                                    <TextBlock Grid.Column="3" Text="{Binding Source}" Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center" Margin="6,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding Source}" />
-                                                    <TextBlock Grid.Column="4" Text="{Binding DisplayMessage}" Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center" Margin="6,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding Message}" />
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                <StackPanel x:Name="LogNoLogsState" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">
-                                    <TextBlock Text="暂无日志" Style="{StaticResource Text.Muted}" HorizontalAlignment="Center" />
-                                </StackPanel>
-                                <StackPanel x:Name="LogNoMatchState" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">
-                                    <TextBlock Text="没有匹配的日志" Style="{StaticResource Text.Muted}" HorizontalAlignment="Center" />
-                                    <Button Content="清除筛选" Style="{StaticResource Button.Secondary}" Padding="10,4" Margin="0,8,0,0" Click="ClearLogFilters_Click" />
-                                </StackPanel>
-                            </Grid>
-                        </ScrollViewer>
+                        <ListBox x:Name="LogsList"
+                                 Margin="12,0,12,10"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Padding="0"
+                                 SelectionMode="Single"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 ScrollViewer.CanContentScroll="True"
+                                 VirtualizingPanel.IsVirtualizing="True"
+                                 VirtualizingPanel.VirtualizationMode="Recycling"
+                                 Loaded="LogsList_Loaded">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="BorderThickness" Value="0" />
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="Focusable" Value="False" />
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <ContentPresenter />
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Height="30"
+                                            BorderBrush="{DynamicResource Brush.Border}"
+                                            BorderThickness="0,0,0,1">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="Transparent" />
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource Brush.SurfaceHover}" />
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBox Text="{Binding DisplayLine, Mode=OneWay}"
+                                                 VerticalContentAlignment="Center"
+                                                 Margin="6,0"
+                                                 TextWrapping="NoWrap"
+                                                 ToolTip="{Binding CopyText}">
+                                            <TextBox.Style>
+                                                <Style TargetType="TextBox" BasedOn="{StaticResource Text.Selectable}">
+                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Level}" Value="SUCCESS"><Setter Property="Foreground" Value="{DynamicResource Brush.Success}" /></DataTrigger>
+                                                        <DataTrigger Binding="{Binding Level}" Value="WARNING"><Setter Property="Foreground" Value="{DynamicResource Brush.Warning}" /></DataTrigger>
+                                                        <DataTrigger Binding="{Binding Level}" Value="ERROR"><Setter Property="Foreground" Value="{DynamicResource Brush.Error}" /></DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBox.Style>
+                                        </TextBox>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <Grid x:Name="LogEmptyStateHost" MinHeight="120" IsHitTestVisible="False">
+                            <StackPanel x:Name="LogNoLogsState" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">
+                                <TextBlock Text="暂无日志" Style="{StaticResource Text.Muted}" HorizontalAlignment="Center" />
+                            </StackPanel>
+                            <StackPanel x:Name="LogNoMatchState" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">
+                                <TextBlock Text="没有匹配的日志" Style="{StaticResource Text.Muted}" HorizontalAlignment="Center" />
+                                <Button Content="清除筛选" Style="{StaticResource Button.Secondary}" Padding="10,4" Margin="0,8,0,0" Click="ClearLogFilters_Click" />
+                            </StackPanel>
+                        </Grid>
                         <Button x:Name="NewLogsButton" Content="新增 0 条" Style="{StaticResource Button.Secondary}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,12" Padding="12,5" Visibility="Collapsed" Click="NewLogsButton_Click" />
                     </Grid>
                 </DockPanel>
