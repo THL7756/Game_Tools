@@ -328,27 +328,32 @@ public partial class SettingsView : System.Windows.Controls.UserControl
 
     private void LoadWheelStepControls()
     {
-        SetWheelStepControls(VerticalWheelStepSlider, VerticalWheelStepBox, settings.VerticalWheelScrollStep);
-        SetWheelStepControls(HorizontalWheelStepSlider, HorizontalWheelStepBox, settings.HorizontalWheelScrollStep);
+        SetWheelStepControls(VerticalWheelStepBox, VerticalWheelStepDecreaseButton, VerticalWheelStepIncreaseButton, settings.VerticalWheelScrollStep);
+        SetWheelStepControls(HorizontalWheelStepBox, HorizontalWheelStepDecreaseButton, HorizontalWheelStepIncreaseButton, settings.HorizontalWheelScrollStep);
     }
 
-    private static void SetWheelStepControls(Slider slider, TextBox box, int value)
+    private static void SetWheelStepControls(TextBox box, Button decreaseButton, Button increaseButton, int value)
     {
         var normalized = Math.Clamp(value, 1, 10);
-        slider.Value = normalized;
         box.Text = normalized.ToString();
+        decreaseButton.IsEnabled = normalized > 1;
+        increaseButton.IsEnabled = normalized < 10;
     }
 
-    private void VerticalWheelStepSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void WheelStepDecrease_Click(object sender, RoutedEventArgs e)
     {
-        if (!isInitializing && VerticalWheelStepBox is not null)
-            SetWheelStep(true, (int)e.NewValue);
+        if (sender is FrameworkElement element && string.Equals(element.Tag?.ToString(), "vertical", StringComparison.Ordinal))
+            SetWheelStep(true, settings.VerticalWheelScrollStep - 1);
+        else
+            SetWheelStep(false, settings.HorizontalWheelScrollStep - 1);
     }
 
-    private void HorizontalWheelStepSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void WheelStepIncrease_Click(object sender, RoutedEventArgs e)
     {
-        if (!isInitializing && HorizontalWheelStepBox is not null)
-            SetWheelStep(false, (int)e.NewValue);
+        if (sender is FrameworkElement element && string.Equals(element.Tag?.ToString(), "vertical", StringComparison.Ordinal))
+            SetWheelStep(true, settings.VerticalWheelScrollStep + 1);
+        else
+            SetWheelStep(false, settings.HorizontalWheelScrollStep + 1);
     }
 
     private void WheelStepBox_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -380,14 +385,12 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         if (vertical)
         {
             settings.VerticalWheelScrollStep = value;
-            VerticalWheelStepBox.Text = value.ToString();
-            VerticalWheelStepSlider.Value = value;
+            SetWheelStepControls(VerticalWheelStepBox, VerticalWheelStepDecreaseButton, VerticalWheelStepIncreaseButton, value);
         }
         else
         {
             settings.HorizontalWheelScrollStep = value;
-            HorizontalWheelStepBox.Text = value.ToString();
-            HorizontalWheelStepSlider.Value = value;
+            SetWheelStepControls(HorizontalWheelStepBox, HorizontalWheelStepDecreaseButton, HorizontalWheelStepIncreaseButton, value);
         }
         PersistSettings();
     }

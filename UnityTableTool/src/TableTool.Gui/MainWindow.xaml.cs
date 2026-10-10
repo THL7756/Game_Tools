@@ -29,6 +29,7 @@ private bool isApplyingLanguage;
     private readonly HashSet<string> collapsedLogCategories = new(StringComparer.Ordinal);
     private bool isLogAtBottom = true;
     private string logSearchText = string.Empty;
+    private IReadOnlyList<LogDisplayItem> visibleLogEntries = Array.Empty<LogDisplayItem>();
 
     public MainWindow()
     {
@@ -438,8 +439,7 @@ App.LogUiError("切换界面语言失败", error);
 
     private void CopyLogs_Click(object sender, RoutedEventArgs e)
     {
-        var items = LogsList.ItemsSource as IEnumerable<LogDisplayItem> ?? [];
-        var text = string.Join(Environment.NewLine, items.Select(item => item.CopyText));
+        var text = string.Join(Environment.NewLine, visibleLogEntries.Select(item => item.CopyText));
         if (text.Length > 0)
             Clipboard.SetText(text);
     }
@@ -498,6 +498,32 @@ App.LogUiError("切换界面语言失败", error);
     {
         settings.LogCollapseDuplicates = !settings.LogCollapseDuplicates;
         UpdateLogCollapseDuplicatesButton();
+        SaveLogState();
+        ReloadLogs();
+    }
+
+    private void LogGroupToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement element || element.Tag is not string category)
+            return;
+
+        if (!collapsedLogCategories.Add(category))
+            collapsedLogCategories.Remove(category);
+        SaveLogState();
+        ReloadLogs();
+    }
+
+    private void LogCollapseAll_Click(object sender, RoutedEventArgs e)
+    {
+        collapsedLogCategories.Clear();
+        collapsedLogCategories.UnionWith(ToolLogCategories.All);
+        SaveLogState();
+        ReloadLogs();
+    }
+
+    private void LogExpandAll_Click(object sender, RoutedEventArgs e)
+    {
+        collapsedLogCategories.Clear();
         SaveLogState();
         ReloadLogs();
     }
@@ -574,7 +600,17 @@ App.LogUiError("切换界面语言失败", error);
         var visibleEntries = settings.LogCollapseDuplicates
             ? LogDisplayItems.Collapse(entries)
             : entries;
-        LogsList.ItemsSource = visibleEntries;
+        visibleLogEntries = visibleEntries;
+        LogsList.ItemsSource = ToolLogCategories.All
+            .Select(category => new LogCategoryGroupDisplayItem(
+                category,
+                visibleEntries.Where(item => string.Equals(item.Category, category, StringComparison.Ordinal)).ToArray(),
+                collapsedLogCategories.Contains(category)))
+            .Where(group => group.Items.Count > 0)
+            .ToArray();
+        LogEmptyStateText.Visibility = visibleEntries.Count == 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
         var totalErrors = allEntries.Count(item => item.Level == "ERROR");
         var totalWarnings = allEntries.Count(item => item.Level == "WARNING");
         LogSummaryText.Text = $"{entries.Length}/{allEntries.Length} 条 · 错误 {totalErrors} · 警告 {totalWarnings}";

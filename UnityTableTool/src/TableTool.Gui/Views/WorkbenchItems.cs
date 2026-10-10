@@ -83,6 +83,21 @@ public static class LogDisplayItems
             .ToArray();
 }
 
+public sealed record LogCategoryGroupDisplayItem(
+    string Category,
+    IReadOnlyList<LogDisplayItem> Items,
+    bool IsCollapsed)
+{
+    public int EntryCount => Items.Sum(item => item.DuplicateCount);
+    public int ErrorCount => Items.Where(item => item.Level == "ERROR").Sum(item => item.DuplicateCount);
+    public int WarningCount => Items.Where(item => item.Level == "WARNING").Sum(item => item.DuplicateCount);
+    public string SummaryText => $"{EntryCount} 条";
+    public string ErrorSummaryText => ErrorCount > 0 ? $"错误 {ErrorCount}" : string.Empty;
+    public string WarningSummaryText => WarningCount > 0 ? $"警告 {WarningCount}" : string.Empty;
+    public string ToggleGlyph => IsCollapsed ? "+" : "−";
+    public string ToggleToolTip => IsCollapsed ? "展开分类" : "收起分类";
+}
+
 public sealed class LogCategoryFilterItem : INotifyPropertyChanged
 {
     private int count;

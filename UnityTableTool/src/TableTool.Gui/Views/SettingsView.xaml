@@ -592,11 +592,17 @@
                                 <TextBlock Text="上下滚轮行数" VerticalAlignment="Center" />
                                 <Grid Grid.Column="1" Margin="10,0,0,0">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="28" />
                                         <ColumnDefinition Width="52" />
+                                        <ColumnDefinition Width="28" />
                                     </Grid.ColumnDefinitions>
-                                    <Slider x:Name="VerticalWheelStepSlider" Style="{StaticResource Slider.Tool}" Minimum="1" Maximum="10" TickFrequency="1" SmallChange="1" LargeChange="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="VerticalWheelStepSlider_ValueChanged" ToolTip="每次滚轮移动的内容行数" />
-                                    <TextBox x:Name="VerticalWheelStepBox" Grid.Column="1" Width="52" Height="28" MaxLength="3" Style="{StaticResource TextBox.Field}" VerticalAlignment="Center" PreviewKeyDown="WheelStepBox_PreviewKeyDown" LostFocus="WheelStepBox_LostFocus" />
+                                    <Button x:Name="VerticalWheelStepDecreaseButton" Style="{StaticResource Button.Stepper}" Click="WheelStepDecrease_Click" Tag="vertical" ToolTip="减少滚轮行数">
+                                        <TextBlock Text="-" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Button>
+                                    <TextBox x:Name="VerticalWheelStepBox" Grid.Column="1" Width="52" Height="28" MaxLength="2" Style="{StaticResource TextBox.Field}" HorizontalContentAlignment="Center" VerticalAlignment="Center" PreviewKeyDown="WheelStepBox_PreviewKeyDown" LostFocus="WheelStepBox_LostFocus" />
+                                    <Button x:Name="VerticalWheelStepIncreaseButton" Grid.Column="2" Style="{StaticResource Button.Stepper}" Click="WheelStepIncrease_Click" Tag="vertical" ToolTip="增加滚轮行数">
+                                        <TextBlock Text="+" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Button>
                                 </Grid>
                             </Grid>
                             <Border Grid.Row="3" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
@@ -608,11 +614,17 @@
                                 <TextBlock Text="左右滚轮列数" VerticalAlignment="Center" />
                                 <Grid Grid.Column="1" Margin="10,0,0,0">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="28" />
                                         <ColumnDefinition Width="52" />
+                                        <ColumnDefinition Width="28" />
                                     </Grid.ColumnDefinitions>
-                                    <Slider x:Name="HorizontalWheelStepSlider" Style="{StaticResource Slider.Tool}" Minimum="1" Maximum="10" TickFrequency="1" SmallChange="1" LargeChange="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" ValueChanged="HorizontalWheelStepSlider_ValueChanged" ToolTip="每次滚轮移动的内容列数" />
-                                    <TextBox x:Name="HorizontalWheelStepBox" Grid.Column="1" Width="52" Height="28" MaxLength="3" Style="{StaticResource TextBox.Field}" VerticalAlignment="Center" PreviewKeyDown="WheelStepBox_PreviewKeyDown" LostFocus="WheelStepBox_LostFocus" />
+                                    <Button x:Name="HorizontalWheelStepDecreaseButton" Style="{StaticResource Button.Stepper}" Click="WheelStepDecrease_Click" Tag="horizontal" ToolTip="减少滚轮列数">
+                                        <TextBlock Text="-" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Button>
+                                    <TextBox x:Name="HorizontalWheelStepBox" Grid.Column="1" Width="52" Height="28" MaxLength="2" Style="{StaticResource TextBox.Field}" HorizontalContentAlignment="Center" VerticalAlignment="Center" PreviewKeyDown="WheelStepBox_PreviewKeyDown" LostFocus="WheelStepBox_LostFocus" />
+                                    <Button x:Name="HorizontalWheelStepIncreaseButton" Grid.Column="2" Style="{StaticResource Button.Stepper}" Click="WheelStepIncrease_Click" Tag="horizontal" ToolTip="增加滚轮列数">
+                                        <TextBlock Text="+" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Button>
                                 </Grid>
                             </Grid>
                             <Border Grid.Row="4" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />

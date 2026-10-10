@@ -16,7 +16,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="GridSplitter">
-                        <Grid Background="Transparent">
+                        <Grid Background="{TemplateBinding Background}">
                             <Border x:Name="GripChrome"
                                     Width="1"
                                     HorizontalAlignment="Center"
@@ -60,8 +60,8 @@
             <Setter Property="Background" Value="{DynamicResource Brush.ScrollbarThumb}" />
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="MinWidth" Value="3" />
-            <Setter Property="MinHeight" Value="3" />
+            <Setter Property="MinWidth" Value="2" />
+            <Setter Property="MinHeight" Value="2" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Thumb">
@@ -69,7 +69,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="2"
+                                CornerRadius="1"
                                 Margin="0" />
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -85,8 +85,8 @@
         </Style>
 
         <Style TargetType="ScrollBar">
-            <Setter Property="Width" Value="4" />
-            <Setter Property="Height" Value="4" />
+            <Setter Property="Width" Value="2" />
+            <Setter Property="Height" Value="2" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.ScrollbarThumb}" />
             <Setter Property="Template">
@@ -124,11 +124,11 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="Orientation" Value="Horizontal">
-                    <Setter Property="Height" Value="4" />
+                    <Setter Property="Height" Value="2" />
                     <Setter Property="Width" Value="Auto" />
                 </Trigger>
                 <Trigger Property="Orientation" Value="Vertical">
-                    <Setter Property="Width" Value="4" />
+                    <Setter Property="Width" Value="2" />
                     <Setter Property="Height" Value="Auto" />
                 </Trigger>
                 <Trigger Property="IsEnabled" Value="False">
@@ -259,6 +259,13 @@
             </Setter>
         </Style>
 
+        <Style x:Key="Button.Stepper" TargetType="Button" BasedOn="{StaticResource Button.Icon}">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
+        </Style>
+
         <Style x:Key="Button.Filter" TargetType="ToggleButton">
             <Setter Property="Background" Value="{DynamicResource Brush.Window}" />
             <Setter Property="BorderBrush" Value="Transparent" />
@@ -302,6 +309,12 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <Style x:Key="Button.LogAction" TargetType="Button" BasedOn="{StaticResource Button.Icon}">
+            <Setter Property="Background" Value="{DynamicResource Brush.Window}" />
+            <Setter Property="Padding" Value="7,4" />
+            <Setter Property="FontSize" Value="10" />
         </Style>
 
         <Style x:Key="Button.Secondary" TargetType="Button">
