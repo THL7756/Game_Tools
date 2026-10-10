@@ -253,7 +253,6 @@
                                     <ComboBoxItem Content="系统" />
                                 </ComboBox>
                             </Grid>
-                            <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
                             <Grid Height="56">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />

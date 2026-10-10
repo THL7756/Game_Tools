@@ -80,7 +80,7 @@ public sealed class PreviewService
         var highlights = ValidationHighlightResolver.Resolve(document, issues);
         var context = new PreviewContext(
             table.DisplayName,
-            string.Format("修改于 {0}", GetModifiedTime(table.SourcePath).ToString("HH:mm")),
+            string.Format("修改于 {0}", GetModifiedTime(table.SourcePath).ToString("MM-dd HH:mm:ss")),
             $"{GetRelativeSource(table.SourcePath)} · {table.CurrentSheet.LogicalTableName}",
             table.Sheets.Select(sheet => sheet.SheetName).ToArray(),
             issues);

@@ -104,7 +104,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
 
         ApplyFilter();
         lastSyncTime = DateTime.Now;
-        SyncText.Text = string.Format("已同步 {0}", lastSyncTime.ToString("HH:mm"));
+        SyncText.Text = string.Format("已同步 {0}", lastSyncTime.ToString("MM-dd HH:mm:ss"));
         if (result.Errors.Count == 0)
             ToolLogService.Success("配置表", $"刷新表列表：读取 {result.Tables.Count} 个文件。");
         else

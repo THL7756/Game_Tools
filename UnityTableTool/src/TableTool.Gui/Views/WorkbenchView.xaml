@@ -182,7 +182,7 @@
                                          TextChanged="SearchBox_TextChanged" />
                                 <TextBlock x:Name="SearchPlaceholder"
                                            Grid.Column="1"
-                                           Text="搜索表名或文件名"
+                                           Text="    搜索文件名或者表名"
                                            FontSize="11"
                                            Foreground="{DynamicResource Brush.TextMuted}"
                                            VerticalAlignment="Center"
@@ -257,7 +257,7 @@
                                             Padding="5"
                                             Click="OpenTable_Click"
                                             Tag="{Binding}"
-                                            ToolTip="打开源文件">
+                                            ToolTip="打开文件">
                                         <Image Source="/UnityTableTool;component/Assets/Icons/external-link1.png" Width="14" Height="14" />
                                     </Button>
                                     <Button Grid.Column="3"
@@ -309,7 +309,7 @@
 
                 <Grid Grid.Row="0" Background="{DynamicResource Brush.Panel}">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="62" />
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="32" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
@@ -356,7 +356,7 @@
                             <Button Style="{StaticResource Button.Secondary}" Height="28" MinWidth="80" Padding="10,5" Click="OpenInExcel_Click">
                                 <StackPanel Orientation="Horizontal">
                                     <Image Source="/UnityTableTool;component/Assets/Icons/external-link2.png" Width="13" Height="13" Margin="0,0,5,0" />
-                                    <TextBlock Text="打开 Excel" FontSize="10" />
+                                    <TextBlock Text="打开文件" FontSize="10" />
                                 </StackPanel>
                             </Button>
                         </StackPanel>
@@ -381,31 +381,8 @@
                                                            FontSize="10"
                                                            TextTrimming="CharacterEllipsis"
                                                            MaxWidth="160"
+                                                           Padding="10,0"
                                                            ToolTip="{Binding SheetName}" />
-                                                <Border Width="6" Height="6" CornerRadius="3" Margin="6,0,0,0">
-                                                    <TextBlock Text="{Binding ValidationMarker}"
-                                                               FontSize="8"
-                                                               FontWeight="SemiBold"
-                                                               Foreground="White"
-                                                               HorizontalAlignment="Center"
-                                                               VerticalAlignment="Center" />
-                                                    <Border.Style>
-                                                        <Style TargetType="Border">
-                                                            <Setter Property="Visibility" Value="Collapsed" />
-                                                            <Setter Property="Background" Value="{DynamicResource Brush.Error}" />
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding ValidationLevel}" Value="Error">
-                                                                    <Setter Property="Visibility" Value="Visible" />
-                                                                    <Setter Property="Background" Value="{DynamicResource Brush.Error}" />
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding ValidationLevel}" Value="Warning">
-                                                                    <Setter Property="Visibility" Value="Visible" />
-                                                                    <Setter Property="Background" Value="{DynamicResource Brush.Warning}" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Border.Style>
-                                                </Border>
                                             </StackPanel>
                                             <Button.Style>
                                                 <Style TargetType="Button" BasedOn="{StaticResource Button.Icon}">

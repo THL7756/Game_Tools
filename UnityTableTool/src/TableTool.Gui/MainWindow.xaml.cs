@@ -365,7 +365,6 @@ App.LogUiError("切换界面语言失败", error);
 
         isLogAtBottom = true;
         pendingNewLogCount = 0;
-        NewLogsButton.Visibility = Visibility.Collapsed;
         Dispatcher.BeginInvoke(() =>
         {
             GetLogsScrollViewer()?.ScrollToEnd();
@@ -463,7 +462,6 @@ App.LogUiError("切换界面语言失败", error);
     private void UpdateLogCategoryButtonState()
     {
         LogCategoryButton.Content = $"分类 {activeLogCategories.Count}/{ToolLogCategories.All.Count}";
-        LogCategorySelectionText.Text = $"已选 {activeLogCategories.Count} / {ToolLogCategories.All.Count}";
         SetLogFilterButtonState(LogCategoryButton, activeLogCategories.Count != ToolLogCategories.All.Count);
     }
 
@@ -477,7 +475,7 @@ App.LogUiError("切换界面语言失败", error);
 
     private void UpdateLogCollapseDuplicatesButton()
     {
-        LogCollapseDuplicatesButton.Content = "重复折叠";
+        LogCollapseDuplicatesButton.Content = "折叠";
         SetLogFilterButtonState(LogCollapseDuplicatesButton, settings.LogCollapseDuplicates);
     }
 
@@ -510,7 +508,6 @@ App.LogUiError("切换界面语言失败", error);
         Dispatcher.BeginInvoke(() =>
         {
             pendingNewLogCount = 0;
-            NewLogsButton.Visibility = Visibility.Collapsed;
             ReloadLogs();
         });
 
@@ -525,7 +522,6 @@ App.LogUiError("切换界面语言失败", error);
         if (atBottom && !isLogAtBottom)
         {
             pendingNewLogCount = 0;
-            NewLogsButton.Visibility = Visibility.Collapsed;
         }
         isLogAtBottom = atBottom;
     }
@@ -534,7 +530,6 @@ App.LogUiError("切换界面语言失败", error);
     {
         pendingNewLogCount = 0;
         isLogAtBottom = true;
-        NewLogsButton.Visibility = Visibility.Collapsed;
         GetLogsScrollViewer()?.ScrollToEnd();
     }
 
@@ -573,24 +568,13 @@ App.LogUiError("切换界面语言失败", error);
         LogsList.ItemsSource = visibleEntries;
         LogEmptyStateHost.IsHitTestVisible = allEntries.Length > 0 && entries.Length == 0;
         LogNoLogsState.Visibility = allEntries.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
-        LogNoMatchState.Visibility = allEntries.Length > 0 && entries.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
-        LogFilteredCountText.Text = $"当前 {entries.Length} 条";
-        LogCategoryResultText.Text = $"{entries.Length} 条";
         var totalErrors = allEntries.Count(item => item.Level == "ERROR");
         var totalWarnings = allEntries.Count(item => item.Level == "WARNING");
-        LogErrorSummaryText.Text = $"错误 {totalErrors}";
-        LogWarningSummaryText.Text = $"警告 {totalWarnings}";
         LogToggleButton.ToolTip = $"打开日志（错误 {totalErrors} · 警告 {totalWarnings}）";
         if (followBottom)
         {
             pendingNewLogCount = 0;
-            NewLogsButton.Visibility = Visibility.Collapsed;
             Dispatcher.BeginInvoke(() => GetLogsScrollViewer()?.ScrollToEnd());
-        }
-        else if (pendingNewLogCount > 0)
-        {
-            NewLogsButton.Content = $"新增 {pendingNewLogCount} 条";
-            NewLogsButton.Visibility = Visibility.Visible;
         }
     }
 
