@@ -1,9 +1,0 @@
-<!-- 用途：独立编译验证 Unity Runtime 无引擎依赖的运行时源码。编写日期：2026-10-10；作者：Codex。 -->
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <LangVersion>latest</LangVersion>
-  </PropertyGroup>
-</Project>

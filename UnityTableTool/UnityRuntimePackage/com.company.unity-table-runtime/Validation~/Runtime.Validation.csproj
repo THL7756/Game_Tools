@@ -1,0 +1,15 @@
+<!-- 用途：独立编译验证 Unity Runtime 无引擎依赖的运行时源码。编写日期：2026-10-10；作者：Codex。 -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>9.0</LangVersion>
+    <WarningsAsErrors>$(WarningsAsErrors);CS8632</WarningsAsErrors>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../Runtime/**/*.cs" Exclude="../Runtime/bin/**/*.cs;../Runtime/obj/**/*.cs" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+</Project>
