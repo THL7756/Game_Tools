@@ -493,6 +493,9 @@
 </Setter>
 </Style>
 <Style x:Key="TextBox.Field" TargetType="TextBox">
+            <EventSetter Event="GotKeyboardFocus" Handler="TextBox_GotKeyboardFocus" />
+            <EventSetter Event="PreviewMouseLeftButtonDown" Handler="TextBox_PreviewMouseLeftButtonDown" />
+            <EventSetter Event="PreviewMouseLeftButtonUp" Handler="TextBox_PreviewMouseLeftButtonUp" />
             <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.Text}" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
             <Setter Property="Background" Value="{DynamicResource Brush.Window}" />

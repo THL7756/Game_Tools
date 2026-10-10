@@ -5,6 +5,8 @@
 using System.IO;
 using System.Text;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 using TableTool.Gui.Services;
 
@@ -13,6 +15,12 @@ namespace TableTool.Gui;
 public partial class App : System.Windows.Application
 {
     private static readonly object LogLock = new();
+    private static readonly DependencyProperty MoveCaretToEndAfterClickProperty =
+        DependencyProperty.RegisterAttached(
+            "MoveCaretToEndAfterClick",
+            typeof(bool),
+            typeof(App),
+            new PropertyMetadata(false));
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -25,6 +33,37 @@ public partial class App : System.Windows.Application
 
     internal static void LogUiError(string context, Exception error) =>
         WriteError(context, error, handled: true);
+
+    private void TextBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e) =>
+        MoveCaretToEnd(sender);
+
+    private void TextBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is TextBox textBox && !textBox.IsKeyboardFocused)
+            textBox.SetValue(MoveCaretToEndAfterClickProperty, true);
+    }
+
+    private void TextBox_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not TextBox textBox
+            || textBox.GetValue(MoveCaretToEndAfterClickProperty) is not bool moveCaretToEnd
+            || !moveCaretToEnd)
+        {
+            return;
+        }
+
+        textBox.ClearValue(MoveCaretToEndAfterClickProperty);
+        MoveCaretToEnd(textBox);
+    }
+
+    private static void MoveCaretToEnd(object sender)
+    {
+        if (sender is TextBox textBox)
+        {
+            textBox.SelectionLength = 0;
+            textBox.CaretIndex = textBox.Text.Length;
+        }
+    }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {

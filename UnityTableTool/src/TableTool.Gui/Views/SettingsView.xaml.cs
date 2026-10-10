@@ -334,10 +334,10 @@ public partial class SettingsView : System.Windows.Controls.UserControl
 
     private static void SetWheelStepControls(TextBox box, Button decreaseButton, Button increaseButton, int value)
     {
-        var normalized = Math.Clamp(value, 1, 10);
+        var normalized = Math.Clamp(value, 1, 9999);
         box.Text = normalized.ToString();
         decreaseButton.IsEnabled = normalized > 1;
-        increaseButton.IsEnabled = normalized < 10;
+        increaseButton.IsEnabled = normalized < 9999;
     }
 
     private void WheelStepDecrease_Click(object sender, RoutedEventArgs e)
@@ -369,10 +369,10 @@ public partial class SettingsView : System.Windows.Controls.UserControl
 
     private void CommitWheelStep(TextBox? box, bool showError)
     {
-        if (box is null || !int.TryParse(box.Text, out var value) || value < 1 || value > 10)
+        if (box is null || !int.TryParse(box.Text, out var value) || value < 1 || value > 9999)
         {
             if (showError)
-                MessageBox.Show("滚轮行/列数必须是 1–10 之间的整数。", "设置", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("滚轮行/列数必须是 1–9999 之间的整数。", "设置", MessageBoxButton.OK, MessageBoxImage.Warning);
             LoadWheelStepControls();
             return;
         }
@@ -381,7 +381,7 @@ public partial class SettingsView : System.Windows.Controls.UserControl
 
     private void SetWheelStep(bool vertical, int value)
     {
-        value = Math.Clamp(value, 1, 10);
+        value = Math.Clamp(value, 1, 9999);
         if (vertical)
         {
             settings.VerticalWheelScrollStep = value;

@@ -77,11 +77,14 @@ public sealed class BuildService
             stopwatch.Stop();
             return new BuildResult(false, mergeIssues.Count == 0 ? [issue] : mergeIssues, logs, selectedDocuments.Length, 0, 0, stopwatch.Elapsed);
         }
-        var issues = merged.SelectMany(document => (document.ParseIssues ?? []).Concat(new TableValidator(
-            new ArraySeparatorOptions(
-                settings.ArrayInnerSeparator,
-                settings.ArrayMiddleSeparator,
-                settings.ArrayOuterSeparator)).Validate(document))).ToList();
+        var validator = new TableValidator(new ArraySeparatorOptions(
+            settings.ArrayInnerSeparator,
+            settings.ArrayMiddleSeparator,
+            settings.ArrayOuterSeparator));
+        var issues = selectedDocuments
+            .SelectMany(document => document.ParseIssues ?? [])
+            .ToList();
+        issues.AddRange(validator.Validate(selectedDocuments));
         issues.AddRange(TableDocumentMerger.FindSchemaConflicts(selectedDocuments));
         if (codeTarget != ExportTarget.None)
         {

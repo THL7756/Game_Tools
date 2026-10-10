@@ -20,9 +20,9 @@ public static class TableBatchValidator
     {
         var selectedDocuments = TableSelectionResolver.Expand(allDocuments, selectedSourceNames).ToArray();
         var issues = selectedDocuments
-            .SelectMany(document => (document.ParseIssues ?? []).Concat(new TableValidator(separators).Validate(document)))
+            .SelectMany(document => document.ParseIssues ?? [])
             .ToList();
-
+        issues.AddRange(new TableValidator(separators).Validate(selectedDocuments));
         issues.AddRange(TableDocumentMerger.FindSchemaConflicts(selectedDocuments));
         issues.AddRange(TableReferenceValidator.Validate(allDocuments, selectedDocuments, separators));
 

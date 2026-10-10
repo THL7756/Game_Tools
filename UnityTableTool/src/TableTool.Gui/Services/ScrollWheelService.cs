@@ -27,8 +27,8 @@ public static class ScrollWheelService
             return;
 
         var configuredStep = horizontal
-            ? Math.Clamp(settings.HorizontalWheelScrollStep, 1, 10)
-            : Math.Clamp(settings.VerticalWheelScrollStep, 1, 10);
+            ? Math.Clamp(settings.HorizontalWheelScrollStep, 1, 9999)
+            : Math.Clamp(settings.VerticalWheelScrollStep, 1, 9999);
         var notches = Math.Clamp(e.Delta / 120d, -3d, 3d);
         var amount = -notches * configuredStep;
         if (Math.Abs(amount) < 0.01)
