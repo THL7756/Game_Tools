@@ -7,7 +7,7 @@
         <BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
 
         <Style x:Key="Splitter.Grip" TargetType="GridSplitter">
-            <Setter Property="Background" Value="{DynamicResource Brush.Border}" />
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Focusable" Value="False" />
@@ -16,12 +16,20 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="GridSplitter">
-                        <Grid Background="{TemplateBinding Background}">
-                            <Border x:Name="GripChrome" Background="{TemplateBinding Background}" />
+                        <Grid Background="Transparent">
+                            <Border x:Name="GripChrome"
+                                    Width="1"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Stretch"
+                                    Background="{DynamicResource Brush.Border}" />
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="ResizeDirection" Value="Rows">
                                 <Setter Property="Cursor" Value="SizeNS" />
+                                <Setter TargetName="GripChrome" Property="Width" Value="Auto" />
+                                <Setter TargetName="GripChrome" Property="Height" Value="1" />
+                                <Setter TargetName="GripChrome" Property="HorizontalAlignment" Value="Stretch" />
+                                <Setter TargetName="GripChrome" Property="VerticalAlignment" Value="Center" />
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="GripChrome" Property="Background" Value="{DynamicResource Brush.Accent}" />
@@ -77,17 +85,15 @@
         </Style>
 
         <Style TargetType="ScrollBar">
-            <Setter Property="Width" Value="5" />
-            <Setter Property="Height" Value="5" />
+            <Setter Property="Width" Value="4" />
+            <Setter Property="Height" Value="4" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.ScrollbarThumb}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ScrollBar">
                         <Grid Background="Transparent">
-                            <Border Background="{DynamicResource Brush.ScrollbarTrack}"
-                                    CornerRadius="3"
-                                    Margin="1" />
+                            <Border Background="Transparent" />
                             <Track x:Name="PART_Track"
                                    Orientation="{TemplateBinding Orientation}"
                                    Minimum="{TemplateBinding Minimum}"
@@ -118,11 +124,11 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="Orientation" Value="Horizontal">
-                    <Setter Property="Height" Value="5" />
+                    <Setter Property="Height" Value="4" />
                     <Setter Property="Width" Value="Auto" />
                 </Trigger>
                 <Trigger Property="Orientation" Value="Vertical">
-                    <Setter Property="Width" Value="5" />
+                    <Setter Property="Width" Value="4" />
                     <Setter Property="Height" Value="Auto" />
                 </Trigger>
                 <Trigger Property="IsEnabled" Value="False">
@@ -132,8 +138,8 @@
         </Style>
 
         <Style x:Key="Slider.Thumb" TargetType="Thumb">
-            <Setter Property="Width" Value="12" />
-            <Setter Property="Height" Value="12" />
+            <Setter Property="Width" Value="10" />
+            <Setter Property="Height" Value="10" />
             <Setter Property="Background" Value="{DynamicResource Brush.Accent}" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -144,7 +150,7 @@
                                  StrokeThickness="1" />
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Opacity" Value="0.9" />
+                                <Setter TargetName="Chrome" Property="Opacity" Value="0.92" />
                             </Trigger>
                             <Trigger Property="IsDragging" Value="True">
                                 <Setter TargetName="Chrome" Property="Opacity" Value="0.82" />
@@ -156,25 +162,25 @@
         </Style>
 
         <Style x:Key="Slider.Tool" TargetType="Slider">
-            <Setter Property="Height" Value="24" />
+            <Setter Property="Height" Value="22" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
             <Setter Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Slider">
                         <Grid>
-                            <Border Height="3"
+                            <Border Height="2"
                                     Background="{DynamicResource Brush.SurfaceAlt}"
                                     CornerRadius="2"
                                     VerticalAlignment="Center"
-                                    Margin="6,0" />
+                                    Margin="5,0" />
                             <Track x:Name="PART_Track"
                                    Minimum="{TemplateBinding Minimum}"
                                    Maximum="{TemplateBinding Maximum}"
                                    Value="{TemplateBinding Value}"
                                    IsDirectionReversed="{TemplateBinding IsDirectionReversed}"
                                    Orientation="{TemplateBinding Orientation}"
-                                   Margin="6,0">
+                                   Margin="5,0">
                                 <Track.DecreaseRepeatButton>
                                     <RepeatButton Style="{StaticResource ScrollBar.RepeatButton}"
                                                   Background="{DynamicResource Brush.Accent}"

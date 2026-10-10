@@ -1,0 +1,138 @@
+<!-- 用途：提供主题颜色的内嵌色板、色相条和 HEX 编辑器。编写日期：2026-10-10；作者：Codex。 -->
+<UserControl x:Class="TableTool.Gui.Views.ColorPickerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Width="152"
+             Height="32">
+    <Grid>
+        <Button x:Name="SwatchButton"
+                Style="{StaticResource Button.Secondary}"
+                Height="32"
+                Padding="8,4"
+                Click="SwatchButton_Click"
+                ToolTip="打开颜色选择器">
+            <Grid Width="134">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="22" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border x:Name="SwatchBorder"
+                        Width="16"
+                        Height="16"
+                        BorderBrush="{DynamicResource Brush.Border}"
+                        BorderThickness="1"
+                        CornerRadius="3"
+                        VerticalAlignment="Center" />
+                <TextBlock x:Name="HexSummary"
+                           Grid.Column="1"
+                           FontSize="11"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+            </Grid>
+        </Button>
+
+        <Popup x:Name="PickerPopup"
+               PlacementTarget="{Binding ElementName=SwatchButton}"
+               Placement="Bottom"
+               HorizontalOffset="-92"
+               AllowsTransparency="True"
+               StaysOpen="False"
+               PopupAnimation="Fade"
+               Closed="PickerPopup_Closed">
+            <Border Width="246"
+                    Padding="10"
+                    Background="{DynamicResource Brush.Panel}"
+                    BorderBrush="{DynamicResource Brush.Border}"
+                    BorderThickness="1"
+                    CornerRadius="6">
+                <StackPanel>
+                    <Grid x:Name="SaturationValueCanvas"
+                          Width="224"
+                          Height="142"
+                          ClipToBounds="True"
+                          MouseLeftButtonDown="SaturationValueCanvas_MouseLeftButtonDown"
+                          MouseMove="SaturationValueCanvas_MouseMove"
+                          MouseLeftButtonUp="SaturationValueCanvas_MouseLeftButtonUp">
+                        <Border x:Name="SaturationValueBase" Background="Red" />
+                        <Rectangle>
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#FFFFFFFF" Offset="0" />
+                                    <GradientStop Color="#00FFFFFF" Offset="1" />
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                        <Rectangle>
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#00000000" Offset="0" />
+                                    <GradientStop Color="#FF000000" Offset="1" />
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                        <Ellipse x:Name="SaturationValueThumb"
+                                 Width="14"
+                                 Height="14"
+                                 Stroke="White"
+                                 StrokeThickness="2"
+                                 Fill="Transparent"
+                                 IsHitTestVisible="False" />
+                    </Grid>
+
+                    <Canvas x:Name="HueCanvas"
+                            Width="224"
+                            Height="18"
+                            Margin="0,10,0,0"
+                            ClipToBounds="True"
+                            MouseLeftButtonDown="HueCanvas_MouseLeftButtonDown"
+                            MouseMove="HueCanvas_MouseMove"
+                            MouseLeftButtonUp="HueCanvas_MouseLeftButtonUp">
+                        <Border Width="224" Height="18" CornerRadius="3">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#FFFF0000" Offset="0" />
+                                    <GradientStop Color="#FFFFFF00" Offset="0.1667" />
+                                    <GradientStop Color="#FF00FF00" Offset="0.3333" />
+                                    <GradientStop Color="#FF00FFFF" Offset="0.5" />
+                                    <GradientStop Color="#FF0000FF" Offset="0.6667" />
+                                    <GradientStop Color="#FFFF00FF" Offset="0.8333" />
+                                    <GradientStop Color="#FFFF0000" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Ellipse x:Name="HueThumb"
+                                 Width="14"
+                                 Height="14"
+                                 Canvas.Top="2"
+                                 Stroke="White"
+                                 StrokeThickness="2"
+                                 Fill="Transparent"
+                                 IsHitTestVisible="False" />
+                    </Canvas>
+
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="34" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border x:Name="PreviewBorder"
+                                Width="24"
+                                Height="24"
+                                BorderBrush="{DynamicResource Brush.Border}"
+                                BorderThickness="1"
+                                CornerRadius="3"
+                                VerticalAlignment="Center" />
+                        <TextBox x:Name="HexBox"
+                                 Grid.Column="1"
+                                 Height="30"
+                                 Style="{StaticResource TextBox.Field}"
+                                 FontSize="11"
+                                 MaxLength="7"
+                                 TextChanged="HexBox_TextChanged"
+                                 PreviewKeyDown="HexBox_PreviewKeyDown" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

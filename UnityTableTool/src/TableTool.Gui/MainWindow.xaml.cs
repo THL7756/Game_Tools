@@ -438,8 +438,7 @@ App.LogUiError("切换界面语言失败", error);
 
     private void CopyLogs_Click(object sender, RoutedEventArgs e)
     {
-        var items = (LogsList.ItemsSource as IEnumerable<LogGroupDisplayItem> ?? [])
-            .SelectMany(group => group.Entries);
+        var items = LogsList.ItemsSource as IEnumerable<LogDisplayItem> ?? [];
         var text = string.Join(Environment.NewLine, items.Select(item => item.CopyText));
         if (text.Length > 0)
             Clipboard.SetText(text);
@@ -515,31 +514,6 @@ App.LogUiError("切换界面语言失败", error);
         ReloadLogs();
     }
 
-    private void LogGroupToggle_Click(object sender, RoutedEventArgs e)
-    {
-        if ((sender as FrameworkElement)?.Tag is not LogGroupDisplayItem group)
-            return;
-        if (!collapsedLogCategories.Add(group.Category))
-            collapsedLogCategories.Remove(group.Category);
-        SaveLogState();
-        ReloadLogs();
-    }
-
-    private void ExpandAllLogGroups_Click(object sender, RoutedEventArgs e)
-    {
-        collapsedLogCategories.Clear();
-        SaveLogState();
-        ReloadLogs();
-    }
-
-    private void CollapseAllLogGroups_Click(object sender, RoutedEventArgs e)
-    {
-        collapsedLogCategories.Clear();
-        collapsedLogCategories.UnionWith(ToolLogCategories.All);
-        SaveLogState();
-        ReloadLogs();
-    }
-
     private void LogPanelResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
     {
         var height = Math.Clamp(LogOverlayPanel.Height - e.VerticalChange, 220, 560);
@@ -600,14 +574,7 @@ App.LogUiError("切换界面语言失败", error);
         var visibleEntries = settings.LogCollapseDuplicates
             ? LogDisplayItems.Collapse(entries)
             : entries;
-        var groups = visibleEntries
-            .GroupBy(item => item.Category, StringComparer.Ordinal)
-            .OrderBy(group => Array.IndexOf(ToolLogCategories.All.ToArray(), group.Key))
-            .Select(group => new LogGroupDisplayItem(
-                group.Key,
-                group.ToArray()))
-            .ToArray();
-        LogsList.ItemsSource = groups;
+        LogsList.ItemsSource = visibleEntries;
         var totalErrors = allEntries.Count(item => item.Level == "ERROR");
         var totalWarnings = allEntries.Count(item => item.Level == "WARNING");
         LogSummaryText.Text = $"{entries.Length}/{allEntries.Length} 条 · 错误 {totalErrors} · 警告 {totalWarnings}";

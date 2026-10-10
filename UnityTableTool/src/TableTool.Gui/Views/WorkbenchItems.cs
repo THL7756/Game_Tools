@@ -55,9 +55,17 @@ public sealed record LogDisplayItem(
 {
     public string DuplicateCountText => DuplicateCount > 1 ? $"×{DuplicateCount}" : string.Empty;
 
+    public string DisplayLevel => Level switch
+    {
+        "SUCCESS" => "成功",
+        "WARNING" => "警告",
+        "ERROR" => "错误",
+        _ => "信息"
+    };
+
     public string CopyText => DuplicateCount > 1
-        ? $"{TimeText}\t{Level}\t{Category}\t{Source}\t{Message}\t×{DuplicateCount}"
-        : $"{TimeText}\t{Level}\t{Category}\t{Source}\t{Message}";
+        ? $"{TimeText}\t{DisplayLevel}\t{Category}\t{Source}\t{Message}\t×{DuplicateCount}"
+        : $"{TimeText}\t{DisplayLevel}\t{Category}\t{Source}\t{Message}";
 
     public static LogDisplayItem FromEntry(ToolLogEntry entry) => new(
         entry.TimeText,
@@ -73,23 +81,6 @@ public static class LogDisplayItems
         entries.GroupBy(entry => $"{entry.Category}\u001f{entry.Source}\u001f{entry.Message}", StringComparer.Ordinal)
             .Select(group => group.Last() with { DuplicateCount = group.Count() })
             .ToArray();
-}
-
-public sealed class LogGroupDisplayItem
-{
-    public LogGroupDisplayItem(string category, IReadOnlyList<LogDisplayItem> entries)
-    {
-        Category = category;
-        Entries = entries;
-    }
-
-    public string Category { get; }
-    public IReadOnlyList<LogDisplayItem> Entries { get; }
-    public bool IsExpanded => true;
-    public string ToggleGlyph => string.Empty;
-    public int Count => Entries.Count;
-    public int ErrorCount => Entries.Count(item => item.Level == "ERROR");
-    public int WarningCount => Entries.Count(item => item.Level == "WARNING");
 }
 
 public sealed class LogCategoryFilterItem : INotifyPropertyChanged

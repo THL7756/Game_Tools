@@ -49,9 +49,9 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         ArrayMiddleSeparatorBox.Text = settings.ArrayMiddleSeparator;
         ArrayOuterSeparatorBox.Text = settings.ArrayOuterSeparator;
         LoadWheelStepControls();
-        AccentTextBox.Text = settings.AccentColor.ToUpperInvariant();
-        BackgroundTextBox.Text = settings.BackgroundColor.ToUpperInvariant();
-        ForegroundTextBox.Text = settings.ForegroundColor.ToUpperInvariant();
+        AccentColorPicker.SetHex(settings.AccentColor);
+        BackgroundColorPicker.SetHex(settings.BackgroundColor);
+        ForegroundColorPicker.SetHex(settings.ForegroundColor);
 
         if (ThemeCombo.Parent is Grid themeRow)
             themeRow.Visibility = Visibility.Collapsed;
@@ -392,58 +392,43 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         PersistSettings();
     }
 
-    private void AccentSwatch_Click(object sender, RoutedEventArgs e)
+    private void ColorPicker_PreviewChanged(object? sender, EventArgs e)
     {
-        if (sender is not FrameworkElement element || element.Tag is not string color)
+        if (isInitializing || sender is not ColorPickerView picker)
             return;
-        settings.AccentColor = color;
-        AccentTextBox.Text = color.ToUpperInvariant();
-        ThemeManager.Apply(settings);
+        ApplyPickerColor(picker);
+    }
+
+    private void ColorPicker_Committed(object? sender, EventArgs e)
+    {
+        if (sender is not ColorPickerView picker)
+            return;
+        ApplyPickerColor(picker);
         PersistSettings();
     }
 
-    private void PickColor_Click(object sender, RoutedEventArgs e)
+    private void ColorPicker_Canceled(object? sender, EventArgs e)
     {
-        if (sender is not FrameworkElement element)
-            return;
-        var current = element.Tag?.ToString() switch
-        {
-            "background" => settings.BackgroundColor,
-            "foreground" => settings.ForegroundColor,
-            _ => settings.AccentColor
-        };
+        if (sender is ColorPickerView picker)
+            ApplyPickerColor(picker);
+    }
 
-        using var dialog = new System.Windows.Forms.ColorDialog();
-        try
-        {
-            dialog.Color = System.Drawing.ColorTranslator.FromHtml(current);
-        }
-        catch
-        {
-        }
-
-        if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK)
-            return;
-
-        var color = $"#{dialog.Color.R:X2}{dialog.Color.G:X2}{dialog.Color.B:X2}";
-        switch (element.Tag?.ToString())
+    private void ApplyPickerColor(ColorPickerView picker)
+    {
+        var color = picker.GetHex();
+        switch (picker.ColorKey)
         {
             case "background":
                 settings.BackgroundColor = color;
-                BackgroundTextBox.Text = color;
                 break;
             case "foreground":
                 settings.ForegroundColor = color;
-                ForegroundTextBox.Text = color;
                 break;
             default:
                 settings.AccentColor = color;
-                AccentTextBox.Text = color;
                 break;
         }
-
         ThemeManager.Apply(settings);
-        PersistSettings();
     }
 
     private void BrowseFolder_Click(object sender, RoutedEventArgs e)
@@ -544,9 +529,6 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         settings.ClientCodeOutputDirectory = ClientCodeOutputBox.Text.Trim();
         settings.ServerCodeOutputDirectory = ServerCodeOutputBox.Text.Trim();
         settings.UnityRuntimePackageDirectory = UnityRuntimePackageBox.Text.Trim();
-        settings.AccentColor = NormalizeColor(AccentTextBox.Text, settings.AccentColor);
-        settings.BackgroundColor = NormalizeColor(BackgroundTextBox.Text, settings.BackgroundColor);
-        settings.ForegroundColor = NormalizeColor(ForegroundTextBox.Text, settings.ForegroundColor);
         settings.ArrayInnerSeparator = ArrayInnerSeparatorBox.Text;
         settings.ArrayMiddleSeparator = ArrayMiddleSeparatorBox.Text;
         settings.ArrayOuterSeparator = ArrayOuterSeparatorBox.Text;
