@@ -58,7 +58,7 @@
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition x:Name="SettingsNavColumn" Width="155" MinWidth="140" MaxWidth="280" />
-            <ColumnDefinition x:Name="SettingsSplitterColumn" Width="6" />
+            <ColumnDefinition x:Name="SettingsSplitterColumn" Width="1" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 

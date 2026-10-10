@@ -44,6 +44,7 @@ private bool isApplyingLanguage;
             .Select(category => new LogCategoryFilterItem(category, 0, activeLogCategories.Contains(category)))
             .ToArray();
         UpdateLogCollapseDuplicatesButton();
+        UpdateLogCategoryButtonState();
         LogOverlayPanel.Height = settings.LogPanelHeight;
         ToolLogService.EntryAdded += ToolLogService_EntryAdded;
         ToolLogService.Cleared += ToolLogService_Cleared;
@@ -430,17 +431,9 @@ App.LogUiError("切换界面语言失败", error);
 
     private void LogCategoryFilters_Loaded(object sender, RoutedEventArgs e) => UpdateLogCategoryFilterStates();
 
-    private static void SetLogFilterButtonState(Button button, bool active)
+    private static void SetLogFilterButtonState(ToggleButton button, bool active)
     {
-        if (active)
-        {
-            button.SetResourceReference(BackgroundProperty, "Brush.AccentSoft");
-            button.SetResourceReference(ForegroundProperty, "Brush.Accent");
-            return;
-        }
-
-        button.SetResourceReference(BackgroundProperty, "Brush.Window");
-        button.SetResourceReference(ForegroundProperty, "Brush.TextSecondary");
+        button.IsChecked = active;
     }
 
     private void CopyLogs_Click(object sender, RoutedEventArgs e)
@@ -454,8 +447,11 @@ App.LogUiError("切换界面语言失败", error);
 
     private void ClearLogs_Click(object sender, RoutedEventArgs e) => ToolLogService.Clear();
 
-    private void LogCategoryButton_Click(object sender, RoutedEventArgs e) =>
+    private void LogCategoryButton_Click(object sender, RoutedEventArgs e)
+    {
         LogCategoryPopup.IsOpen = !LogCategoryPopup.IsOpen;
+        UpdateLogCategoryButtonState();
+    }
 
     private void LogCategoryFilter_Click(object sender, RoutedEventArgs e)
     {
@@ -466,6 +462,7 @@ App.LogUiError("切换界面语言失败", error);
         else
             activeLogCategories.Remove(category);
         SyncLogCategoryItems();
+        UpdateLogCategoryButtonState();
         SaveLogState();
         ReloadLogs();
     }
@@ -482,6 +479,7 @@ App.LogUiError("切换界面语言失败", error);
         if (selected)
             activeLogCategories.UnionWith(ToolLogCategories.All);
         SyncLogCategoryItems();
+        UpdateLogCategoryButtonState();
         SaveLogState();
         ReloadLogs();
     }
@@ -493,6 +491,9 @@ App.LogUiError("切换界面语言失败", error);
         foreach (var item in items)
             item.IsSelected = activeLogCategories.Contains(item.Category);
     }
+
+    private void UpdateLogCategoryButtonState() =>
+        SetLogFilterButtonState(LogCategoryButton, activeLogCategories.Count != ToolLogCategories.All.Count);
 
     private void LogCollapseDuplicates_Click(object sender, RoutedEventArgs e)
     {
@@ -582,6 +583,7 @@ App.LogUiError("切换界面语言失败", error);
             item.Count = categoryCounts.GetValueOrDefault(item.Category);
             item.IsSelected = activeLogCategories.Contains(item.Category);
         }
+        UpdateLogCategoryButtonState();
         LogFilterAllButton.Content = $"全部 ({allEntries.Length})";
         LogFilterInfoButton.Content = $"信息 ({allEntries.Count(item => item.Level == "INFO")})";
         LogFilterSuccessButton.Content = $"成功 ({allEntries.Count(item => item.Level == "SUCCESS")})";

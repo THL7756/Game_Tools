@@ -49,6 +49,31 @@
             <Setter Property="Padding" Value="0" />
         </Style>
 
+        <Style x:Key="LogResizeGrip" TargetType="Thumb">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Cursor" Value="SizeNS" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Grid Background="Transparent">
+                            <Border x:Name="Line"
+                                    Height="1"
+                                    VerticalAlignment="Bottom"
+                                    Background="{DynamicResource Brush.Border}" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Line" Property="Background" Value="{DynamicResource Brush.Accent}" />
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="True">
+                                <Setter TargetName="Line" Property="Background" Value="{DynamicResource Brush.Accent}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
 <Style x:Key="MenuText" TargetType="MenuItem" BasedOn="{StaticResource MenuItem.Base}">
             <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
             <Setter Property="Background" Value="Transparent" />
@@ -212,7 +237,7 @@
 <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="MainSidebarColumn" Width="120" MinWidth="104" MaxWidth="240" />
-                <ColumnDefinition x:Name="MainSidebarSplitterColumn" Width="6" />
+                <ColumnDefinition x:Name="MainSidebarSplitterColumn" Width="1" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
@@ -282,10 +307,11 @@
             </Grid>
         </Border>
 
-        <Grid x:Name="LogOverlayHost" Grid.Row="2" Panel.ZIndex="100" Visibility="Collapsed" Background="Transparent" MouseLeftButtonDown="LogOverlayHost_MouseLeftButtonDown">
-            <Border x:Name="LogOverlayPanel" Height="320" MaxHeight="560" MinHeight="220" Margin="8,8,8,0" VerticalAlignment="Bottom" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="5,5,0,0" ClipToBounds="True">
+        <Grid x:Name="LogOverlayHost" Grid.Row="2" Panel.ZIndex="100" Visibility="Collapsed" Background="#01000000" MouseLeftButtonDown="LogOverlayHost_MouseLeftButtonDown">
+            <Border Background="{DynamicResource Brush.Overlay}" Opacity="0.12" IsHitTestVisible="False" />
+            <Border x:Name="LogOverlayPanel" Height="320" MaxHeight="560" MinHeight="220" Margin="8,0,8,0" VerticalAlignment="Bottom" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="5,5,0,0" ClipToBounds="True">
                 <DockPanel>
-                    <Thumb x:Name="LogPanelResizeThumb" DockPanel.Dock="Top" Height="5" Cursor="SizeNS" DragDelta="LogPanelResizeThumb_DragDelta" Background="Transparent" ToolTip="拖动调整日志高度" />
+                    <Thumb x:Name="LogPanelResizeThumb" DockPanel.Dock="Top" Height="5" Style="{StaticResource LogResizeGrip}" DragDelta="LogPanelResizeThumb_DragDelta" ToolTip="拖动调整日志高度" />
                     <Grid DockPanel.Dock="Top" MinHeight="38" Margin="8,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -313,18 +339,19 @@
                             <TextBox.Tag>搜索日志</TextBox.Tag>
                         </TextBox>
                         <WrapPanel Grid.Row="0" Margin="0" HorizontalAlignment="Right" VerticalAlignment="Center">
-                            <Button x:Name="LogFilterAllButton" Tag="all" Style="{StaticResource Button.Icon}" Content="全部" Click="LogFilter_Click" Padding="9,4" Margin="0,0,4,0" />
-                            <Button x:Name="LogFilterInfoButton" Tag="INFO" Style="{StaticResource Button.Icon}" Content="信息" Click="LogFilter_Click" Padding="9,4" Margin="0,0,4,0" />
-                            <Button x:Name="LogFilterSuccessButton" Tag="SUCCESS" Style="{StaticResource Button.Icon}" Content="成功" Click="LogFilter_Click" Padding="9,4" Margin="0,0,4,0" />
-                            <Button x:Name="LogFilterWarningButton" Tag="WARNING" Style="{StaticResource Button.Icon}" Content="警告" Click="LogFilter_Click" Padding="9,4" Margin="0,0,4,0" />
-                            <Button x:Name="LogFilterErrorButton" Tag="ERROR" Style="{StaticResource Button.Icon}" Content="错误" Click="LogFilter_Click" Padding="9,4" Margin="0,0,8,0" />
-                            <Button x:Name="LogCategoryButton" Style="{StaticResource Button.Icon}" Content="分类" Click="LogCategoryButton_Click" Padding="9,4" Margin="0,0,4,0" />
-                            <Button x:Name="LogCollapseDuplicatesButton" Style="{StaticResource Button.Icon}" Content="重复折叠" Click="LogCollapseDuplicates_Click" Padding="7,4" ToolTip="折叠或展开相同消息" />
+                            <ToggleButton x:Name="LogFilterAllButton" Tag="all" Style="{StaticResource Button.Filter}" Content="全部" Click="LogFilter_Click" Margin="0,0,4,0" />
+                            <ToggleButton x:Name="LogFilterInfoButton" Tag="INFO" Style="{StaticResource Button.Filter}" Content="信息" Click="LogFilter_Click" Margin="0,0,4,0" />
+                            <ToggleButton x:Name="LogFilterSuccessButton" Tag="SUCCESS" Style="{StaticResource Button.Filter}" Content="成功" Click="LogFilter_Click" Margin="0,0,4,0" />
+                            <ToggleButton x:Name="LogFilterWarningButton" Tag="WARNING" Style="{StaticResource Button.Filter}" Content="警告" Click="LogFilter_Click" Margin="0,0,4,0" />
+                            <ToggleButton x:Name="LogFilterErrorButton" Tag="ERROR" Style="{StaticResource Button.Filter}" Content="错误" Click="LogFilter_Click" Margin="0,0,8,0" />
+                            <ToggleButton x:Name="LogCategoryButton" Style="{StaticResource Button.Filter}" Content="分类" Click="LogCategoryButton_Click" Margin="0,0,4,0" />
+                            <ToggleButton x:Name="LogCollapseDuplicatesButton" Style="{StaticResource Button.Filter}" Content="重复折叠" Click="LogCollapseDuplicates_Click" Padding="7,4" ToolTip="折叠或展开相同消息" />
                         </WrapPanel>
                         <Popup x:Name="LogCategoryPopup"
                                PlacementTarget="{Binding ElementName=LogCategoryButton}"
                                Placement="Bottom"
                                IsOpen="False"
+                               StaysOpen="False"
                                AllowsTransparency="True"
                                PopupAnimation="Fade">
                             <Border Background="{DynamicResource Brush.Panel}"

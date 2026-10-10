@@ -7,7 +7,7 @@
         <BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
 
         <Style x:Key="Splitter.Grip" TargetType="GridSplitter">
-            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Background" Value="{DynamicResource Brush.Border}" />
             <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Focusable" Value="False" />
@@ -17,15 +17,17 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="GridSplitter">
                         <Grid Background="{TemplateBinding Background}">
-                            <Border Background="{DynamicResource Brush.Border}" Width="1" Height="1" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            <Border x:Name="GripChrome" Background="Transparent" />
+                            <Border x:Name="GripChrome" Background="{TemplateBinding Background}" />
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="ResizeDirection" Value="Rows">
                                 <Setter Property="Cursor" Value="SizeNS" />
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="GripChrome" Property="Background" Value="{DynamicResource Brush.AccentMuted}" />
+                                <Setter TargetName="GripChrome" Property="Background" Value="{DynamicResource Brush.Accent}" />
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="True">
+                                <Setter TargetName="GripChrome" Property="Background" Value="{DynamicResource Brush.Accent}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -75,8 +77,8 @@
         </Style>
 
         <Style TargetType="ScrollBar">
-            <Setter Property="Width" Value="4" />
-            <Setter Property="Height" Value="4" />
+            <Setter Property="Width" Value="5" />
+            <Setter Property="Height" Value="5" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.ScrollbarThumb}" />
             <Setter Property="Template">
@@ -84,8 +86,8 @@
                     <ControlTemplate TargetType="ScrollBar">
                         <Grid Background="Transparent">
                             <Border Background="{DynamicResource Brush.ScrollbarTrack}"
-                                    CornerRadius="5"
-                                    Margin="2" />
+                                    CornerRadius="3"
+                                    Margin="1" />
                             <Track x:Name="PART_Track"
                                    Orientation="{TemplateBinding Orientation}"
                                    Minimum="{TemplateBinding Minimum}"
@@ -116,11 +118,11 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="Orientation" Value="Horizontal">
-                    <Setter Property="Height" Value="10" />
+                    <Setter Property="Height" Value="5" />
                     <Setter Property="Width" Value="Auto" />
                 </Trigger>
                 <Trigger Property="Orientation" Value="Vertical">
-                    <Setter Property="Width" Value="10" />
+                    <Setter Property="Width" Value="5" />
                     <Setter Property="Height" Value="Auto" />
                 </Trigger>
                 <Trigger Property="IsEnabled" Value="False">
@@ -130,8 +132,8 @@
         </Style>
 
         <Style x:Key="Slider.Thumb" TargetType="Thumb">
-            <Setter Property="Width" Value="14" />
-            <Setter Property="Height" Value="14" />
+            <Setter Property="Width" Value="12" />
+            <Setter Property="Height" Value="12" />
             <Setter Property="Background" Value="{DynamicResource Brush.Accent}" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -142,11 +144,10 @@
                                  StrokeThickness="1" />
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Opacity" Value="0.82" />
-                                <Setter TargetName="Chrome" Property="StrokeThickness" Value="2" />
+                                <Setter TargetName="Chrome" Property="Opacity" Value="0.9" />
                             </Trigger>
                             <Trigger Property="IsDragging" Value="True">
-                                <Setter TargetName="Chrome" Property="Opacity" Value="0.68" />
+                                <Setter TargetName="Chrome" Property="Opacity" Value="0.82" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -162,18 +163,18 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Slider">
                         <Grid>
-                            <Border Height="4"
+                            <Border Height="3"
                                     Background="{DynamicResource Brush.SurfaceAlt}"
                                     CornerRadius="2"
                                     VerticalAlignment="Center"
-                                    Margin="7,0" />
+                                    Margin="6,0" />
                             <Track x:Name="PART_Track"
                                    Minimum="{TemplateBinding Minimum}"
                                    Maximum="{TemplateBinding Maximum}"
                                    Value="{TemplateBinding Value}"
                                    IsDirectionReversed="{TemplateBinding IsDirectionReversed}"
                                    Orientation="{TemplateBinding Orientation}"
-                                   Margin="7,0">
+                                   Margin="6,0">
                                 <Track.DecreaseRepeatButton>
                                     <RepeatButton Style="{StaticResource ScrollBar.RepeatButton}"
                                                   Background="{DynamicResource Brush.Accent}"
@@ -243,6 +244,51 @@
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
                             </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Button.Filter" TargetType="ToggleButton">
+            <Setter Property="Background" Value="{DynamicResource Brush.Window}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Padding" Value="9,4" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Chrome"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
+                            </Trigger>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource TemplatedParent}}" Value="True" />
+                                    <Condition Binding="{Binding IsChecked, RelativeSource={RelativeSource TemplatedParent}}" Value="False" />
+                                </MultiDataTrigger.Conditions>
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.SurfaceHover}" />
+                            </MultiDataTrigger>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding IsPressed, RelativeSource={RelativeSource TemplatedParent}}" Value="True" />
+                                    <Condition Binding="{Binding IsChecked, RelativeSource={RelativeSource TemplatedParent}}" Value="False" />
+                                </MultiDataTrigger.Conditions>
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
+                            </MultiDataTrigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.4" />
                             </Trigger>
