@@ -176,7 +176,8 @@
                                          Style="{StaticResource TextBox.Field}"
                                          BorderThickness="0"
                                          Background="Transparent"
-                                         Padding="8,6"
+                                         Padding="8,0"
+                                         VerticalContentAlignment="Center"
                                          FontSize="11"
                                          TextChanged="SearchBox_TextChanged" />
                                 <TextBlock x:Name="SearchPlaceholder"
@@ -458,82 +459,90 @@
                                     <TextBlock x:Name="WarningSummaryText" Text="0 警告" Foreground="{DynamicResource Brush.Warning}" FontSize="10" Margin="10,0,0,0" />
                                 </StackPanel>
                             </StackPanel>
-                            <Button Style="{StaticResource Button.Icon}"
-                                    Width="28"
-                                    Height="26"
-                                    HorizontalAlignment="Right"
-                                    Margin="0,0,8,0"
-                                    Click="CopyIssues_Click"
-                                    ToolTip="复制全部问题">
-                                <Image Source="/UnityTableTool;component/Assets/Icons/copy.png" Width="14" Height="14" />
-                            </Button>
                         </Grid>
                         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                            <ItemsControl x:Name="IssuesList" Margin="12,0,12,10">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border BorderBrush="{DynamicResource Brush.Border}"
-                                                BorderThickness="0,0,0,1"
-                                                Padding="0,6">
-                                            <Grid MinHeight="38">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" MinWidth="54" />
-                                                    <ColumnDefinition Width="190" />
-                                                    <ColumnDefinition Width="110" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <Border Padding="8,0"
-                                                        CornerRadius="4"
-                                                        Margin="0,0,12,0"
-                                                        VerticalAlignment="Stretch">
-                                                    <TextBox Text="{Binding Level}"
-                                                             FontWeight="SemiBold"
-                                                             HorizontalAlignment="Center"
-                                                             VerticalAlignment="Center">
-                                                        <TextBox.Style>
-                                                            <Style TargetType="TextBox" BasedOn="{StaticResource Text.Selectable}">
-                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Error}" />
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding Severity}" Value="Warning">
-                                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Warning}" />
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBox.Style>
-                                                    </TextBox>
-                                                    <Border.Style>
-                                                        <Style TargetType="Border">
-                                                            <Setter Property="Background" Value="{DynamicResource Brush.ErrorSoft}" />
-                                                            <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.Error}" />
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding Severity}" Value="Warning">
-                                                                    <Setter Property="Background" Value="{DynamicResource Brush.WarningSoft}" />
-                                                                    <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.Warning}" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Border.Style>
-                                                </Border>
-                                                <TextBox Grid.Column="1"
-                                                         Style="{StaticResource Text.Selectable}"
-                                                         Text="{Binding Source}"
-                                                         Margin="0,0,8,0"
-                                                         VerticalAlignment="Center" />
-                                                <TextBox Grid.Column="2"
-                                                         Style="{StaticResource Text.Selectable}"
-                                                         Text="{Binding Location}"
-                                                         Margin="0,0,8,0"
-                                                         VerticalAlignment="Center" />
-                                                <TextBox Grid.Column="3"
-                                                         Style="{StaticResource Text.Selectable}"
-                                                         Text="{Binding Detail}"
-                                                         VerticalAlignment="Center" />
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
+    <ItemsControl x:Name="IssuesList" Margin="12,0,12,10">
+        <ItemsControl.ItemTemplate>
+            <DataTemplate>
+                <!-- 整行条目 -->
+                <Border x:Name="RootBorder"
+                        BorderBrush="{DynamicResource Brush.Border}"
+                        BorderThickness="0,0,0,1"
+                        Padding="0,6">
+                    <Grid MinHeight="38">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" MinWidth="54" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- 第 0 列：级别标签（错误 / 警告） -->
+                        <Border Padding="8,0"
+                                CornerRadius="4"
+                                Margin="0,0,12,0"
+                                VerticalAlignment="Stretch">
+                            <TextBox Text="{Binding Level}"
+                                     FontWeight="SemiBold"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center">
+                                <TextBox.Style>
+                                    <Style TargetType="TextBox" BasedOn="{StaticResource Text.Selectable}">
+                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Error}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Warning}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBox.Style>
+                            </TextBox>
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="{DynamicResource Brush.ErrorSoft}" />
+                                    <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.Error}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                                            <Setter Property="Background" Value="{DynamicResource Brush.WarningSoft}" />
+                                            <Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.Warning}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                        </Border>
+
+                        <!-- 第 1 列：右侧文本区，分两行 -->
+                        <Grid Grid.Column="1">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <!-- 第一行：来源 + 位置 -->
+                            <TextBox Grid.Row="0"
+                                     Style="{StaticResource Text.Selectable}"
+                                     Margin="0,0,0,2"
+                                     VerticalAlignment="Center"
+                                     ToolTip="{Binding SourceTooltip}">
+                                <TextBox.Text>
+                                    <MultiBinding StringFormat="{}{0}   {1}">
+                                        <Binding Path="Source" />
+                                        <Binding Path="Location" />
+                                    </MultiBinding>
+                                </TextBox.Text>
+                            </TextBox>
+
+                            <!-- 第二行：详细说明 -->
+                            <TextBox Grid.Row="1"
+                                     Style="{StaticResource Text.Selectable}"
+                                     Text="{Binding Detail}"
+                                     VerticalAlignment="Center"
+                                     Foreground="{DynamicResource Brush.TextSecondary}" />
+                        </Grid>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+</ScrollViewer>
                     </DockPanel>
                 </Grid>
             </Grid>

@@ -84,7 +84,7 @@ public static class ValidationIssueFormatter
     {
         var source = sourceName ?? string.Empty;
         var parts = source.Split("::", 2, StringSplitOptions.None);
-        var fileName = parts[0].Replace('\\', '/');
+        var fileName = Path.GetFileName(parts[0].Replace('\\', '/'));
         if (string.IsNullOrWhiteSpace(fileName))
             fileName = parts[0];
 

@@ -5,13 +5,18 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
+    <UnityRuntimePackageDirectory Condition="'$(UnityRuntimePackageDirectory)' == ''">$(MSBuildThisFileDirectory)..\..\UnityRuntimePackage</UnityRuntimePackageDirectory>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="ExcelDataReader" Version="3.6.0" />
     <PackageReference Include="ExcelDataReader.DataSet" Version="3.6.0" />
   </ItemGroup>
+  <Target Name="ValidateUnityRuntimePackage" BeforeTargets="BeforeBuild">
+    <Error Condition="!Exists('$(UnityRuntimePackageDirectory)\com.company.unity-table-runtime\Runtime\Shared')"
+           Text="Unity Runtime Package shared code was not found at '$(UnityRuntimePackageDirectory)\com.company.unity-table-runtime\Runtime\Shared'. Set UnityRuntimePackageDirectory to the package root." />
+  </Target>
   <ItemGroup>
-    <Compile Include="..\..\UnityRuntimePackage\com.company.unity-table-runtime\Runtime\Shared\*.cs"
+    <Compile Include="$(UnityRuntimePackageDirectory)\com.company.unity-table-runtime\Runtime\Shared\*.cs"
              Link="RuntimeShared\%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

@@ -497,9 +497,9 @@
             </Border>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="6,0,12,0">
                 <Border Background="{DynamicResource Brush.Panel}" CornerRadius="6" MinWidth="200" MaxWidth="300" VerticalAlignment="Stretch" Margin="0,0,8,0" HorizontalAlignment="Right">
-                    <TextBlock Text="{Binding Text, ElementName=ServerCodeOutputBox}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="12,0" Foreground="{DynamicResource Brush.TextSecondary}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+<TextBlock Text="{Binding Text, ElementName=ServerCodeOutputBox}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="12,0" Foreground="{DynamicResource Brush.TextSecondary}" FontSize="12" TextTrimming="CharacterEllipsis"/>
                 </Border>
-                <Button MinWidth="60" Height="34" Padding="12,0" Style="{StaticResource Button.Secondary}" Click="BrowseFolder_Click" Tag="serverCode">
+<Button MinWidth="60" Height="34" Padding="12,0" Style="{StaticResource Button.Secondary}" Click="BrowseFolder_Click" Tag="serverCode">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="/UnityTableTool;component/Assets/Icons/folder-open.png" Width="16" Height="16" Margin="0,0,7,0" />
                         <TextBlock Text="更改" FontSize="12"/>
@@ -507,6 +507,34 @@
                 </Button>
             </StackPanel>
             <TextBox x:Name="ServerCodeOutputBox" Visibility="Collapsed"/>
+        </Grid>
+
+        <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" />
+
+        <!-- ===== Unity包目录 ===== -->
+        <Grid Margin="0,8,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Border Background="{DynamicResource Brush.Panel}" CornerRadius="6" Margin="12,0,6,0">
+                <StackPanel VerticalAlignment="Center" Margin="16,0,12,0">
+                    <TextBlock Text="Unity包目录" Foreground="{DynamicResource Brush.Text}" FontSize="13" FontWeight="SemiBold"/>
+                    <TextBlock Text="调用Unity包，进行表校验相关内容，并且包拥有处理输出数据的能力" Foreground="{DynamicResource Brush.TextMuted}" FontSize="11" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="6,0,12,0">
+                <Border Background="{DynamicResource Brush.Panel}" CornerRadius="6" MinWidth="200" MaxWidth="300" VerticalAlignment="Stretch" Margin="0,0,8,0" HorizontalAlignment="Right">
+<TextBlock Text="{Binding Text, ElementName=UnityRuntimePackageBox}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="12,0" Foreground="{DynamicResource Brush.TextSecondary}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                </Border>
+<Button MinWidth="60" Height="34" Padding="12,0" Style="{StaticResource Button.Secondary}" Click="BrowseFolder_Click" Tag="unityRuntimePackage">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="/UnityTableTool;component/Assets/Icons/folder-open.png" Width="16" Height="16" Margin="0,0,7,0" />
+                        <TextBlock Text="更改" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+<TextBox x:Name="UnityRuntimePackageBox" Visibility="Collapsed"/>
         </Grid>
 
     </StackPanel>

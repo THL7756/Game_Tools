@@ -17,19 +17,15 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="GridSplitter">
                         <Grid Background="{TemplateBinding Background}">
-                            <Border Background="{DynamicResource Brush.Border}" />
-                            <Border x:Name="GripChrome" Background="Transparent" CornerRadius="2" Margin="1">
-                                <TextBlock x:Name="Grip" Text="⋮" FontSize="12" Foreground="{DynamicResource Brush.TextMuted}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Border>
+                            <Border Background="{DynamicResource Brush.Border}" Width="1" Height="1" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <Border x:Name="GripChrome" Background="Transparent" />
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="ResizeDirection" Value="Rows">
-                                <Setter TargetName="Grip" Property="Text" Value="⋯" />
                                 <Setter Property="Cursor" Value="SizeNS" />
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="GripChrome" Property="Background" Value="{DynamicResource Brush.AccentMuted}" />
-                                <Setter TargetName="Grip" Property="Foreground" Value="{DynamicResource Brush.Accent}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -54,8 +50,8 @@
             <Setter Property="Background" Value="{DynamicResource Brush.ScrollbarThumb}" />
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="MinWidth" Value="8" />
-            <Setter Property="MinHeight" Value="8" />
+            <Setter Property="MinWidth" Value="3" />
+            <Setter Property="MinHeight" Value="3" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Thumb">
@@ -63,8 +59,8 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="5"
-                                Margin="1" />
+                                CornerRadius="2"
+                                Margin="0" />
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.ScrollbarThumbHover}" />
@@ -79,8 +75,8 @@
         </Style>
 
         <Style TargetType="ScrollBar">
-            <Setter Property="Width" Value="10" />
-            <Setter Property="Height" Value="10" />
+            <Setter Property="Width" Value="4" />
+            <Setter Property="Height" Value="4" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.ScrollbarThumb}" />
             <Setter Property="Template">

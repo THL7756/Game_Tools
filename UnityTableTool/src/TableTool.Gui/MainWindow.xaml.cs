@@ -41,9 +41,9 @@ private bool isApplyingLanguage;
         activeLogCategories.UnionWith(settings.LogFilterCategories);
         collapsedLogCategories.UnionWith(settings.LogCollapsedCategories);
         LogCategoryFilters.ItemsSource = ToolLogCategories.All
-            .Select(category => new LogCategoryFilterItem(category, 0))
+            .Select(category => new LogCategoryFilterItem(category, 0, activeLogCategories.Contains(category)))
             .ToArray();
-        Dispatcher.BeginInvoke(UpdateLogCategoryFilterStates);
+        UpdateLogCollapseDuplicatesButton();
         LogOverlayPanel.Height = settings.LogPanelHeight;
         ToolLogService.EntryAdded += ToolLogService_EntryAdded;
         ToolLogService.Cleared += ToolLogService_Cleared;
@@ -377,8 +377,10 @@ App.LogUiError("切换界面语言失败", error);
         var filter = element.Tag?.ToString() ?? "all";
         if (filter.Equals("all", StringComparison.OrdinalIgnoreCase))
         {
+            var selectAll = activeLogLevels.Count != ToolLogCategories.Levels.Count;
             activeLogLevels.Clear();
-            activeLogLevels.UnionWith(ToolLogCategories.Levels);
+            if (selectAll)
+                activeLogLevels.UnionWith(ToolLogCategories.Levels);
         }
         else if (ToolLogCategories.Levels.Contains(filter, StringComparer.OrdinalIgnoreCase))
         {
@@ -452,6 +454,9 @@ App.LogUiError("切换界面语言失败", error);
 
     private void ClearLogs_Click(object sender, RoutedEventArgs e) => ToolLogService.Clear();
 
+    private void LogCategoryButton_Click(object sender, RoutedEventArgs e) =>
+        LogCategoryPopup.IsOpen = !LogCategoryPopup.IsOpen;
+
     private void LogCategoryFilter_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not CheckBox checkBox || checkBox.Tag is not string category)
@@ -460,8 +465,47 @@ App.LogUiError("切换界面语言失败", error);
             activeLogCategories.Add(category);
         else
             activeLogCategories.Remove(category);
+        SyncLogCategoryItems();
         SaveLogState();
         ReloadLogs();
+    }
+
+    private void SelectAllLogCategories_Click(object sender, RoutedEventArgs e) =>
+        SetAllLogCategories(true);
+
+    private void ClearAllLogCategories_Click(object sender, RoutedEventArgs e) =>
+        SetAllLogCategories(false);
+
+    private void SetAllLogCategories(bool selected)
+    {
+        activeLogCategories.Clear();
+        if (selected)
+            activeLogCategories.UnionWith(ToolLogCategories.All);
+        SyncLogCategoryItems();
+        SaveLogState();
+        ReloadLogs();
+    }
+
+    private void SyncLogCategoryItems()
+    {
+        if (LogCategoryFilters.ItemsSource is not IEnumerable<LogCategoryFilterItem> items)
+            return;
+        foreach (var item in items)
+            item.IsSelected = activeLogCategories.Contains(item.Category);
+    }
+
+    private void LogCollapseDuplicates_Click(object sender, RoutedEventArgs e)
+    {
+        settings.LogCollapseDuplicates = !settings.LogCollapseDuplicates;
+        UpdateLogCollapseDuplicatesButton();
+        SaveLogState();
+        ReloadLogs();
+    }
+
+    private void UpdateLogCollapseDuplicatesButton()
+    {
+        LogCollapseDuplicatesButton.Content = settings.LogCollapseDuplicates ? "展开重复" : "重复折叠";
+        SetLogFilterButtonState(LogCollapseDuplicatesButton, settings.LogCollapseDuplicates);
     }
 
     private void LogSearchBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -533,9 +577,11 @@ App.LogUiError("切换界面语言失败", error);
         var categoryCounts = allEntries
             .GroupBy(item => item.Category, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
-        LogCategoryFilters.ItemsSource = ToolLogCategories.All
-            .Select(category => new LogCategoryFilterItem(category, categoryCounts.GetValueOrDefault(category)))
-            .ToArray();
+        foreach (var item in LogCategoryFilters.ItemsSource.OfType<LogCategoryFilterItem>())
+        {
+            item.Count = categoryCounts.GetValueOrDefault(item.Category);
+            item.IsSelected = activeLogCategories.Contains(item.Category);
+        }
         LogFilterAllButton.Content = $"全部 ({allEntries.Length})";
         LogFilterInfoButton.Content = $"信息 ({allEntries.Count(item => item.Level == "INFO")})";
         LogFilterSuccessButton.Content = $"成功 ({allEntries.Count(item => item.Level == "SUCCESS")})";
@@ -549,16 +595,17 @@ App.LogUiError("切换界面语言失败", error);
                     || item.Source.Contains(logSearchText, StringComparison.OrdinalIgnoreCase)
                     || item.Message.Contains(logSearchText, StringComparison.OrdinalIgnoreCase)))
             .ToArray();
-        var groups = entries
+        var visibleEntries = settings.LogCollapseDuplicates
+            ? LogDisplayItems.Collapse(entries)
+            : entries;
+        var groups = visibleEntries
             .GroupBy(item => item.Category, StringComparer.Ordinal)
             .OrderBy(group => Array.IndexOf(ToolLogCategories.All.ToArray(), group.Key))
             .Select(group => new LogGroupDisplayItem(
                 group.Key,
-                group.ToArray(),
-                !collapsedLogCategories.Contains(group.Key)))
+                group.ToArray()))
             .ToArray();
         LogsList.ItemsSource = groups;
-        Dispatcher.BeginInvoke(UpdateLogCategoryFilterStates);
         var totalErrors = allEntries.Count(item => item.Level == "ERROR");
         var totalWarnings = allEntries.Count(item => item.Level == "WARNING");
         LogSummaryText.Text = $"{entries.Length}/{allEntries.Length} 条 · 错误 {totalErrors} · 警告 {totalWarnings}";

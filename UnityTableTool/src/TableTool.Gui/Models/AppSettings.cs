@@ -52,7 +52,9 @@ public sealed class AppSettings
     public List<string> LogFilterLevels { get; set; } = ["INFO", "SUCCESS", "WARNING", "ERROR"];
     public List<string> LogFilterCategories { get; set; } = ["系统", "配置表", "校验", "设置", "打表", "工作台"];
     public List<string> LogCollapsedCategories { get; set; } = [];
+    public bool LogCollapseDuplicates { get; set; }
     public double LogPanelHeight { get; set; } = 320;
+    public string UnityRuntimePackageDirectory { get; set; } = string.Empty;
 
     public AppSettings Clone() => new()
     {
@@ -92,6 +94,8 @@ public sealed class AppSettings
         LogFilterLevels = [.. LogFilterLevels],
         LogFilterCategories = [.. LogFilterCategories],
         LogCollapsedCategories = [.. LogCollapsedCategories],
-        LogPanelHeight = LogPanelHeight
+        LogCollapseDuplicates = LogCollapseDuplicates,
+        LogPanelHeight = LogPanelHeight,
+        UnityRuntimePackageDirectory = UnityRuntimePackageDirectory
     };
 }

@@ -3,6 +3,7 @@
 // 最近修改日期：2026-10-10
 // 作者：Codex（按用户需求修改）
 
+using System.ComponentModel;
 using TableTool.Core.Models;
 using TableTool.Gui.Services;
 
@@ -11,6 +12,7 @@ namespace TableTool.Gui.Views;
 public sealed record IssueDisplayItem(
     string Level,
     string Source,
+    string SourceTooltip,
     string Location,
     string Code,
     string Message,
@@ -24,6 +26,7 @@ public sealed record IssueDisplayItem(
         return new IssueDisplayItem(
             ValidationIssueFormatter.Level(issue.Severity),
             ValidationIssueFormatter.Source(issue),
+            issue.SourceName,
             ValidationIssueFormatter.Location(issue),
             issue.Code,
             ValidationIssueFormatter.Description(issue),
@@ -34,6 +37,7 @@ public sealed record IssueDisplayItem(
     public static IssueDisplayItem CatalogError(string message) => new(
         "错误",
         "配置表目录",
+        message,
         "读取",
         "CATALOG_READ_FAILED",
         message,
@@ -46,9 +50,14 @@ public sealed record LogDisplayItem(
     string Level,
     string Category,
     string Source,
-    string Message)
+    string Message,
+    int DuplicateCount = 1)
 {
-    public string CopyText => $"{TimeText}\t{Level}\t{Category}\t{Source}\t{Message}";
+    public string DuplicateCountText => DuplicateCount > 1 ? $"×{DuplicateCount}" : string.Empty;
+
+    public string CopyText => DuplicateCount > 1
+        ? $"{TimeText}\t{Level}\t{Category}\t{Source}\t{Message}\t×{DuplicateCount}"
+        : $"{TimeText}\t{Level}\t{Category}\t{Source}\t{Message}";
 
     public static LogDisplayItem FromEntry(ToolLogEntry entry) => new(
         entry.TimeText,
@@ -58,25 +67,70 @@ public sealed record LogDisplayItem(
         entry.Message);
 }
 
+public static class LogDisplayItems
+{
+    public static IReadOnlyList<LogDisplayItem> Collapse(IEnumerable<LogDisplayItem> entries) =>
+        entries.GroupBy(entry => $"{entry.Category}\u001f{entry.Source}\u001f{entry.Message}", StringComparer.Ordinal)
+            .Select(group => group.Last() with { DuplicateCount = group.Count() })
+            .ToArray();
+}
+
 public sealed class LogGroupDisplayItem
 {
-    public LogGroupDisplayItem(string category, IReadOnlyList<LogDisplayItem> entries, bool isExpanded)
+    public LogGroupDisplayItem(string category, IReadOnlyList<LogDisplayItem> entries)
     {
         Category = category;
         Entries = entries;
-        IsExpanded = isExpanded;
     }
 
     public string Category { get; }
     public IReadOnlyList<LogDisplayItem> Entries { get; }
-    public bool IsExpanded { get; set; }
-    public string ToggleGlyph => IsExpanded ? "▾" : "▸";
+    public bool IsExpanded => true;
+    public string ToggleGlyph => string.Empty;
     public int Count => Entries.Count;
     public int ErrorCount => Entries.Count(item => item.Level == "ERROR");
     public int WarningCount => Entries.Count(item => item.Level == "WARNING");
 }
 
-public sealed record LogCategoryFilterItem(string Category, int Count)
+public sealed class LogCategoryFilterItem : INotifyPropertyChanged
 {
+    private int count;
+    private bool isSelected;
+
+    public LogCategoryFilterItem(string category, int count, bool isSelected)
+    {
+        Category = category;
+        this.count = count;
+        this.isSelected = isSelected;
+    }
+
+    public string Category { get; }
     public string Label => $"{Category} ({Count})";
+
+    public int Count
+    {
+        get => count;
+        set
+        {
+            if (count == value)
+                return;
+            count = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Count)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Label)));
+        }
+    }
+
+    public bool IsSelected
+    {
+        get => isSelected;
+        set
+        {
+            if (isSelected == value)
+                return;
+            isSelected = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 }

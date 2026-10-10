@@ -86,6 +86,7 @@ public static class SettingsStore
             ServerOutputDirectory = Path.Combine(root, "Data_s"),
             ClientCodeOutputDirectory = Path.Combine(root, "Code_c"),
             ServerCodeOutputDirectory = Path.Combine(root, "Code_s"),
+            UnityRuntimePackageDirectory = Path.Combine(root, "UnityRuntimePackage"),
             BuildScriptPath = string.Empty
         };
     }
@@ -99,6 +100,8 @@ public static class SettingsStore
             settings.ClientCodeOutputDirectory = Path.Combine(root, "Code_c");
         if (string.IsNullOrWhiteSpace(settings.ServerCodeOutputDirectory))
             settings.ServerCodeOutputDirectory = Path.Combine(root, "Code_s");
+        if (string.IsNullOrWhiteSpace(settings.UnityRuntimePackageDirectory))
+            settings.UnityRuntimePackageDirectory = Path.Combine(root, "UnityRuntimePackage");
         settings.VerticalWheelScrollStep = settings.VerticalWheelScrollStep is > 0 and <= 10 ? settings.VerticalWheelScrollStep : 3;
         settings.HorizontalWheelScrollStep = settings.HorizontalWheelScrollStep is > 0 and <= 10 ? settings.HorizontalWheelScrollStep : 3;
         settings.MainSidebarWidth = ClampLayoutSize(settings.MainSidebarWidth, 120, 104, 240);

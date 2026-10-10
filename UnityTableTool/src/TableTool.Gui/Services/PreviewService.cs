@@ -161,35 +161,26 @@ public sealed class PreviewService
         var singletonValues = document.Rows
             .FirstOrDefault(row => !row.IsTest)?.RawValues
             ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-        var includeDescription = definitions.Any(field => !string.IsNullOrWhiteSpace(field.Description));
-        var displayKeys = includeDescription
-            ? new[] { "name", "description", "type", "value", "target" }
-            : new[] { "name", "type", "value", "target" };
+        var displayKeys = new[] { "id", "type", "data", "cs" };
 
         string DefinitionValue(FieldSchema field, string key) => key switch
         {
-            "name" => field.Name,
-            "description" => field.Description,
+            "id" => field.Name,
             "type" => GetSingletonTypeLabel(field),
-            "value" => singletonValues.GetValueOrDefault(field.Name) ?? string.Empty,
-            "target" => GetTargetLabel(field.Target),
+            "data" => singletonValues.GetValueOrDefault(field.Name) ?? string.Empty,
+            "cs" => GetTargetLabel(field.Target),
             _ => string.Empty
         };
 
-        var headerDefinition = definitions[0];
-        var fields = displayKeys.Select((key, index) =>
-        {
-            var highlight = index == 0 ? highlights.Fields.GetValueOrDefault(headerDefinition.Name) : null;
-            return new PreviewField(
-                key,
-                key,
-                DefinitionValue(headerDefinition, key),
-                string.Empty,
-                ToHighlightName(highlight?.Level ?? ValidationHighlightLevel.None),
-                highlight is null ? string.Empty : $"{highlight.Code}：{highlight.Reason}");
-        }).ToArray();
+        var fields = displayKeys.Select(key => new PreviewField(
+            key,
+            key,
+            key,
+            string.Empty,
+            "None",
+            string.Empty)).ToArray();
 
-        var rows = definitions.Skip(1).Select(definition =>
+        var rows = definitions.Select(definition =>
         {
             var values = displayKeys.ToDictionary(
                 key => key,

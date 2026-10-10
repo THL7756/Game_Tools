@@ -283,7 +283,7 @@
         </Border>
 
         <Grid x:Name="LogOverlayHost" Grid.Row="2" Panel.ZIndex="100" Visibility="Collapsed" Background="Transparent" MouseLeftButtonDown="LogOverlayHost_MouseLeftButtonDown">
-            <Border x:Name="LogOverlayPanel" Height="320" MaxHeight="560" MinHeight="220" Margin="8" VerticalAlignment="Bottom" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="5" ClipToBounds="True">
+            <Border x:Name="LogOverlayPanel" Height="320" MaxHeight="560" MinHeight="220" Margin="8,8,8,0" VerticalAlignment="Bottom" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="5,5,0,0" ClipToBounds="True">
                 <DockPanel>
                     <Thumb x:Name="LogPanelResizeThumb" DockPanel.Dock="Top" Height="5" Cursor="SizeNS" DragDelta="LogPanelResizeThumb_DragDelta" Background="Transparent" ToolTip="拖动调整日志高度" />
                     <Grid DockPanel.Dock="Top" MinHeight="38" Margin="8,0">
@@ -292,19 +292,10 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="日志" Style="{StaticResource Text.Section}" VerticalAlignment="Center" Margin="4,0,10,0" />
+                            <TextBlock Text="日志" Style="{StaticResource Text.Section}" VerticalAlignment="Center" Margin="4,0,8,0" />
                             <TextBlock x:Name="LogSummaryText" Text="0 条" Style="{StaticResource Text.Muted}" VerticalAlignment="Center" />
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Style="{StaticResource Button.Icon}" Width="30" Height="28" Click="ExpandAllLogGroups_Click" ToolTip="展开全部分类">
-                                <TextBlock Text="+" FontSize="15" />
-                            </Button>
-                            <Button Style="{StaticResource Button.Icon}" Width="30" Height="28" Click="CollapseAllLogGroups_Click" ToolTip="收起全部分类">
-                                <TextBlock Text="−" FontSize="15" />
-                            </Button>
-                            <Button Style="{StaticResource Button.Icon}" Width="30" Height="28" Click="CopyLogs_Click" ToolTip="复制筛选后的日志">
-                                <Image Source="/UnityTableTool;component/Assets/Icons/copy.png" Width="14" Height="14" />
-                            </Button>
                             <Button Style="{StaticResource Button.Icon}" Width="30" Height="28" Click="ClearLogs_Click" ToolTip="清空日志">
                                 <Image Source="/UnityTableTool;component/Assets/Icons/trash2.png" Width="14" Height="14" />
                             </Button>
@@ -318,35 +309,57 @@
                             <RowDefinition Height="32" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
-                        <TextBox x:Name="LogSearchBox" Grid.Row="0" Height="28" Style="{StaticResource TextBox.Field}" Padding="9,0" TextChanged="LogSearchBox_TextChanged" ToolTip="搜索分类、来源或消息">
+                        <TextBox x:Name="LogSearchBox" Grid.Row="0" Width="180" MinWidth="140" MaxWidth="220" Height="28" HorizontalAlignment="Left" Style="{StaticResource TextBox.Field}" Padding="9,0" TextChanged="LogSearchBox_TextChanged" ToolTip="搜索分类、来源或消息">
                             <TextBox.Tag>搜索日志</TextBox.Tag>
                         </TextBox>
-                        <WrapPanel Grid.Row="1" Margin="0,5,0,0" VerticalAlignment="Center">
+                        <WrapPanel Grid.Row="0" Margin="0" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <Button x:Name="LogFilterAllButton" Tag="all" Style="{StaticResource Button.Icon}" Content="全部" Click="LogFilter_Click" Padding="9,4" Margin="0,0,4,0" />
                             <Button x:Name="LogFilterInfoButton" Tag="INFO" Style="{StaticResource Button.Icon}" Content="信息" Click="LogFilter_Click" Padding="9,4" Margin="0,0,4,0" />
                             <Button x:Name="LogFilterSuccessButton" Tag="SUCCESS" Style="{StaticResource Button.Icon}" Content="成功" Click="LogFilter_Click" Padding="9,4" Margin="0,0,4,0" />
                             <Button x:Name="LogFilterWarningButton" Tag="WARNING" Style="{StaticResource Button.Icon}" Content="警告" Click="LogFilter_Click" Padding="9,4" Margin="0,0,4,0" />
                             <Button x:Name="LogFilterErrorButton" Tag="ERROR" Style="{StaticResource Button.Icon}" Content="错误" Click="LogFilter_Click" Padding="9,4" Margin="0,0,8,0" />
-                            <ItemsControl x:Name="LogCategoryFilters" Loaded="LogCategoryFilters_Loaded">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <CheckBox Style="{StaticResource CheckBox.Tool}" Content="{Binding Label}" Tag="{Binding Category}" IsChecked="True" Click="LogCategoryFilter_Click" Margin="0,0,9,0" />
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                            <Button x:Name="LogCategoryButton" Style="{StaticResource Button.Icon}" Content="分类" Click="LogCategoryButton_Click" Padding="9,4" Margin="0,0,4,0" />
+                            <Button x:Name="LogCollapseDuplicatesButton" Style="{StaticResource Button.Icon}" Content="重复折叠" Click="LogCollapseDuplicates_Click" Padding="7,4" ToolTip="折叠或展开相同消息" />
                         </WrapPanel>
+                        <Popup x:Name="LogCategoryPopup"
+                               PlacementTarget="{Binding ElementName=LogCategoryButton}"
+                               Placement="Bottom"
+                               IsOpen="False"
+                               AllowsTransparency="True"
+                               PopupAnimation="Fade">
+                            <Border Background="{DynamicResource Brush.Panel}"
+                                    BorderBrush="{DynamicResource Brush.Border}"
+                                    BorderThickness="1"
+                                    CornerRadius="5"
+                                    Padding="8"
+                                    Width="210">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,6">
+                                        <Button Style="{StaticResource Button.Icon}" Content="+" Width="28" Height="26" Click="SelectAllLogCategories_Click" ToolTip="全选分类" />
+                                        <Button Style="{StaticResource Button.Icon}" Content="−" Width="28" Height="26" Click="ClearAllLogCategories_Click" ToolTip="全不选分类" />
+                                    </StackPanel>
+                                    <ItemsControl x:Name="LogCategoryFilters">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <CheckBox Style="{StaticResource CheckBox.Tool}"
+                                                          Content="{Binding Label}"
+                                                          Tag="{Binding Category}"
+                                                          IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                          Click="LogCategoryFilter_Click"
+                                                          Margin="0,2" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
                     </Grid>
                     <ScrollViewer x:Name="LogsScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" ScrollChanged="LogsScrollViewer_ScrollChanged">
                         <ItemsControl x:Name="LogsList" Margin="12,0,12,10">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel>
-                                        <Button Style="{StaticResource Button.Icon}" HorizontalContentAlignment="Left" Click="LogGroupToggle_Click" Tag="{Binding}" Padding="5,4" Margin="0,2">
+                                        <Button Style="{StaticResource Button.Icon}" HorizontalContentAlignment="Left" Visibility="Collapsed" Click="LogGroupToggle_Click" Tag="{Binding}" Padding="5,4" Margin="0,2">
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="{Binding ToggleGlyph}" Width="18" Foreground="{DynamicResource Brush.Accent}" />
                                                 <TextBlock Text="{Binding Category}" FontWeight="SemiBold" Margin="0,0,8,0" />
@@ -366,6 +379,7 @@
                                                                 <ColumnDefinition Width="82" />
                                                                 <ColumnDefinition Width="105" />
                                                                 <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="34" />
                                                             </Grid.ColumnDefinitions>
                                                             <TextBox Style="{StaticResource Text.Selectable}" Text="{Binding TimeText}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" />
                                                             <Border Grid.Column="1" Padding="6,2" CornerRadius="3" HorizontalAlignment="Left">
@@ -384,6 +398,7 @@
                                                             <TextBox Grid.Column="2" Style="{StaticResource Text.Selectable}" Text="{Binding Category}" Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center" />
                                                             <TextBox Grid.Column="3" Style="{StaticResource Text.Selectable}" Text="{Binding Source}" Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center" />
                                                             <TextBox Grid.Column="4" Style="{StaticResource Text.Selectable}" Text="{Binding Message}" Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="5" Text="{Binding DuplicateCountText}" Foreground="{DynamicResource Brush.Accent}" VerticalAlignment="Center" HorizontalAlignment="Right" />
                                                         </Grid>
                                                     </Border>
                                                 </DataTemplate>

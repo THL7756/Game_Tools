@@ -42,6 +42,7 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         ServerOutputBox.Text = settings.ServerOutputDirectory;
         ClientCodeOutputBox.Text = settings.ClientCodeOutputDirectory;
         ServerCodeOutputBox.Text = settings.ServerCodeOutputDirectory;
+        UnityRuntimePackageBox.Text = settings.UnityRuntimePackageDirectory;
         BuildShortcutBox.Text = settings.BuildShortcut;
         RefreshShortcutBox.Text = settings.RefreshShortcut;
         ArrayInnerSeparatorBox.Text = settings.ArrayInnerSeparator;
@@ -477,6 +478,9 @@ public partial class SettingsView : System.Windows.Controls.UserControl
             case "serverCode":
                 ServerCodeOutputBox.Text = dialog.FolderName;
                 break;
+            case "unityRuntimePackage":
+                UnityRuntimePackageBox.Text = dialog.FolderName;
+                break;
         }
         ToolLogService.Info("设置", $"选择目录：{dialog.FolderName}");
     }
@@ -488,6 +492,7 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         "server" => ServerOutputBox.Text,
         "clientCode" => ClientCodeOutputBox.Text,
         "serverCode" => ServerCodeOutputBox.Text,
+        "unityRuntimePackage" => UnityRuntimePackageBox.Text,
         _ => ProjectRootBox.Text
     };
 
@@ -500,6 +505,7 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         settings.ServerOutputDirectory = defaults.ServerOutputDirectory;
         settings.ClientCodeOutputDirectory = defaults.ClientCodeOutputDirectory;
         settings.ServerCodeOutputDirectory = defaults.ServerCodeOutputDirectory;
+        settings.UnityRuntimePackageDirectory = defaults.UnityRuntimePackageDirectory;
         settings.BuildScriptPath = defaults.BuildScriptPath;
         settings.AppearanceMode = defaults.AppearanceMode;
         settings.AccentColor = defaults.AccentColor;
@@ -537,6 +543,7 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         settings.ServerOutputDirectory = ServerOutputBox.Text.Trim();
         settings.ClientCodeOutputDirectory = ClientCodeOutputBox.Text.Trim();
         settings.ServerCodeOutputDirectory = ServerCodeOutputBox.Text.Trim();
+        settings.UnityRuntimePackageDirectory = UnityRuntimePackageBox.Text.Trim();
         settings.AccentColor = NormalizeColor(AccentTextBox.Text, settings.AccentColor);
         settings.BackgroundColor = NormalizeColor(BackgroundTextBox.Text, settings.BackgroundColor);
         settings.ForegroundColor = NormalizeColor(ForegroundTextBox.Text, settings.ForegroundColor);
@@ -568,9 +575,17 @@ public partial class SettingsView : System.Windows.Controls.UserControl
             || string.IsNullOrWhiteSpace(settings.ClientOutputDirectory)
             || string.IsNullOrWhiteSpace(settings.ServerOutputDirectory)
             || string.IsNullOrWhiteSpace(settings.ClientCodeOutputDirectory)
-            || string.IsNullOrWhiteSpace(settings.ServerCodeOutputDirectory))
+            || string.IsNullOrWhiteSpace(settings.ServerCodeOutputDirectory)
+            || string.IsNullOrWhiteSpace(settings.UnityRuntimePackageDirectory))
         {
-            MessageBox.Show("项目根目录、配置表目录和四个输出目录都必须填写。", "设置", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("项目根目录、配置表目录、Unity包目录和四个输出目录都必须填写。", "设置", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
+        }
+
+        var packageError = UnityRuntimePackageLocator.Validate(settings);
+        if (packageError is not null)
+        {
+            MessageBox.Show(packageError, "设置", MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
         }
 
