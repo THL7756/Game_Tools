@@ -63,6 +63,8 @@ public sealed record LogDisplayItem(
         _ => "信息"
     };
 
+    public string DisplayMessage => DuplicateCount > 1 ? $"{Message} ×{DuplicateCount}" : Message;
+
     public string CopyText => DuplicateCount > 1
         ? $"{TimeText}\t{DisplayLevel}\t{Category}\t{Source}\t{Message}\t×{DuplicateCount}"
         : $"{TimeText}\t{DisplayLevel}\t{Category}\t{Source}\t{Message}";
@@ -83,24 +85,11 @@ public static class LogDisplayItems
             .ToArray();
 }
 
-public sealed record LogCategoryGroupDisplayItem(
-    string Category,
-    IReadOnlyList<LogDisplayItem> Items,
-    bool IsCollapsed)
-{
-    public int EntryCount => Items.Sum(item => item.DuplicateCount);
-    public int ErrorCount => Items.Where(item => item.Level == "ERROR").Sum(item => item.DuplicateCount);
-    public int WarningCount => Items.Where(item => item.Level == "WARNING").Sum(item => item.DuplicateCount);
-    public string SummaryText => $"{EntryCount} 条";
-    public string ErrorSummaryText => ErrorCount > 0 ? $"错误 {ErrorCount}" : string.Empty;
-    public string WarningSummaryText => WarningCount > 0 ? $"警告 {WarningCount}" : string.Empty;
-    public string ToggleGlyph => IsCollapsed ? "+" : "−";
-    public string ToggleToolTip => IsCollapsed ? "展开分类" : "收起分类";
-}
-
 public sealed class LogCategoryFilterItem : INotifyPropertyChanged
 {
     private int count;
+    private int errorCount;
+    private int warningCount;
     private bool isSelected;
 
     public LogCategoryFilterItem(string category, int count, bool isSelected)
@@ -113,6 +102,9 @@ public sealed class LogCategoryFilterItem : INotifyPropertyChanged
     public string Category { get; }
     public string Label => $"{Category} ({Count})";
 
+    public string ErrorMarker => ErrorCount > 0 ? "●" : string.Empty;
+    public string WarningMarker => WarningCount > 0 ? "●" : string.Empty;
+
     public int Count
     {
         get => count;
@@ -123,6 +115,32 @@ public sealed class LogCategoryFilterItem : INotifyPropertyChanged
             count = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Count)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Label)));
+        }
+    }
+
+    public int ErrorCount
+    {
+        get => errorCount;
+        set
+        {
+            if (errorCount == value)
+                return;
+            errorCount = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ErrorCount)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ErrorMarker)));
+        }
+    }
+
+    public int WarningCount
+    {
+        get => warningCount;
+        set
+        {
+            if (warningCount == value)
+                return;
+            warningCount = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(WarningCount)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(WarningMarker)));
         }
     }
 

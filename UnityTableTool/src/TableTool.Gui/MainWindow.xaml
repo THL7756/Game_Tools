@@ -320,10 +320,11 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Text="日志" Style="{StaticResource Text.Section}" VerticalAlignment="Center" Margin="4,0,8,0" />
-                            <TextBlock x:Name="LogSummaryText" Text="0 条" Style="{StaticResource Text.Muted}" VerticalAlignment="Center" />
+                            <TextBlock x:Name="LogErrorSummaryText" Text="错误 0" Foreground="{DynamicResource Brush.Error}" FontSize="10" VerticalAlignment="Center" Margin="0,0,10,0" />
+                            <TextBlock x:Name="LogWarningSummaryText" Text="警告 0" Foreground="{DynamicResource Brush.Warning}" FontSize="10" VerticalAlignment="Center" />
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Style="{StaticResource Button.Icon}" Width="30" Height="28" Click="CopyLogs_Click" ToolTip="复制日志">
+                            <Button Style="{StaticResource Button.Icon}" Width="30" Height="28" Click="CopyLogs_Click" ToolTip="复制当前筛选结果">
                                 <Image Source="/UnityTableTool;component/Assets/Icons/copy.png" Width="14" Height="14" />
                             </Button>
                             <Button Style="{StaticResource Button.Icon}" Width="30" Height="28" Click="ClearLogs_Click" ToolTip="清空日志">
@@ -335,24 +336,22 @@
                         </StackPanel>
                     </Grid>
                     <Grid DockPanel.Dock="Top" Margin="12,0,12,7">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="32" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <TextBox x:Name="LogSearchBox" Grid.Row="0" Height="28" HorizontalAlignment="Stretch" Style="{StaticResource TextBox.Field}" Padding="9,0" TextChanged="LogSearchBox_TextChanged" ToolTip="搜索分类、来源或消息">
-                            <TextBox.Tag>搜索日志</TextBox.Tag>
-                        </TextBox>
-                        <WrapPanel Grid.Row="1" Margin="0,6,0,0" HorizontalAlignment="Left">
-                            <ToggleButton x:Name="LogFilterAllButton" Tag="all" Style="{StaticResource Button.Filter}" Content="全部" Click="LogFilter_Click" Margin="0,0,4,0" />
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="220" />
+                        </Grid.ColumnDefinitions>
+                        <WrapPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left">
                             <ToggleButton x:Name="LogFilterInfoButton" Tag="INFO" Style="{StaticResource Button.Filter}" Content="信息" Click="LogFilter_Click" Margin="0,0,4,0" />
                             <ToggleButton x:Name="LogFilterSuccessButton" Tag="SUCCESS" Style="{StaticResource Button.Filter}" Content="成功" Click="LogFilter_Click" Margin="0,0,4,0" />
                             <ToggleButton x:Name="LogFilterWarningButton" Tag="WARNING" Style="{StaticResource Button.Filter}" Content="警告" Click="LogFilter_Click" Margin="0,0,4,0" />
                             <ToggleButton x:Name="LogFilterErrorButton" Tag="ERROR" Style="{StaticResource Button.Filter}" Content="错误" Click="LogFilter_Click" Margin="0,0,8,0" />
-                            <ToggleButton x:Name="LogCategoryButton" Style="{StaticResource Button.Filter}" Content="分类" Click="LogCategoryButton_Click" Margin="0,0,4,0" />
                             <ToggleButton x:Name="LogCollapseDuplicatesButton" Style="{StaticResource Button.Filter}" Content="重复折叠" Click="LogCollapseDuplicates_Click" Padding="7,4" ToolTip="折叠或展开相同消息" Margin="0,0,4,0" />
-                            <Button x:Name="LogCollapseAllButton" Style="{StaticResource Button.LogAction}" Content="全部收起" Click="LogCollapseAll_Click" ToolTip="收起全部日志分类" Margin="0,0,4,0" />
-                            <Button x:Name="LogExpandAllButton" Style="{StaticResource Button.LogAction}" Content="全部展开" Click="LogExpandAll_Click" ToolTip="展开全部日志分类" />
+                            <ToggleButton x:Name="LogCategoryButton" Style="{StaticResource Button.Filter}" Content="分类" Click="LogCategoryButton_Click" Margin="0,0,4,0" />
+                            <TextBlock x:Name="LogFilteredCountText" Text="当前 0 条" Style="{StaticResource Text.Muted}" VerticalAlignment="Center" Margin="4,0,0,0" />
                         </WrapPanel>
+                        <TextBox x:Name="LogSearchBox" Grid.Column="1" Height="28" HorizontalAlignment="Stretch" Style="{StaticResource TextBox.Field}" Padding="9,0" TextChanged="LogSearchBox_TextChanged" ToolTip="搜索分类、来源或消息">
+                            <TextBox.Tag>搜索日志</TextBox.Tag>
+                        </TextBox>
                         <Popup x:Name="LogCategoryPopup"
                                PlacementTarget="{Binding ElementName=LogCategoryButton}"
                                Placement="Bottom"
@@ -365,149 +364,114 @@
                                     BorderThickness="1"
                                     CornerRadius="5"
                                     Padding="8"
-                                    Width="210">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,6">
-                                        <Button Style="{StaticResource Button.Icon}" Content="+" Width="28" Height="26" Click="SelectAllLogCategories_Click" ToolTip="全选分类" />
-                                        <Button Style="{StaticResource Button.Icon}" Content="−" Width="28" Height="26" Click="ClearAllLogCategories_Click" ToolTip="全不选分类" />
-                                    </StackPanel>
-                                    <ItemsControl x:Name="LogCategoryFilters">
+                                    Width="230">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid Grid.Row="0" Margin="2,0,2,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="分类筛选" Style="{StaticResource Text.Section}" FontSize="12" />
+                                        <TextBlock x:Name="LogCategoryResultText" Grid.Column="1" Text="0 条" Style="{StaticResource Text.Muted}" />
+                                    </Grid>
+                                    <Grid Grid.Row="1" Margin="2,0,2,5">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="LogCategorySelectionText" Text="已选 6 / 6" Style="{StaticResource Text.Muted}" />
+                                        <Button Grid.Column="1" Style="{StaticResource Button.Secondary}" Content="清空" Width="44" Height="24" Padding="4,0" Click="ClearAllLogCategories_Click" ToolTip="清空分类筛选" />
+                                    </Grid>
+                                    <ItemsControl x:Name="LogCategoryFilters" Grid.Row="2">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <CheckBox Style="{StaticResource CheckBox.Tool}"
-                                                          Content="{Binding Label}"
-                                                          Tag="{Binding Category}"
-                                                          IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                          Click="LogCategoryFilter_Click"
-                                                          Margin="0,2" />
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </Border>
-                        </Popup>
-                    </Grid>
-                    <Grid DockPanel.Dock="Top" Height="28" Margin="12,0,12,0" Background="{DynamicResource Brush.SurfaceAlt}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="64" />
-                            <ColumnDefinition Width="70" />
-                            <ColumnDefinition Width="82" />
-                            <ColumnDefinition Width="105" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="34" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="时间" Style="{StaticResource Text.Muted}" VerticalAlignment="Center" Margin="6,0" />
-                        <TextBlock Grid.Column="1" Text="级别" Style="{StaticResource Text.Muted}" VerticalAlignment="Center" Margin="6,0" />
-                        <TextBlock Grid.Column="2" Text="分类" Style="{StaticResource Text.Muted}" VerticalAlignment="Center" Margin="6,0" />
-                        <TextBlock Grid.Column="3" Text="来源" Style="{StaticResource Text.Muted}" VerticalAlignment="Center" Margin="6,0" />
-                        <TextBlock Grid.Column="4" Text="消息" Style="{StaticResource Text.Muted}" VerticalAlignment="Center" Margin="6,0" />
-                        <TextBlock Grid.Column="5" Text="重复" Style="{StaticResource Text.Muted}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,6,0" />
-                    </Grid>
-                    <ScrollViewer x:Name="LogsScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" ScrollChanged="LogsScrollViewer_ScrollChanged">
-                        <Grid>
-                            <ItemsControl x:Name="LogsList" Margin="12,0,12,10">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Margin="0,0,0,8"
-                                                BorderBrush="{DynamicResource Brush.Border}"
-                                                BorderThickness="1"
-                                                Background="{DynamicResource Brush.Panel}">
-                                            <DockPanel>
-                                                <Grid DockPanel.Dock="Top" Height="32" Background="{DynamicResource Brush.SurfaceAlt}">
+                                                <Grid Height="28">
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="32" />
                                                         <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
-                                                    <Button Style="{StaticResource Button.Icon}"
-                                                            Width="28"
-                                                            Height="28"
-                                                            Tag="{Binding Category}"
-                                                            Click="LogGroupToggle_Click"
-                                                            ToolTip="{Binding ToggleToolTip}">
-                                                        <TextBlock Text="{Binding ToggleGlyph}" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                                    </Button>
+                                                    <CheckBox Style="{StaticResource CheckBox.Tool}"
+                                                              Content="{Binding Category}"
+                                                              Tag="{Binding Category}"
+                                                              IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                              Click="LogCategoryFilter_Click" />
                                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding Category}" FontWeight="SemiBold" FontSize="11" />
-                                                        <TextBlock Text="{Binding SummaryText}" Style="{StaticResource Text.Muted}" Margin="8,0,0,0" />
-                                                    </StackPanel>
-                                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
-                                                        <TextBlock Text="{Binding ErrorSummaryText}" Foreground="{DynamicResource Brush.Error}" FontSize="10" Margin="0,0,8,0" />
-                                                        <TextBlock Text="{Binding WarningSummaryText}" Foreground="{DynamicResource Brush.Warning}" FontSize="10" />
+                                                        <TextBlock Text="{Binding ErrorMarker}" Foreground="{DynamicResource Brush.Error}" FontSize="9" Margin="0,0,3,0" />
+                                                        <TextBlock Text="{Binding WarningMarker}" Foreground="{DynamicResource Brush.Warning}" FontSize="9" Margin="0,0,3,0" />
+                                                        <TextBlock Text="{Binding Count}" Style="{StaticResource Text.Muted}" />
                                                     </StackPanel>
                                                 </Grid>
-                                                <ItemsControl ItemsSource="{Binding Items}">
-                                                    <ItemsControl.Style>
-                                                        <Style TargetType="ItemsControl">
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsCollapsed}" Value="True">
-                                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </ItemsControl.Style>
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <Border Height="30"
-                                                                    BorderBrush="{DynamicResource Brush.Border}"
-                                                                    BorderThickness="0,1,0,0">
-                                                                <Border.Style>
-                                                                    <Style TargetType="Border">
-                                                                        <Setter Property="Background" Value="Transparent" />
-                                                                        <Style.Triggers>
-                                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                                <Setter Property="Background" Value="{DynamicResource Brush.SurfaceHover}" />
-                                                                            </Trigger>
-                                                                        </Style.Triggers>
-                                                                    </Style>
-                                                                </Border.Style>
-                                                                <Grid>
-                                                                    <Grid.ColumnDefinitions>
-                                                                        <ColumnDefinition Width="64" />
-                                                                        <ColumnDefinition Width="70" />
-                                                                        <ColumnDefinition Width="82" />
-                                                                        <ColumnDefinition Width="105" />
-                                                                        <ColumnDefinition Width="*" />
-                                                                        <ColumnDefinition Width="34" />
-                                                                    </Grid.ColumnDefinitions>
-                                                                    <TextBox Style="{StaticResource Text.Selectable}" Text="{Binding TimeText}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" Margin="6,0" />
-                                                                    <Border Grid.Column="1" Padding="6,2" CornerRadius="3" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                                                        <Border.Style>
-                                                                            <Style TargetType="Border">
-                                                                                <Setter Property="Background" Value="{DynamicResource Brush.SurfaceAlt}" />
-                                                                                <Style.Triggers>
-                                                                                    <DataTrigger Binding="{Binding Level}" Value="SUCCESS"><Setter Property="Background" Value="{DynamicResource Brush.SuccessSoft}" /></DataTrigger>
-                                                                                    <DataTrigger Binding="{Binding Level}" Value="WARNING"><Setter Property="Background" Value="{DynamicResource Brush.WarningSoft}" /></DataTrigger>
-                                                                                    <DataTrigger Binding="{Binding Level}" Value="ERROR"><Setter Property="Background" Value="{DynamicResource Brush.ErrorSoft}" /></DataTrigger>
-                                                                                </Style.Triggers>
-                                                                            </Style>
-                                                                        </Border.Style>
-                                                                        <TextBlock Text="{Binding DisplayLevel}" FontWeight="SemiBold" FontSize="10" />
-                                                                    </Border>
-                                                                    <TextBox Grid.Column="2" Style="{StaticResource Text.Selectable}" Text="{Binding Category}" Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center" Margin="6,0" />
-                                                                    <TextBox Grid.Column="3" Style="{StaticResource Text.Selectable}" Text="{Binding Source}" Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center" Margin="6,0" />
-                                                                    <TextBox Grid.Column="4" Style="{StaticResource Text.Selectable}" Text="{Binding Message}" Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center" Margin="6,0" />
-                                                                    <TextBlock Grid.Column="5" Text="{Binding DuplicateCountText}" Foreground="{DynamicResource Brush.Accent}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,6,0" />
-                                                                </Grid>
-                                                            </Border>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </DockPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <TextBlock x:Name="LogEmptyStateText"
-                                       Text="暂无日志"
-                                       Style="{StaticResource Text.Muted}"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       Margin="0,20"
-                                       Visibility="Collapsed" />
-                        </Grid>
-                    </ScrollViewer>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <Grid>
+                        <ScrollViewer x:Name="LogsScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" ScrollChanged="LogsScrollViewer_ScrollChanged">
+                            <Grid MinHeight="120">
+                                <ItemsControl x:Name="LogsList" Margin="12,0,12,10">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Height="30"
+                                                    BorderBrush="{DynamicResource Brush.Border}"
+                                                    BorderThickness="0,0,0,1">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="Transparent" />
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Background" Value="{DynamicResource Brush.SurfaceHover}" />
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="70" />
+                                                        <ColumnDefinition Width="58" />
+                                                        <ColumnDefinition Width="70" />
+                                                        <ColumnDefinition Width="145" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding TimeText}" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center" Margin="6,0" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayLevel}" FontWeight="SemiBold" FontSize="10" VerticalAlignment="Center" Margin="6,0">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Level}" Value="SUCCESS"><Setter Property="Foreground" Value="{DynamicResource Brush.Success}" /></DataTrigger>
+                                                                    <DataTrigger Binding="{Binding Level}" Value="WARNING"><Setter Property="Foreground" Value="{DynamicResource Brush.Warning}" /></DataTrigger>
+                                                                    <DataTrigger Binding="{Binding Level}" Value="ERROR"><Setter Property="Foreground" Value="{DynamicResource Brush.Error}" /></DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <TextBlock Grid.Column="2" Text="{Binding Category}" Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center" Margin="6,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding Category}" />
+                                                    <TextBlock Grid.Column="3" Text="{Binding Source}" Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center" Margin="6,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding Source}" />
+                                                    <TextBlock Grid.Column="4" Text="{Binding DisplayMessage}" Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center" Margin="6,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding Message}" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <StackPanel x:Name="LogNoLogsState" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">
+                                    <TextBlock Text="暂无日志" Style="{StaticResource Text.Muted}" HorizontalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel x:Name="LogNoMatchState" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">
+                                    <TextBlock Text="没有匹配的日志" Style="{StaticResource Text.Muted}" HorizontalAlignment="Center" />
+                                    <Button Content="清除筛选" Style="{StaticResource Button.Secondary}" Padding="10,4" Margin="0,8,0,0" Click="ClearLogFilters_Click" />
+                                </StackPanel>
+                            </Grid>
+                        </ScrollViewer>
+                        <Button x:Name="NewLogsButton" Content="新增 0 条" Style="{StaticResource Button.Secondary}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,12" Padding="12,5" Visibility="Collapsed" Click="NewLogsButton_Click" />
+                    </Grid>
                 </DockPanel>
             </Border>
         </Grid>
