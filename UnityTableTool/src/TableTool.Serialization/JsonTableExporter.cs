@@ -1,6 +1,6 @@
 // 用途：把正式配置表序列化为 JSON 数据。
 // 编写日期：2026-10-08
-// 最近修改日期：2026-10-10
+// 最近修改日期：2026-10-11
 // 作者：Codex（按用户需求修改）
 
 using System.Text.Json;
@@ -25,28 +25,29 @@ public sealed class JsonTableExporter
             field => field.Name,
             field => GetEffectiveValue(row, field),
             StringComparer.OrdinalIgnoreCase)).ToArray();
-        var payload = new
+        var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
         {
-            formatVersion = 1,
-            tableName = document.Schema.Name,
-            schemaHash = SchemaHasher.Compute(document.Schema),
-            isSingleton = document.Schema.IsSingleton,
-            primaryKey = document.Schema.IsSingleton ? null : document.Schema.PrimaryKey,
-            fields = document.Schema.Fields.Select(field => new
+            ["tableName"] = document.Schema.Name,
+            ["isSingleton"] = document.Schema.IsSingleton,
+            ["primaryKey"] = document.Schema.IsSingleton ? null : document.Schema.PrimaryKey,
+            ["fields"] = document.Schema.Fields.Select(field => new
             {
                 name = field.Name,
                 type = field.Type.DisplayText,
                 defaultValue = field.DefaultValue
             }).ToArray(),
-            arraySeparators = new
+            ["arraySeparators"] = new
             {
                 inner = separators.Inner,
                 middle = separators.Middle,
                 outer = separators.Outer
-            },
-            rows = document.Schema.IsSingleton ? Array.Empty<Dictionary<string, string?>>() : rows,
-            data = document.Schema.IsSingleton ? rows.SingleOrDefault() : null
+            }
         };
+
+        if (document.Schema.IsSingleton)
+            payload["data"] = rows.SingleOrDefault();
+        else
+            payload["rows"] = rows;
 
         return JsonSerializer.Serialize(payload, Options);
     }

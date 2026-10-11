@@ -2,7 +2,7 @@
 
 将 UnityRuntimePackage/com.company.unity-table-runtime 加入 Unity 项目的 Packages 目录，或在 Packages/manifest.json 使用本地路径引用。
 
-Runtime Package 只消费工具已经生成的客户端数据。表结构、字段端别、默认值、主键、引用和 Excel/Sheet 规则在工具打表阶段完成；Runtime 不重复校验 schemaHash，该字段只保留用于诊断。读取器仍会检查 JSON 结构和 UTB1 的 magic、版本、长度与 CRC，避免损坏输入导致未定义行为。
+Runtime Package 只消费工具已经生成的客户端数据。表结构、字段端别、默认值、主键、引用和 Excel/Sheet 规则在工具打表阶段完成；JSON 使用 `fields` 提供 Runtime 转换所需的类型、枚举成员和默认值，使用 `arraySeparators` 传递数组分隔符。读取器仍会检查 JSON 结构和 UTB1 的 magic、版本、长度与 CRC，避免损坏输入导致未定义行为。
 
 工具和 Runtime 共用 Runtime/Shared 下的类型和值解析源码。工具端的 TypeDescriptor、ValueParser 是兼容入口，实际规则只有一份。
 

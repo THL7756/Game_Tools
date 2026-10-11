@@ -1,6 +1,7 @@
 #nullable enable
 // 用途：定义客户端表运行时文档及 JSON/UTB1 自动读取入口，不执行业务校验。
 // 编写日期：2026-10-10
+// 最近修改日期：2026-10-11
 // 作者：Codex（按用户需求修改）
 
 using System;
@@ -16,17 +17,15 @@ namespace Company.UnityTableRuntime
 
         public TableRuntimeDocument(
             string tableName,
-            string schemaHash,
             IEnumerable<IReadOnlyDictionary<string, string?>> rows,
             string? primaryKey,
             bool isSingleton)
-            : this(tableName, schemaHash, rows, primaryKey, isSingleton, Array.Empty<RuntimeFieldDefinition>(), RuntimeArraySeparators.Default)
+            : this(tableName, rows, primaryKey, isSingleton, Array.Empty<RuntimeFieldDefinition>(), RuntimeArraySeparators.Default)
         {
         }
 
         public TableRuntimeDocument(
             string tableName,
-            string schemaHash,
             IEnumerable<IReadOnlyDictionary<string, string?>> rows,
             string? primaryKey,
             bool isSingleton,
@@ -34,7 +33,6 @@ namespace Company.UnityTableRuntime
             RuntimeArraySeparators separators)
         {
             TableName = tableName;
-            SchemaHash = schemaHash;
             IsSingleton = isSingleton;
             PrimaryKey = primaryKey;
             Fields = fields.ToDictionary(field => field.Name, StringComparer.OrdinalIgnoreCase);
@@ -48,7 +46,6 @@ namespace Company.UnityTableRuntime
         }
 
         public string TableName { get; }
-        public string SchemaHash { get; }
         public string? PrimaryKey { get; }
         public bool IsSingleton { get; }
         public IReadOnlyDictionary<string, string?>? SingletonRow { get; }

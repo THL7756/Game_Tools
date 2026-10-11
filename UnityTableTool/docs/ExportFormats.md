@@ -10,14 +10,15 @@
 - 两端同时勾选时分别生成两套文件。
 - 字段标记 `c`、`s`、`cs` 或空值只决定字段进入哪一端，不写入最终 JSON。
 - 导出目录中的 JSON 平铺，不生成 manifest。
+- 打表只覆盖本次生成的文件，输出目录中的其他文件、其他表文件和未勾选表文件会保留。
 - C# 文件名为 `<表名>Data.cs`。客户端代码包含 `<表名>Data` 数据类和 `<表名>TableAdapter` 行转换适配器；服务器代码只生成数据类。
 - JSON 中的 `fields` 和 `arraySeparators` 是客户端 Runtime 转换字段值所需的协议元数据。
 - `##` 注释行/列和 `#test` 测试行不会导出。
 
 ## JSON
 
-每个逻辑表输出 `<表名>.json`，普通表使用 `rows` 数组，单例表使用 `data` 对象。`formatVersion` 表示协议版本，`schemaHash` 表示字段结构指纹，Runtime 仅保留该字段用于诊断，不以它阻断加载。
+每个逻辑表输出 `<表名>.json`。普通表使用 `rows` 数组，单例表使用 `data` 对象。JSON 保留 `tableName`、`isSingleton`、`primaryKey`、`fields` 和 `arraySeparators`，其中 `fields` 为通用 Runtime 提供类型、枚举成员和默认值；不再输出 `formatVersion` 和 `schemaHash`，旧 JSON 不作为受支持协议维护。
 
 `arraySeparators` 记录当前工具设置的一到三维数组分隔符，保证工具校验和客户端转换使用同一套规则。
 
-校验失败时不会替换原输出目录。
+校验失败时不会写入输出目录；导出提交阶段只原子覆盖本次生成的文件，不会整体替换或清空原输出目录。

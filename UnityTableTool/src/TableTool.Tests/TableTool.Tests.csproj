@@ -10,5 +10,7 @@
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
     <ProjectReference Include="..\TableTool.Core\TableTool.Core.csproj" />
+    <ProjectReference Include="..\TableTool.Serialization\TableTool.Serialization.csproj" />
+    <ProjectReference Include="..\..\UnityRuntimePackage\com.company.unity-table-runtime\Validation~\Runtime.Validation.csproj" />
   </ItemGroup>
 </Project>

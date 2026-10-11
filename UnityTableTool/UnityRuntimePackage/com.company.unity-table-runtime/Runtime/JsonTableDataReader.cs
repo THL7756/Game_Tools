@@ -1,6 +1,7 @@
 #nullable enable
-// 用途：读取工具导出的客户端 JSON，并保留字段定义、默认值和诊断 schema hash。
+// 用途：读取工具导出的客户端 JSON，并保留字段定义、默认值和数组分隔符。
 // 编写日期：2026-10-10
+// 最近修改日期：2026-10-11
 // 作者：Codex（按用户需求修改）
 
 using System;
@@ -32,7 +33,6 @@ namespace Company.UnityTableRuntime
             using var json = JsonDocument.Parse(data);
             var root = json.RootElement;
             var tableName = root.GetProperty("tableName").GetString() ?? string.Empty;
-            var schemaHash = root.TryGetProperty("schemaHash", out var schemaProperty) ? schemaProperty.GetString() ?? string.Empty : string.Empty;
             var isSingleton = root.TryGetProperty("isSingleton", out var singletonProperty) && singletonProperty.GetBoolean();
             var primaryKey = root.TryGetProperty("primaryKey", out var primaryKeyProperty) && primaryKeyProperty.ValueKind != JsonValueKind.Null
                 ? primaryKeyProperty.GetString()
@@ -62,7 +62,7 @@ namespace Company.UnityTableRuntime
                 foreach (var row in rowArray.EnumerateArray())
                     rows.Add(ReadRow(row));
             }
-            return new TableRuntimeDocument(tableName, schemaHash, rows, primaryKey, isSingleton, fields, separators);
+            return new TableRuntimeDocument(tableName, rows, primaryKey, isSingleton, fields, separators);
         }
 
         private static RuntimeArraySeparators ReadSeparators(JsonElement root)

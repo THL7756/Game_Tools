@@ -30,7 +30,8 @@
 - 单例表的多个常量字段聚合为一个对象。
 - 客户端/服务器重复声明的同名单例字段会合并端别。
 - JSON 单例使用 `data` 对象；Runtime 同时兼容旧的 `rows` 数组。
-- `schemaHash` 用于识别结构变化，`formatVersion` 用于识别格式版本，当前保留。
+- JSON 保留 `tableName`、`isSingleton`、`primaryKey`、`fields` 和 `arraySeparators`；`formatVersion`、`schemaHash` 不再输出，Runtime 也不读取或维护它们。
+- 打表只覆盖本次生成的文件，不会清空客户端、服务器或代码输出目录中的其他文件。
 - GUI 生成 JSON 和 C#；Runtime Package 仍可兼容 JSON 与 UTB1 bytes。
 - 工具首次启动会在程序目录创建 `ToolData/settings.json`，用于保存界面、路径、输出范围和快捷键配置；目录不可写时回退到用户本地数据目录。
 
