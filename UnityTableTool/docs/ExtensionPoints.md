@@ -1,11 +1,13 @@
 # 扩展接口
 
-首版不实现 Diff、远程服务器打表、CI/CLI、macOS GUI 或 Linux GUI。
+当前版本明确保留以下扩展方向：
 
-Diff 后续放在 `Game_Tools/UnityTableToolDiff`，作为同级独立工具开发和发布，不进入当前打表工具的主流程。
+- `Core` 和 `Serialization` 可被未来 CLI/CI 调用；当前 GUI 是主要入口。
+- `ExportService` 已有 JSON、C# 和 UTB1 bytes 输出能力，GUI 暂时只打开 JSON/C#。
+- Unity Runtime 的 `TableRuntimeSettings.LoadBytes` 可接入 AssetBundle、Addressables、远程资源或项目自定义缓存。
+- Diff、schema 版本和变更报告可作为独立模块实现，不改变现有表头和 JSON 基础结构。
+- GUI 平台启动器未来可接入 macOS/Linux，但当前发布目标是 Windows x64。
 
-- Core 的导出服务可被未来 CLI/CI 调用。
-- GUI 的平台启动器可接入其他桌面平台。
-- Runtime 的加载回调可接入 AssetBundle、Addressables 或远程资源。
+UE 和 Godot 的专用运行时适配器尚未纳入当前版本；它们目前使用通用 JSON，需要项目自行完成字段转换和资源加载。
 
-这些接口不会改变六行表头、三层拆分协议或 UTB1 magic。JSON 普通表结构保持稳定，单例表使用 `data` 对象表示单一输出对象。
+后续扩展应保持以下兼容约定：六行普通表定义区、最多三维数组、UTB1 magic `UTB1`、普通表 `rows` 数组和单例表 `data` 对象。

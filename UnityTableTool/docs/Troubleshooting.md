@@ -20,7 +20,10 @@
 | 勾选分表后导出更多文件 | 这是预期行为，同一个 `table:` 逻辑表的分表会自动合并；关联表也会自动加入。 |
 | JSON/bytes 没有端别字段 | 这是预期行为，端别由导出选择和 `Data_c`/`Data_s` 目录决定。 |
 | `RUNTIME_FORMAT_UNKNOWN` | 确认文件是有效 JSON 或以 `UTB1` 开头的 bytes。 |
-| `RUNTIME_SCHEMA_MISMATCH` | 当前 Runtime 不会因 schema hash 不一致拒绝已生成文件；该字段只用于诊断。若读取字段失败，再确认客户端数据和客户端代码来自同一次导出。 |
+| Unity 找不到 Runtime 类型 | 确认目录是 `Packages/com.company.unity-table-runtime`，且 `package.json` 存在；脚本中使用 `using Company.UnityTableRuntime;`。 |
+| Unity 找不到 `Skill.json` | 如果使用 `Resources.Load<TextAsset>("Tables/Skill")`，文件必须位于 `Assets/Resources/Tables/Skill.json`，加载路径不写扩展名。 |
+| Runtime 字段转换失败 | 确认客户端 JSON 和客户端 C# 来自同一次导出；字段类型、默认值和数组分隔符由 JSON 的 `fields` 与 `arraySeparators` 提供。 |
+| 想使用 `.bytes` 但 GUI 没有文件 | 当前 GUI 只生成 JSON/C#；请通过 `ExportService` 启用 `GenerateBytes`，或继续使用 JSON。 |
 | 字体大小看起来没有变化 | 在“设置 / 外观风格”直接输入 6–72 px，并确认缩放比例；所有界面文字使用所选系统字体。 |
 | 设置没有记住 | 配置默认保存在程序目录的 `ToolData\settings.json`，包括输出范围、项目路径、主题、字体、缩放和快捷键；安装目录不可写时查看 `%LOCALAPPDATA%\UnityTableTool\settings.json`。 |
 | 点击项目助手、素材工具、音频工具或提示词仓库崩溃 | 这些页面是安全占位页面，不依赖外部图片资源；若仍崩溃，检查发布目录是否完整并保留 `Assets/Icons`。 |

@@ -1,27 +1,105 @@
-# Runtime Package 接入
+# Unity Runtime 接入
 
-将 UnityRuntimePackage/com.company.unity-table-runtime 加入 Unity 项目的 Packages 目录，或在 Packages/manifest.json 使用本地路径引用。
+本包位于 `UnityRuntimePackage/com.company.unity-table-runtime`，包名为 `com.company.unity-table-runtime`，最低 Unity 版本声明为 `2021.3`，程序集为 `Company.UnityTableRuntime`。Runtime 不依赖 `UnityEngine`，只有生成的 `Vector`/`Color`/`Quaternion` 数据类在需要时才引用 `UnityEngine`。
 
-Runtime Package 只消费工具已经生成的客户端数据。表结构、字段端别、默认值、主键、引用和 Excel/Sheet 规则在工具打表阶段完成；JSON 使用 `fields` 提供 Runtime 转换所需的类型、枚举成员和默认值，使用 `arraySeparators` 传递数组分隔符。读取器仍会检查 JSON 结构和 UTB1 的 magic、版本、长度与 CRC，避免损坏输入导致未定义行为。
+## 安装方式
 
-工具和 Runtime 共用 Runtime/Shared 下的类型和值解析源码。工具端的 TypeDescriptor、ValueParser 是兼容入口，实际规则只有一份。
+### 复制到 Packages
 
-    var manager = new Company.UnityTableRuntime.TableManager();
-    manager.Load("Skill", bytesOrJson);
-    var skill = manager.Get("Skill", "1001");
-    var config = manager.GetSingleton("GlobalConfig");
+把整个目录复制到 Unity 项目：
 
-客户端生成的 SkillData.cs 会包含一个轻量的 SkillTableAdapter，适配器只负责把行字段映射到生成类型：
+```text
+UnityRuntimePackage/com.company.unity-table-runtime
+    -> MyUnityProject/Packages/com.company.unity-table-runtime
+```
 
-    var skill = manager.Get("Skill", "1001", SkillTableAdapter.FromRow);
-    var allSkills = manager.GetAll("Skill", SkillTableAdapter.FromRow);
-    var config = manager.GetSingleton("GlobalConfig", GlobalConfigTableAdapter.FromRow);
+确认 `MyUnityProject/Packages/com.company.unity-table-runtime/package.json` 存在，重新打开 Unity 后 Package Manager 会识别该包。
 
-TableRowView.Read<T> 使用导出数据中的字段定义、默认值和数组分隔符完成基础类型、enum、数组及结构值分量读取。Unity 结构类型由生成代码构造，Runtime Package 本身不依赖 UnityEngine。
+### 使用 manifest 本地路径
 
-正式构建推荐使用 bytes；开发和调试可以使用 JSON。可以通过 TableRuntimeSettings.LoadBytes 接入 AssetBundle、Addressables 或其他客户端资源来源：
+在 `MyUnityProject/Packages/manifest.json` 的 `dependencies` 中加入：
 
-    manager.LoadClient("Skill", new TableRuntimeSettings
+```json
+"com.company.unity-table-runtime": "file:../../UnityTableTool/UnityRuntimePackage/com.company.unity-table-runtime"
+```
+
+路径相对于 `manifest.json` 所在目录，Windows 路径建议使用 `/`。工具本身的“Unity 包目录”设置应指向包含 `com.company.unity-table-runtime` 的目录，例如仓库中的 `UnityRuntimePackage`，不要只指向包内的 `Runtime` 目录。
+
+## 输出文件放置
+
+建议把 UnityTableTool 的客户端数据目录设为 `Assets/Resources/Tables`，客户端代码目录设为 `Assets/Scripts/GeneratedTables`：
+
+```text
+Assets/Resources/Tables/Skill.json
+Assets/Resources/Tables/GlobalConfig.json
+Assets/Scripts/GeneratedTables/SkillData.cs
+Assets/Scripts/GeneratedTables/GlobalConfigData.cs
+```
+
+服务器 JSON 和服务器 C# 放在 Unity 项目之外。GUI 当前默认生成 JSON；如果由序列化库调用 `ExportService` 并启用 `GenerateBytes`，也可以生成 `.bytes`，Runtime 会自动识别两种格式。
+
+## 加载和查询
+
+最简单的开发期接入是使用 `Resources.Load<TextAsset>`：
+
+```csharp
+using Company.UnityTableRuntime;
+using UnityEngine;
+
+public sealed class TableBootstrap : MonoBehaviour
+{
+    public static TableManager Tables { get; private set; } = null!;
+
+    private void Awake()
     {
-        LoadBytes = tableName => LoadClientAsset(tableName)
-    });
+        Tables = new TableManager();
+        var asset = Resources.Load<TextAsset>("Tables/Skill");
+        if (asset == null)
+            throw new System.InvalidOperationException("找不到 Skill.json");
+
+        Tables.Load("Skill", asset.bytes);
+        var skill = Tables.Get("Skill", "1001", SkillTableAdapter.FromRow);
+        Debug.Log(skill.Name);
+    }
+}
+```
+
+客户端生成的 `SkillData.cs` 会包含 `SkillData` 和 `SkillTableAdapter`。适配器只负责把 `TableRowView` 转换为生成类型；表的字段定义、默认值和数组分隔符来自 JSON 的 `fields` 和 `arraySeparators`。
+
+常用查询 API：
+
+```csharp
+var raw = Tables.Get("Skill", "1001");
+var typed = Tables.Get("Skill", "1001", SkillTableAdapter.FromRow);
+var all = Tables.GetAll("Skill", SkillTableAdapter.FromRow);
+var exists = Tables.Has("Skill", "1001");
+var config = Tables.GetSingleton("GlobalConfig", GlobalConfigTableAdapter.FromRow);
+```
+
+不存在的表、主键或单例会抛出 `KeyNotFoundException`；需要无异常判断时先使用 `Has`。`GetAll` 返回生成类型列表，显示 UI 时可以直接遍历并实例化预制体：
+
+```csharp
+foreach (var skill in Tables.GetAll("Skill", SkillTableAdapter.FromRow))
+{
+    var item = Instantiate(itemPrefab, content);
+    item.Bind(skill);
+}
+```
+
+## 自定义资源加载
+
+正式项目可以把数据放进 Addressables、AssetBundle 或自定义缓存：
+
+```csharp
+var manager = new TableManager();
+manager.LoadClient("Skill", new TableRuntimeSettings
+{
+    LoadBytes = tableName => LoadBytesFromAddressables(tableName)
+});
+```
+
+`LoadBytes` 必须返回对应表的完整 JSON 或 UTB1 字节数组。`RuntimeFormat.ReadAuto` 会先识别 UTB1 magic，再识别 JSON；也可以通过 `manifestFormat` 显式指定 `"json"` 或 `"bytes"`。
+
+## Runtime 的职责边界
+
+Runtime 只负责读取已经打好的客户端数据、主键/单例查询和字段类型转换，不负责 Excel 解析、表结构检测、分表合并、引用检查或生成代码。这些规则由工具的 Core 和 Serialization 项目在打表阶段完成。
