@@ -1,8 +1,8 @@
-using TableTool.Core.Models;
-
 // 用途：展开当前选择表的引用闭包，并提供缺失引用的来源详情。
 // 编写日期：2026-10-08
 // 作者：Codex（按用户需求修改）
+
+using TableTool.Core.Models;
 
 namespace TableTool.Core.Parsing;
 
@@ -35,14 +35,24 @@ public static class TableSelectionResolver
             {
                 foreach (var field in table.Schema.AllFields)
                 {
-                    if (!field.Name.EndsWith("_id", StringComparison.OrdinalIgnoreCase))
-                        continue;
+                    foreach (var reference in ComplexTypeReferenceWalker.GetReferences(field)
+                                 .Where(reference => !reference.IsLocalization
+                                     && reference.FieldName.EndsWith("_id", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        var referencedName = reference.FieldName.Split('.').Last()[..^3];
+                        var referenced = all.FirstOrDefault(document =>
+                            document.Schema.Name.Equals(referencedName, StringComparison.OrdinalIgnoreCase));
+                        if (referenced is not null && selectedTables.Add(referenced.Schema.Name))
+                            changed = true;
+                    }
 
-                    var referencedName = field.Name[..^3];
-                    var referenced = all.FirstOrDefault(document =>
-                        document.Schema.Name.Equals(referencedName, StringComparison.OrdinalIgnoreCase));
-                    if (referenced is not null && selectedTables.Add(referenced.Schema.Name))
-                        changed = true;
+                    if (ComplexTypeReferenceWalker.GetReferences(field).Any(reference => reference.IsLocalization))
+                    {
+                        var localization = all.FirstOrDefault(document =>
+                            document.Schema.Name.Equals("localization", StringComparison.OrdinalIgnoreCase));
+                        if (localization is not null && selectedTables.Add(localization.Schema.Name))
+                            changed = true;
+                    }
                 }
             }
         }
@@ -69,11 +79,13 @@ public static class TableSelectionResolver
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         return selectedDocuments
             .SelectMany(document => document.Schema.AllFields.Select(field => (Document: document, Field: field)))
-            .Where(item => item.Field.Name.EndsWith("_id", StringComparison.OrdinalIgnoreCase))
-            .Select(item => new MissingReferenceDetail(
-                item.Document.SourceName,
-                item.Field.Name,
-                item.Field.Name[..^3]))
+            .SelectMany(item => ComplexTypeReferenceWalker.GetReferences(item.Field)
+                .Where(reference => !reference.IsLocalization
+                    && reference.FieldName.EndsWith("_id", StringComparison.OrdinalIgnoreCase))
+                .Select(reference => new MissingReferenceDetail(
+                    item.Document.SourceName,
+                    reference.FieldName,
+                    reference.FieldName.Split('.').Last()[..^3])))
             .Where(detail => !available.Contains(detail.ReferencedTableName))
             .DistinctBy(detail => (detail.SourceName, detail.FieldName, detail.ReferencedTableName))
             .ToArray();

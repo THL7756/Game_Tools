@@ -4,11 +4,10 @@
 
 ## 示例文件
 
-- `技能表.xlsx`：完整普通表规则，逻辑表名为 `Skill`，包含数组、端标记、注释和测试行示例。
-- `道具表.xlsx`：普通表和 `GlobalConfig` 单例表示例；单例表使用 `type:single`，前部语义行包含 `id`、`type`、`data`，`desc` 可选。
-- `道具表_1.xlsx`：与 `道具表.xlsx` 同名逻辑表的分表示例。勾选其中任意一份时，工具会自动合并分表。
-- `可识别文件夹里面嵌套的表格/道具表_1.xlsx`：递归目录扫描示例。
-- `ValidationExamples/`：字段类型、单例、数组、缺少定义、结构冲突和未知类型等校验样例。
+- `表格规范.xlsx`：当前回归工作簿，包含基础类型、数组、端标记、`##` 注释列、`#test_` 测试列、`##` 注释行、单例表 `values`、同名分表和常见错误示例。
+- `可识别文件夹里面嵌套的表格/`：递归目录扫描示例。
+
+`表格规范.xlsx` 中的 `localization`、`beans(...)` 和 `map(...)` 是正式回归示例。工具会解析、校验并结构化导出这些类型，不会把它们静默当作普通字符串。
 
 ## 规则入口
 
@@ -16,4 +15,4 @@
 
 ## 运行结果
 
-GUI 默认读取本目录，导出到仓库根目录的 `Data_c`、`Data_s`、`Code_c`、`Code_s`。客户端 JSON 可以直接复制到 Unity 的 `Assets/Resources/Tables`；客户端 C# 可以复制到 Unity 的脚本目录。GUI 当前导出 JSON 和 C#，`.bytes` 需要通过 Serialization API 单独生成。
+GUI 默认读取本目录，导出到仓库根目录的 `Data_c`、`Data_s`、`Code_c`、`Code_s`。客户端 JSON 可以直接复制到 Unity 的 `Assets/Resources/Tables`；客户端 C# 可以复制到 Unity 的脚本目录。GUI 当前导出 JSON 和 C#，`.bytes` 需要通过 Serialization API 单独生成。`##` 注释列/行和 `#test_` 测试列/行不会进入正式导出；重复字段、缺失引用和未知类型会阻断导出，但预览仍保留源列位置。

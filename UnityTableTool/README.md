@@ -69,10 +69,12 @@ MyUnityProject/Packages/com.company.unity-table-runtime/package.json
 - 普通表使用 `table: Skill` 标记逻辑表名，定义区依次描述说明、类型、字段名、端标记和默认值；数据从定义区之后开始。
 - 单例表在表头增加 `type:single`，例如 `GlobalConfig`；导出后使用一个 `data` 对象，不要求主键。
 - 输入支持 `.xlsx`、`.xls`、`.csv`、`.tsv`，Excel 的每个 Sheet 都会单独解析。
-- 字段类型支持 `int`、`long`、`float`、`double`、`bool`、`string`、`enum(...)`、`Vector2/3/4`、`Color`、`Quaternion`，以及一到三维数组。
+- 字段类型支持 `int`、`long`、`float`、`double`、`bool`、`string`、`enum(...)`、`Vector2/3/4`、`Color`、`Quaternion`、一到三维数组，以及 `localization`、递归 `beans(...)` 和 `map(key)(string)(beans(...))`。
+- `localization` 从逻辑表 `localization` 的 `id` 列查键；beans 子字段使用 `字段名#类型`；map 条目使用 `条目;条目`、`key|字符串值#bean字段...`，重复 key 或缺失引用会阻断受影响表及其依赖。
 - 字段名以 `<逻辑表名>_id` 结尾时会检查目标表和目标主键值，例如 `item_id` 会引用 `item` 表。
-- `c`、`s`、`cs` 或空值决定字段进入客户端、服务器或两端；`##` 为注释，`#test` 为只校验不导出的测试字段/行。
-- 同名逻辑表可以分布在多个文件或 Sheet 中；选择其中一份时，工具会合并同名分表并递归加入引用表。
+- `c`、`s`、`cs` 或空值决定字段进入客户端、服务器或两端；第 1 行单元格以 `##` 开头或字段名以 `##` 开头表示注释列，整行首个单元格以 `##` 开头表示注释行；`#test_`/`#ceshi` 字段和行只校验、不导出。
+- 同名逻辑表可以分布在多个文件或 Sheet 中；合并前必须逐列比较字段名称、顺序、类型、默认值和端标记，冲突会阻断导出并显示双方坐标；选择其中一份时，工具会合并通过 schema 检查的分表并递归加入引用表。
+- 单例表按 `id`、`type`、`data`、`cs` 语义列识别字段；即使字段名为 `values`，只要没有注释标记，也会进入单例 `data` 对象。
 
 ## 主要检测代码在哪里
 
@@ -84,7 +86,7 @@ MyUnityProject/Packages/com.company.unity-table-runtime/package.json
 | `src/TableTool.Core/Parsing/TableSchemaParser.cs` | 解析 `table:`、单例标记、字段类型、字段名、端标记和默认值。 |
 | `src/TableTool.Core/Validation/TableValidator.cs` | 检查字段类型、默认值、数组、结构值、主键、单例行等。 |
 | `src/TableTool.Core/Validation/TableReferenceValidator.cs` | 检查 `<表名>_id` 的目标表、主键类型和主键值。 |
-| `src/TableTool.Core/Parsing/TableDocumentMerger.cs` | 合并同名表和分表，并报告 schema 冲突。 |
+| `src/TableTool.Core/Parsing/TableDocumentMerger.cs` | 逐列比较名称、顺序、类型、默认值和端标记，合并通过 schema 检查的同名表和分表。 |
 | `src/TableTool.Gui/Services/BuildService.cs` | GUI 中执行选择展开、检测、客户端/服务器过滤和导出。 |
 
 ## 支持范围
@@ -220,7 +222,7 @@ run-ui.cmd
 publish.cmd
 ```
 
-测试覆盖表解析、主键和引用校验、JSON/UTB1 Runtime 读取以及导出目录保护。最近一次测试为 9/10 通过，唯一失败是样例工作簿重复主键回归测试与当前样例数据不一致，详见 [docs/ProjectPlan.md](docs/ProjectPlan.md)。发布脚本生成 `release/UnityTableTool-2.4.0` 和对应的 Windows x64 压缩包。
+测试覆盖表解析、注释列/行、重复字段、同名表 schema、复杂类型解析与转义、主键和嵌套引用校验、结构化 JSON/UTB1 Runtime 读取以及导出目录保护。最近一次测试为 22/22 通过，回归样例为 `Data/表格规范.xlsx`，详见 [docs/ProjectPlan.md](docs/ProjectPlan.md)。发布脚本生成 `release/UnityTableTool-2.4.0` 和对应的 Windows x64 压缩包。
 
 ## 后续计划
 

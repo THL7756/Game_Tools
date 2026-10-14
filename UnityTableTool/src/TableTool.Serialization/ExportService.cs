@@ -1,6 +1,5 @@
-// 用途：按客户端、服务器和代码目录输出配置表文件，只覆盖本次生成的文件。
-// 编写日期：2026-10-06
-// 最近修改日期：2026-10-11
+// 用途：按客户端、服务器和代码目录输出配置表文件，只覆盖本次生成的文件，并传递复杂类型上下文。
+// 编写日期：2026-10-14
 // 作者：Codex（按用户需求修改）
 
 using TableTool.Core.Models;
@@ -39,6 +38,7 @@ public sealed class ExportService
         var stagingRoots = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var files = new List<string>();
         var hashes = new List<string>();
+        var localizationCatalog = ComplexValueSerializer.BuildLocalizationCatalog(mergedDocuments);
         try
         {
             foreach (var output in dataOutputs.Values.Concat(codeOutputs.Values).Distinct(StringComparer.OrdinalIgnoreCase))
@@ -58,9 +58,9 @@ public sealed class ExportService
                 foreach (var document in targetDocuments)
                 {
                     if (dataRoot is not null && options.GenerateJson)
-                        files.Add(Write(dataRoot, document.Schema.Name + ".json", new JsonTableExporter().Export(document, options.ArraySeparators)));
+                        files.Add(Write(dataRoot, document.Schema.Name + ".json", new JsonTableExporter().Export(document, options.ArraySeparators, localizationCatalog)));
                     if (dataRoot is not null && options.GenerateBytes)
-                        files.Add(WriteBytes(dataRoot, document.Schema.Name + ".bytes", new BinaryTableExporter().Export(document, options.ArraySeparators)));
+                        files.Add(WriteBytes(dataRoot, document.Schema.Name + ".bytes", new BinaryTableExporter().Export(document, options.ArraySeparators, localizationCatalog)));
                     if (codeRoot is not null && options.GenerateCode)
                         files.Add(Write(codeRoot, document.Schema.Name + "Data.cs", CSharpExporter.Export(document, target == ExportTarget.Client)));
                     hashes.Add(SchemaHasher.Compute(document.Schema));

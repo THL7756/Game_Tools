@@ -1,6 +1,5 @@
-// 用途：执行选中配置表的关联展开、校验和 JSON/C# 分端打表。
-// 编写日期：2026-10-08
-// 最近修改日期：2026-10-10
+// 用途：执行选中配置表的关联展开、校验和 JSON/C# 分端打表，并按依赖闭包阻断受影响表。
+// 编写日期：2026-10-14
 
 // 作者：Codex（按用户需求修改）
 
@@ -114,16 +113,24 @@ public sealed class BuildService
                 settings.ArrayOuterSeparator)));
         logs.Add(Entry("INFO", $"开始打表：{merged.Length} 张逻辑表 → 数据：{TargetText(dataTarget)} · 代码：{TargetText(codeTarget)}"));
 
-        if (issues.Any(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal))
+        var blockedTableNames = ResolveBlockedTables(selectedDocuments, issues);
+        var exportDocuments = merged
+            .Where(document => !blockedTableNames.Contains(document.Schema.Name))
+            .ToArray();
+        if (blockedTableNames.Count > 0)
         {
             foreach (var issue in issues.Where(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal))
                 logs.Add(Entry("FAIL", ValidationIssueFormatter.LogText(issue)));
-            stopwatch.Stop();
-            return new BuildResult(false, issues, logs, merged.Length, 0, 0, stopwatch.Elapsed);
+            logs.Add(Entry("WARN", $"按依赖闭包阻断：{string.Join("、", blockedTableNames.OrderBy(name => name, StringComparer.OrdinalIgnoreCase))}。"));
+            if (exportDocuments.Length == 0)
+            {
+                stopwatch.Stop();
+                return new BuildResult(false, issues, logs, merged.Length, 0, 0, stopwatch.Elapsed);
+            }
         }
 
-        var rowCount = merged.Sum(document => document.Rows.Count(row => !row.IsTest));
-        logs.Add(Entry("PASS", string.Join(" · ", merged.Select(document => $"{document.Schema.Name} {document.Rows.Count(row => !row.IsTest)} 行"))));
+        var rowCount = exportDocuments.Sum(document => document.Rows.Count(row => !row.IsTest));
+        logs.Add(Entry("PASS", string.Join(" · ", exportDocuments.Select(document => $"{document.Schema.Name} {document.Rows.Count(row => !row.IsTest)} 行"))));
         var warningCount = issues.Count(issue => issue.Severity == ValidationSeverity.Warning);
         if (warningCount > 0)
         {
@@ -148,7 +155,7 @@ public sealed class BuildService
                     settings.ArrayInnerSeparator,
                     settings.ArrayMiddleSeparator,
                     settings.ArrayOuterSeparator));
-            var exportResult = new ExportService().ExportAll(merged, options);
+            var exportResult = new ExportService().ExportAll(exportDocuments, options);
             if (dataTarget.HasFlag(ExportTarget.Client))
                 logs.Add(Entry("PASS", $"客户端：{CountFilesUnder(exportResult.Files, settings.ClientOutputDirectory)} 个 JSON 文件写入"));
             if (dataTarget.HasFlag(ExportTarget.Server))
@@ -178,6 +185,50 @@ public sealed class BuildService
     };
 
     private static BuildLogEntry Entry(string level, string message) => new(DateTime.Now, level, message);
+
+    private static HashSet<string> ResolveBlockedTables(
+        IReadOnlyList<TableDocument> selectedDocuments,
+        IReadOnlyList<ValidationIssue> issues)
+    {
+        var blocked = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var issue in issues.Where(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal))
+        {
+            foreach (var document in selectedDocuments)
+            {
+                if (string.Equals(issue.SourceName, document.SourceName, StringComparison.OrdinalIgnoreCase)
+                    || issue.SourceName?.Contains(document.SourceName, StringComparison.OrdinalIgnoreCase) == true)
+                    blocked.Add(document.Schema.Name);
+            }
+        }
+
+        var dependencies = selectedDocuments
+            .GroupBy(document => document.Schema.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.SelectMany(document => document.Schema.AllFields)
+                    .SelectMany(field => ComplexTypeReferenceWalker.GetReferences(field))
+                    .Where(reference => !reference.IsLocalization
+                        && reference.FieldName.Split('.').Last().EndsWith("_id", StringComparison.OrdinalIgnoreCase))
+                    .Select(reference => reference.FieldName.Split('.').Last()[..^3])
+                    .Concat(group.SelectMany(document => document.Schema.AllFields)
+                        .Where(field => ComplexTypeReferenceWalker.GetReferences(field).Any(reference => reference.IsLocalization))
+                        .Select(_ => "localization"))
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase),
+                StringComparer.OrdinalIgnoreCase);
+        var changed = true;
+        while (changed)
+        {
+            changed = false;
+            foreach (var pair in dependencies)
+            {
+                if (blocked.Contains(pair.Key) || !pair.Value.Any(blocked.Contains))
+                    continue;
+                blocked.Add(pair.Key);
+                changed = true;
+            }
+        }
+        return blocked;
+    }
 
     private static int CountFilesUnder(IEnumerable<string> files, string directory)
     {

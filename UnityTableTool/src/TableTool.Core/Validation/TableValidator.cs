@@ -1,4 +1,3 @@
-// 用途：验证字段类型、默认值、主键和表引用前提。
 // 用途：验证字段类型、默认值、主键、枚举、数组和数据行。
 // 编写日期：2026-10-08
 // 作者：Codex（按用户需求修改）
@@ -44,7 +43,7 @@ public sealed class TableValidator
                 document.SourceName));
         }
 
-        var invalidDefaults = new HashSet<string>(StringComparer.Ordinal);
+        var invalidDefaults = new HashSet<int>();
         foreach (var field in document.Schema.AllFields.Where(field => !string.IsNullOrWhiteSpace(field.DefaultValue)))
         {
             try
@@ -53,7 +52,7 @@ public sealed class TableValidator
             }
             catch (FormatException)
             {
-                invalidDefaults.Add(field.Name);
+                invalidDefaults.Add(field.SourceColumn);
                 issues.Add(new ValidationIssue(
                     ErrorCodes.FieldDefaultInvalid,
                     ValidationSeverity.Error,
@@ -71,7 +70,7 @@ public sealed class TableValidator
             var rowSource = row.SourceName ?? document.SourceName;
             foreach (var field in document.Schema.AllFields)
             {
-                var raw = row.RawValues.TryGetValue(field.Name, out var value) ? value : null;
+                var raw = row.GetValue(field);
                 var text = string.IsNullOrWhiteSpace(raw) ? field.DefaultValue : raw;
                 if (text is null)
                     continue;
@@ -82,7 +81,7 @@ public sealed class TableValidator
                 }
                 catch (FormatException error)
                 {
-                    if (string.IsNullOrWhiteSpace(raw) && invalidDefaults.Contains(field.Name))
+                    if (string.IsNullOrWhiteSpace(raw) && invalidDefaults.Contains(field.SourceColumn))
                         continue;
 
                     issues.Add(new ValidationIssue(
@@ -104,7 +103,7 @@ public sealed class TableValidator
             if (document.Schema.IsSingleton || row.IsTest || primaryKeyField is null)
                 continue;
 
-            var rawKey = row.RawValues.TryGetValue(document.Schema.PrimaryKey, out var suppliedKey) ? suppliedKey : null;
+            var rawKey = row.GetValue(primaryKeyField);
             var key = (string.IsNullOrWhiteSpace(rawKey) ? primaryKeyField.DefaultValue : rawKey)?.Trim();
             if (string.IsNullOrWhiteSpace(key))
             {
@@ -139,7 +138,7 @@ public sealed class TableValidator
                         .Where(row => !row.IsTest)
                         .Select(row =>
                         {
-                            var raw = row.RawValues.GetValueOrDefault(field.Name);
+                            var raw = row.GetValue(field);
                             var key = (string.IsNullOrWhiteSpace(raw) ? field.DefaultValue : raw)?.Trim();
                             return key is null
                                 ? null

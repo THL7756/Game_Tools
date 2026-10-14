@@ -48,27 +48,16 @@ public sealed class TableSchemaParser
         var fields = new List<FieldSchema>();
         var issues = new List<ValidationIssue>();
         var fieldNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var firstFields = new Dictionary<string, FieldSchema>(StringComparer.OrdinalIgnoreCase);
+        var reportedDuplicateNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         for (var i = 0; i < names.Count; i++)
         {
             var name = names[i]?.Trim() ?? string.Empty;
-            if (ShouldSkipColumn(name))
+            var sourceColumn = i + offset;
+            if (ShouldSkipColumn(name) || IsCommentedColumn(grid.Rows[0], sourceColumn))
                 continue;
             var isTestColumn = IsTestColumn(name);
-
-            if (!fieldNames.Add(name))
-            {
-                issues.Add(new ValidationIssue(
-                    ErrorCodes.FieldNameDuplicate,
-                    ValidationSeverity.Error,
-                    $"字段名“{name}”重复。",
-                    grid.SourceName,
-                    4,
-                    i + offset + 1,
-                    name,
-                    Suggestion: "请保证正式字段和测试字段名称唯一。"));
-                continue;
-            }
 
             var typeText = Get(types, i)?.Trim() ?? string.Empty;
             var type = ParseType(typeText, grid.SourceName, 3, i + offset, out var typeIssue);
@@ -78,13 +67,25 @@ public sealed class TableSchemaParser
             if (targetIssue is not null)
                 issues.Add(targetIssue);
             var field = new FieldSchema(
-                i + offset,
+                sourceColumn,
                 name,
                 Get(descriptions, i)?.Trim() ?? string.Empty,
                 type,
                 target,
                 EmptyToNull(Get(defaults, i)),
                 IsTest: isTestColumn);
+
+            if (!fieldNames.Add(name))
+            {
+                if (firstFields.TryGetValue(name, out var firstField)
+                    && reportedDuplicateNames.Add(name))
+                    issues.Add(CreateDuplicateFieldIssue(grid.SourceName, firstField));
+                issues.Add(CreateDuplicateFieldIssue(grid.SourceName, field));
+            }
+            else
+            {
+                firstFields[name] = field;
+            }
             (isTestColumn ? validationFields : fields).Add(field);
         }
 
@@ -106,15 +107,20 @@ public sealed class TableSchemaParser
                 ? 1
                 : 0;
             var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+            var rawCells = new Dictionary<int, string?>();
+            var rawFieldValues = new Dictionary<string, string?>(StringComparer.Ordinal);
             foreach (var field in fields.Concat(validationFields))
             {
                 var index = field.SourceColumn - offset + valueOffset;
-                values[field.Name] = index >= 0 && index < sourceRow.Count ? sourceRow[index]?.Trim() : null;
+                var raw = index >= 0 && index < sourceRow.Count ? sourceRow[index]?.Trim() : null;
+                rawCells[field.SourceColumn] = raw;
+                rawFieldValues[field.Identity] = raw;
+                values.TryAdd(field.Name, raw);
             }
 
             if (values.Values.All(string.IsNullOrWhiteSpace))
                 continue;
-            rows.Add(new TableRow(rowIndex + 1, isTest, values, grid.SourceName));
+            rows.Add(new TableRow(rowIndex + 1, isTest, values, grid.SourceName, rawCells, rawFieldValues));
         }
 
         var primaryKey = fields.FirstOrDefault(field =>
@@ -143,6 +149,8 @@ public sealed class TableSchemaParser
         var fields = new List<FieldSchema>();
         var validationFields = new List<FieldSchema>();
         var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        var rawCells = new Dictionary<int, string?>();
+        var rawFieldValues = new Dictionary<string, string?>(StringComparer.Ordinal);
         var rows = new List<TableRow>();
 
         var layout = ResolveSingletonLayout(grid.Rows, semanticRowIndex, idColumn, typeColumn, dataColumn, targetColumn);
@@ -176,10 +184,10 @@ public sealed class TableSchemaParser
             var shiftedName = Get(row, typeColumn)?.Trim() ?? string.Empty;
             var shiftedType = Get(row, dataColumn)?.Trim() ?? string.Empty;
             var shiftedValue = Get(row, dataColumn + 1);
-            var useShifted = layout.MetadataRow < 0
-                && string.IsNullOrWhiteSpace(directName)
+            var useShifted = !LooksLikeType(directType)
+                && LooksLikeType(shiftedType)
                 && !string.IsNullOrWhiteSpace(shiftedName)
-                && !LooksLikeType(shiftedName);
+                && !shiftedName.Equals("默认值", StringComparison.OrdinalIgnoreCase);
             var nameColumn = useShifted ? typeColumn : idColumn;
             var typeColumnForRow = useShifted ? dataColumn : typeColumn;
             var valueColumnForRow = useShifted ? dataColumn + 1 : dataColumn;
@@ -232,8 +240,17 @@ public sealed class TableSchemaParser
                 issues.Add(typeIssue with { FieldName = id });
             ValidationIssue? targetIssue = null;
             var target = defaultTarget;
-            if (layout.TargetColumn >= 0 && !string.IsNullOrWhiteSpace(Get(row, layout.TargetColumn)))
-                target = ParseTarget(Get(row, layout.TargetColumn), grid.SourceName, rowIndex + 1, layout.TargetColumn, out targetIssue);
+            var rowTargetColumn = useShifted && layout.TargetColumn >= 0
+                ? layout.TargetColumn + 1
+                : layout.TargetColumn;
+            var rowTargetText = Get(row, rowTargetColumn);
+            if (string.IsNullOrWhiteSpace(rowTargetText) && useShifted)
+            {
+                rowTargetColumn = layout.TargetColumn;
+                rowTargetText = Get(row, rowTargetColumn);
+            }
+            if (rowTargetColumn >= 0 && !string.IsNullOrWhiteSpace(rowTargetText))
+                target = ParseTarget(rowTargetText, grid.SourceName, rowIndex + 1, rowTargetColumn, out targetIssue);
             if (targetIssue is not null)
                 issues.Add(targetIssue with { FieldName = id });
 
@@ -246,10 +263,12 @@ public sealed class TableSchemaParser
                 null,
                 rowIndex + 1,
                 rowIndex + 1,
-                layout.TargetColumn >= 0 ? rowIndex + 1 : 0,
+                rowTargetColumn >= 0 ? rowIndex + 1 : 0,
                 rowIndex + 1,
                 IsTestColumn(id));
-            values[id] = data;
+            rawCells[field.SourceColumn] = data;
+            rawFieldValues[field.Identity] = data;
+            values.TryAdd(id, data);
             if (field.IsTest)
             {
                 validationFields.Add(field);
@@ -261,7 +280,7 @@ public sealed class TableSchemaParser
         if (fields.Count == 0)
             return TableParseResult.Informal(grid.SourceName, "单例表没有正式数据字段。");
 
-        rows.Add(new TableRow(startRow + 1, false, values, grid.SourceName));
+        rows.Add(new TableRow(startRow + 1, false, values, grid.SourceName, rawCells, rawFieldValues));
         return new TableParseResult(
             new TableDocument(grid.SourceName, new TableSchema(tableName, fields, fields[0].Name, true), rows, issues),
             issues,
@@ -319,8 +338,7 @@ public sealed class TableSchemaParser
 
     private static bool IsSingletonDefaultValuesRow(string id, IReadOnlyList<string?> row)
     {
-        if (id.Equals("values", StringComparison.OrdinalIgnoreCase)
-            || id.Equals("默认值", StringComparison.OrdinalIgnoreCase))
+        if (id.Equals("默认值", StringComparison.OrdinalIgnoreCase))
             return true;
 
         var marker = row.Count > 0 ? row[0]?.Trim() ?? string.Empty : string.Empty;
@@ -458,6 +476,20 @@ public sealed class TableSchemaParser
 
     private static bool ShouldSkipColumn(string name) =>
         string.IsNullOrWhiteSpace(name) || name.StartsWith("##", StringComparison.Ordinal);
+
+    private static bool IsCommentedColumn(IReadOnlyList<string?> firstRow, int sourceColumn) =>
+        Get(firstRow, sourceColumn)?.Trim().StartsWith("##", StringComparison.Ordinal) == true;
+
+    private static ValidationIssue CreateDuplicateFieldIssue(string sourceName, FieldSchema field) =>
+        new(
+            ErrorCodes.FieldNameDuplicate,
+            ValidationSeverity.Error,
+            $"字段名“{field.Name}”重复。",
+            sourceName,
+            field.NameRow,
+            field.SourceColumn + 1,
+            field.Name,
+            Suggestion: "请保证正式字段和测试字段名称唯一，并保留所有重复列以便修正。");
 
     private static bool IsTestColumn(string name) =>
         name.StartsWith("#test", StringComparison.OrdinalIgnoreCase)

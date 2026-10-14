@@ -96,16 +96,27 @@ public sealed class PreviewService
         PreviewContext context)
     {
         var previewFields = document.Schema.Fields
-            .OrderBy(field => field.Name.Equals(document.Schema.PrimaryKey, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-            .ThenBy(field => field.SourceColumn)
+            .OrderBy(field => field.SourceColumn)
             .ToArray();
+        var nameCounts = previewFields
+            .GroupBy(field => field.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
+        var nameOccurrences = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var fields = previewFields.Select(field =>
         {
-            var highlight = highlights.Fields.GetValueOrDefault(field.Name);
+            var highlight = highlights.Columns?.GetValueOrDefault(field.SourceColumn)
+                ?? highlights.Fields.GetValueOrDefault(field.Name);
+            var occurrence = nameOccurrences.TryGetValue(field.Name, out var current)
+                ? current + 1
+                : 1;
+            nameOccurrences[field.Name] = occurrence;
+            var header = nameCounts[field.Name] > 1
+                ? $"{field.Name} #{occurrence} · 重复"
+                : field.Name;
             return new PreviewField(
+                field.Identity,
                 field.Name,
-                field.Name,
-                field.Name,
+                header,
                 GetTypeLabel(field, document.Schema),
                 ToHighlightName(highlight?.Level ?? ValidationHighlightLevel.None),
                 highlight is null ? string.Empty : $"{highlight.Code}：{highlight.Reason}");
@@ -116,10 +127,10 @@ public sealed class PreviewService
             .Select(row =>
             {
                 var values = previewFields.ToDictionary(
-                    field => field.Name,
+                    field => field.Identity,
                     field =>
                     {
-                        var raw = row.RawValues.GetValueOrDefault(field.Name);
+                        var raw = row.GetValue(field);
                         return string.IsNullOrWhiteSpace(raw)
                             ? field.DefaultValue ?? string.Empty
                             : raw;
@@ -130,11 +141,14 @@ public sealed class PreviewService
                 foreach (var field in previewFields)
                 {
                     var highlight = highlights.Cells.GetValueOrDefault(
+                        ValidationHighlightResolver.CellKey(row.SourceRow, field.SourceColumn));
+                    highlight ??= highlights.Cells.GetValueOrDefault(
                         ValidationHighlightResolver.CellKey(row.SourceRow, field.Name));
                     if (highlight is null)
                         continue;
-                    cellLevels[field.Name] = ToHighlightName(highlight.Level);
-                    cellTooltips[field.Name] = $"{highlight.Code}：{highlight.Reason}";
+                    var key = field.Identity;
+                    cellLevels[key] = ToHighlightName(highlight.Level);
+                    cellTooltips[key] = $"{highlight.Code}：{highlight.Reason}";
                 }
 
                 return new PreviewRow(row.SourceRow, values, cellLevels, cellTooltips);
@@ -151,7 +165,6 @@ public sealed class PreviewService
     {
         var definitions = document.Schema.Fields
             .Where(field => !field.IsTest
-                && !field.Name.Equals("values", StringComparison.OrdinalIgnoreCase)
                 && !field.Name.Equals("默认值", StringComparison.OrdinalIgnoreCase))
             .OrderBy(field => field.NameRow)
             .ToArray();
@@ -186,7 +199,10 @@ public sealed class PreviewService
                 key => key,
                 key => DefinitionValue(definition, key),
                 StringComparer.OrdinalIgnoreCase);
-            var sourceHighlight = highlights.Cells.GetValueOrDefault(
+            var sourceHighlight = highlights.Columns?.GetValueOrDefault(definition.SourceColumn)
+                ?? highlights.Cells.GetValueOrDefault(
+                    ValidationHighlightResolver.CellKey(definition.NameRow, definition.SourceColumn))
+                ?? highlights.Cells.GetValueOrDefault(
                     ValidationHighlightResolver.CellKey(definition.NameRow, definition.Name))
                 ?? highlights.Fields.GetValueOrDefault(definition.Name);
             var cellLevels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

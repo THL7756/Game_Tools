@@ -11,9 +11,12 @@ namespace TableTool.Serialization;
 
 public sealed class BinaryTableExporter
 {
-    public byte[] Export(TableDocument document, ArraySeparatorOptions? separators = null)
+    public byte[] Export(
+        TableDocument document,
+        ArraySeparatorOptions? separators = null,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, string?>>? localizationCatalog = null)
     {
-        var payload = Encoding.UTF8.GetBytes(new JsonTableExporter().Export(document, separators));
+        var payload = Encoding.UTF8.GetBytes(new JsonTableExporter().Export(document, separators, localizationCatalog));
         var tableName = Encoding.UTF8.GetBytes(document.Schema.Name);
         var schemaHash = Encoding.UTF8.GetBytes(SchemaHasher.Compute(document.Schema));
         var crc = Crc32.Compute(payload);

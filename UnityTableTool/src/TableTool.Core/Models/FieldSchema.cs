@@ -24,4 +24,7 @@ public sealed record FieldSchema(
     int TypeRow = 3,
     int TargetRow = 5,
     int DefaultRow = 6,
-    bool IsTest = false);
+    bool IsTest = false)
+{
+    public string Identity => $"{NameRow}:{SourceColumn}:{Name}";
+}

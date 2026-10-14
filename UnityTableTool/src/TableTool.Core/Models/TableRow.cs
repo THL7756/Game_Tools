@@ -8,4 +8,16 @@ public sealed record TableRow(
     int SourceRow,
     bool IsTest,
     IReadOnlyDictionary<string, string?> RawValues,
-    string? SourceName = null);
+    string? SourceName = null,
+    IReadOnlyDictionary<int, string?>? RawCells = null,
+    IReadOnlyDictionary<string, string?>? RawFieldValues = null)
+{
+    public string? GetValue(FieldSchema field)
+    {
+        if (RawFieldValues is not null && RawFieldValues.TryGetValue(field.Identity, out var fieldValue))
+            return fieldValue;
+        if (RawCells is not null && RawCells.TryGetValue(field.SourceColumn, out var cell))
+            return cell;
+        return RawValues.GetValueOrDefault(field.Name);
+    }
+}

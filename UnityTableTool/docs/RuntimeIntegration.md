@@ -76,6 +76,18 @@ var exists = Tables.Has("Skill", "1001");
 var config = Tables.GetSingleton("GlobalConfig", GlobalConfigTableAdapter.FromRow);
 ```
 
+复杂字段也通过同一行读取入口转换。生成的表数据类会包含按字段命名的嵌套类型，例如 `LabelValue`、`ItemBundleBean` 和 `ItemMapEntry`；map 字段生成 `Dictionary<TKey, Entry>`。如果只使用 Runtime 原始 API，可以读取共享值对象：
+
+```csharp
+using Company.UnityTableRuntime.Shared;
+
+var label = Tables.Get("Items", "10001", row => row.Read<RuntimeLocalizationValue>("label"));
+var map = Tables.Get("Items", "10001", row => row.Read<RuntimeMapValue>("item_map"));
+var text = label.GetText("zh-CN") ?? label.Key;
+```
+
+工具导出的 localization JSON 形如 `{ "key": "greeting", "translations": { "zh-CN": "你好" } }`；缺少语言时 `GetText` 返回空值并保留 key。`TableRowView.Read<T>` 也能直接读取结构化 JSON，再由生成适配器转换为强类型嵌套对象。
+
 不存在的表、主键或单例会抛出 `KeyNotFoundException`；需要无异常判断时先使用 `Has`。`GetAll` 返回生成类型列表，显示 UI 时可以直接遍历并实例化预制体：
 
 ```csharp

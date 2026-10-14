@@ -1,4 +1,4 @@
-// 用途：按字段名合并同名配置表，并将分表默认值校准到输出数据。
+// 用途：按逐列 schema 检查合并同名配置表，并将分表默认值校准到输出数据。
 // 编写日期：2026-10-08
 // 作者：Codex（按用户需求修改）
 
@@ -75,6 +75,8 @@ public static class TableDocumentMerger
         if (first.Schema.IsSingleton)
         {
             var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+            var rawCells = new Dictionary<int, string?>();
+            var rawFieldValues = new Dictionary<string, string?>(StringComparer.Ordinal);
             foreach (var shard in shards)
             foreach (var row in shard.Rows.Where(row => !row.IsTest))
             foreach (var field in fields)
@@ -84,6 +86,8 @@ public static class TableDocumentMerger
                     continue;
                 if (!values.TryGetValue(field.Name, out var current) || string.IsNullOrWhiteSpace(current))
                     values[field.Name] = value;
+                rawCells[field.SourceColumn] = values[field.Name];
+                rawFieldValues[field.Identity] = values[field.Name];
             }
 
             var rowSource = first.Rows.FirstOrDefault(row => !row.IsTest);
@@ -91,7 +95,9 @@ public static class TableDocumentMerger
                 rowSource?.SourceRow ?? 1,
                 false,
                 values,
-                rowSource?.SourceName ?? first.SourceName);
+                rowSource?.SourceName ?? first.SourceName,
+                rawCells,
+                rawFieldValues);
             return new TableDocument(sourceName, schema, [combinedRow], shards.SelectMany(shard => shard.ParseIssues ?? []).ToArray());
         }
 
@@ -108,12 +114,21 @@ public static class TableDocumentMerger
         IReadOnlyList<FieldSchema> validationFields)
     {
         var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        var rawCells = new Dictionary<int, string?>();
+        var rawFieldValues = new Dictionary<string, string?>(StringComparer.Ordinal);
         foreach (var field in fields.Concat(validationFields))
-            values[field.Name] = GetEffectiveValue(shard, row, field);
+        {
+            var value = GetEffectiveValue(shard, row, field);
+            values.TryAdd(field.Name, value);
+            rawCells[field.SourceColumn] = value;
+            rawFieldValues[field.Identity] = value;
+        }
 
         return row with
         {
             RawValues = values,
+            RawCells = rawCells,
+            RawFieldValues = rawFieldValues,
             SourceName = row.SourceName ?? shard.SourceName
         };
     }
@@ -125,7 +140,7 @@ public static class TableDocumentMerger
             && field.Name.Equals(canonicalField.Name, StringComparison.OrdinalIgnoreCase));
         var raw = sourceField is null
             ? null
-            : row.RawValues.GetValueOrDefault(sourceField.Name);
+            : row.GetValue(sourceField);
         if (!string.IsNullOrWhiteSpace(raw))
             return raw.Trim();
 
@@ -136,16 +151,9 @@ public static class TableDocumentMerger
         IReadOnlyList<TableDocument> shards,
         bool isTest)
     {
-        var fields = new List<FieldSchema>();
-        var indexes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var field in shards.SelectMany(shard => shard.Schema.AllFields.Where(field => field.IsTest == isTest)))
-        {
-            if (!indexes.Add(field.Name))
-                continue;
-            fields.Add(field);
-        }
-
-        return fields;
+        return shards[0].Schema.AllFields
+            .Where(field => field.IsTest == isTest)
+            .ToArray();
     }
 
     private static void CompareFields(
@@ -154,44 +162,43 @@ public static class TableDocumentMerger
         string groupName,
         ICollection<ValidationIssue> issues)
     {
-        var names = shards
-            .SelectMany(shard => shard.Schema.AllFields.Where(field => field.IsTest == isTest).Select(field => field.Name))
-            .Distinct(StringComparer.OrdinalIgnoreCase);
-        foreach (var name in names)
+        var first = shards[0].Schema.AllFields.Where(field => field.IsTest == isTest).ToArray();
+        foreach (var shard in shards.Skip(1))
         {
-            var definitions = shards
-                .Select(shard => new
-                {
-                    Document = shard,
-                    Field = shard.Schema.AllFields.FirstOrDefault(field =>
-                        field.IsTest == isTest
-                        && field.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-                })
-                .Where(item => item.Field is not null)
-                .Select(item => (item.Document, Field: item.Field!))
-                .ToArray();
-            if (definitions.Length < 2)
-                continue;
-
-            var first = definitions[0];
-            foreach (var definition in definitions.Skip(1))
+            var current = shard.Schema.AllFields.Where(field => field.IsTest == isTest).ToArray();
+            var count = Math.Max(first.Length, current.Length);
+            for (var index = 0; index < count; index++)
             {
-                if (HasSameDefinition(first.Field, definition.Field))
+                var left = index < first.Length ? first[index] : null;
+                var right = index < current.Length ? current[index] : null;
+                if (left is null || right is null)
+                {
+                    if (left is not null)
+                        AddConflict(shards[0], left, left.NameRow, left.SourceColumn + 1,
+                            $"同名表的{groupName}数量或顺序不一致。", issues);
+                    if (right is not null)
+                        AddConflict(shard, right, right.NameRow, right.SourceColumn + 1,
+                            $"同名表的{groupName}数量或顺序不一致。", issues);
+                    continue;
+                }
+
+                if (left.Name.Equals(right.Name, StringComparison.OrdinalIgnoreCase)
+                    && HasSameDefinition(left, right))
                     continue;
 
                 AddConflict(
-                    first.Document,
-                    first.Field,
-                    ConflictRow(first.Field, definition.Field),
-                    first.Field.SourceColumn + 1,
-                    $"同名表的{groupName}“{name}”类型或端标记不一致。",
+                    shards[0],
+                    left,
+                    ConflictRow(left, right),
+                    left.SourceColumn + 1,
+                    $"同名表的{groupName}字段名称、顺序、类型、默认值或端标记不一致。",
                     issues);
                 AddConflict(
-                    definition.Document,
-                    definition.Field,
-                    ConflictRow(definition.Field, first.Field),
-                    definition.Field.SourceColumn + 1,
-                    $"同名表的{groupName}“{name}”类型或端标记不一致。",
+                    shard,
+                    right,
+                    ConflictRow(right, left),
+                    right.SourceColumn + 1,
+                    $"同名表的{groupName}字段名称、顺序、类型、默认值或端标记不一致。",
                     issues);
             }
         }
@@ -242,10 +249,21 @@ public static class TableDocumentMerger
     }
 
     private static bool HasSameDefinition(FieldSchema left, FieldSchema right) =>
-        HasSameType(left.Type, right.Type) && left.Target == right.Target;
+        string.Equals(left.Name, right.Name, StringComparison.OrdinalIgnoreCase)
+        && HasSameType(left.Type, right.Type)
+        && left.Target == right.Target
+        && string.Equals(left.DefaultValue, right.DefaultValue, StringComparison.Ordinal);
 
-    private static int ConflictRow(FieldSchema left, FieldSchema right) =>
-        !HasSameType(left.Type, right.Type) ? left.TypeRow : left.TargetRow;
+    private static int ConflictRow(FieldSchema left, FieldSchema right)
+    {
+        if (!left.Name.Equals(right.Name, StringComparison.OrdinalIgnoreCase))
+            return left.NameRow;
+        if (!HasSameType(left.Type, right.Type))
+            return left.TypeRow;
+        if (!string.Equals(left.DefaultValue, right.DefaultValue, StringComparison.Ordinal))
+            return left.DefaultRow;
+        return left.TargetRow;
+    }
 
     private static bool HasSameType(TypeDescriptor left, TypeDescriptor right) =>
         string.Equals(left.BaseType, right.BaseType, StringComparison.OrdinalIgnoreCase)

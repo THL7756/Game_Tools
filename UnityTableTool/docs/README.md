@@ -11,12 +11,15 @@
 5. [Unity Runtime 接入](RuntimeIntegration.md)：把包加入 Unity 并读取表。
 6. [排错](Troubleshooting.md)：处理扫描、校验和 Unity 接入问题。
 
+附件规则的实现状态和复杂字段协议见 [问题修复功能补充.md](问题修复功能补充.md)。
+
 ## 代码入口
 
 - `src/TableTool.Core/Reading/TableFileReader.cs`：输入文件读取。
 - `src/TableTool.Core/Parsing/TableSchemaParser.cs`：表头和字段解析。
 - `src/TableTool.Core/Validation/TableValidator.cs`：字段、主键和数据校验。
 - `src/TableTool.Core/Validation/TableReferenceValidator.cs`：`<表名>_id` 引用校验。
+- `src/TableTool.Core/Parsing/TableDocumentMerger.cs`：同名表 schema 逐列比较、冲突诊断和合并。
 - `src/TableTool.Gui/Services/BuildService.cs`：GUI 打表主流程。
 - `UnityRuntimePackage/com.company.unity-table-runtime/Runtime/TableManager.cs`：Unity Runtime 加载和查询入口。
 
@@ -26,4 +29,4 @@
 
 项目计划和验收记录见 [ProjectPlan.md](ProjectPlan.md)，未纳入当前版本的扩展方向见 [ExtensionPoints.md](ExtensionPoints.md)。
 
-最近一次验证为 9/10 测试通过；唯一失败是样例工作簿重复主键回归测试与当前样例数据不一致，详见 [ProjectPlan.md](ProjectPlan.md) 的“最近验证”。
+最近一次验证为 22/22 测试通过；回归样例为 `Data/表格规范.xlsx`，详见 [ProjectPlan.md](ProjectPlan.md) 的“最近验证”。

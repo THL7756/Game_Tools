@@ -1,4 +1,3 @@
-// 用途：把校验问题映射为 Sheet、字段和单元格的高亮状态。
 // 用途：把校验问题映射到 Sheet、字段和预览单元格高亮。
 // 编写日期：2026-10-08
 // 作者：Codex。
@@ -22,12 +21,14 @@ public sealed record ValidationHighlight(
 public sealed record ValidationHighlightMap(
     IReadOnlyDictionary<string, ValidationHighlight> Cells,
     IReadOnlyDictionary<string, ValidationHighlight> Fields,
-    ValidationHighlightLevel HighestLevel)
+    ValidationHighlightLevel HighestLevel,
+    IReadOnlyDictionary<int, ValidationHighlight>? Columns = null)
 {
     public static ValidationHighlightMap Empty { get; } = new(
         new Dictionary<string, ValidationHighlight>(),
         new Dictionary<string, ValidationHighlight>(),
-        ValidationHighlightLevel.None);
+        ValidationHighlightLevel.None,
+        new Dictionary<int, ValidationHighlight>());
 }
 
 public static class ValidationHighlightResolver
@@ -41,6 +42,7 @@ public static class ValidationHighlightResolver
             .ToArray();
         var cells = new Dictionary<string, ValidationHighlight>(StringComparer.OrdinalIgnoreCase);
         var fields = new Dictionary<string, ValidationHighlight>(StringComparer.OrdinalIgnoreCase);
+        var columns = new Dictionary<int, ValidationHighlight>();
 
         foreach (var issue in documentIssues)
         {
@@ -54,13 +56,15 @@ public static class ValidationHighlightResolver
                 var key = CellKey(sourceRow, issue.FieldName);
                 cells[key] = KeepHighest(cells.GetValueOrDefault(key), highlight);
             }
+            if (issue.SourceColumn is int sourceColumn && sourceColumn > 0)
+                columns[sourceColumn - 1] = KeepHighest(columns.GetValueOrDefault(sourceColumn - 1), highlight);
             if (!string.IsNullOrWhiteSpace(issue.FieldName))
             {
                 fields[issue.FieldName] = KeepHighest(fields.GetValueOrDefault(issue.FieldName), highlight);
             }
         }
 
-        return new ValidationHighlightMap(cells, fields, GetHighestLevel(documentIssues));
+        return new ValidationHighlightMap(cells, fields, GetHighestLevel(documentIssues), columns);
     }
 
     public static ValidationHighlightLevel GetHighestLevel(IEnumerable<ValidationIssue> issues)
@@ -78,6 +82,8 @@ public static class ValidationHighlightResolver
             string.Equals(issue.SourceName, sourceName, StringComparison.OrdinalIgnoreCase)));
 
     public static string CellKey(int sourceRow, string fieldName) => $"{sourceRow}:{fieldName}";
+
+    public static string CellKey(int sourceRow, int sourceColumn) => $"{sourceRow}:column:{sourceColumn}";
 
     private static ValidationHighlight KeepHighest(
         ValidationHighlight? current,

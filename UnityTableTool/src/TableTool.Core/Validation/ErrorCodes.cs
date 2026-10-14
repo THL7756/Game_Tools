@@ -21,5 +21,6 @@ public static class ErrorCodes
     public const string FieldNameMissing = "FIELD_NAME_MISSING";
     public const string EnumValueInvalid = "ENUM_VALUE_INVALID";
     public const string EnumCSharpInvalid = "ENUM_CSHARP_IDENTIFIER_INVALID";
+    public const string LocalizationKeyMissing = "LOCALIZATION_KEY_MISSING";
     public const string TableNotFormal = "TABLE_NOT_FORMAL";
 }

@@ -1,5 +1,5 @@
 // 用途：兼容工具端的字段值解析入口，并委托给 Runtime Package 的共享实现。
-// 编写日期：2026-10-10
+// 编写日期：2026-10-14
 // 作者：Codex（按用户需求修改）
 
 using Company.UnityTableRuntime.Shared;
@@ -14,12 +14,7 @@ public static class ValueParser
         TypeDescriptor type,
         ArraySeparatorOptions? separators = null)
     {
-        var sharedType = new RuntimeTypeDescriptor(
-            type.BaseType,
-            type.Dimensions,
-            type.EnumValues,
-            type.IsValid,
-            type.RawText);
+        var sharedType = type.ToRuntime();
         var sharedSeparators = separators is null
             ? RuntimeArraySeparators.Default
             : new RuntimeArraySeparators(separators.Inner, separators.Middle, separators.Outer);
