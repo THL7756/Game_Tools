@@ -12,6 +12,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{EF752733-9B8
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TableTool.Tests", "src\TableTool.Tests\TableTool.Tests.csproj", "{B5701981-FC95-47C7-AE50-2AE5BAF0D41F}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UnityRuntimePackage", "UnityRuntimePackage", "{885A01B7-7262-4A1D-AB4A-871DB4B31D31}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "com.company.unity-table-runtime", "com.company.unity-table-runtime", "{3FF97DB5-8FB7-4FF6-80BC-4A0D6F231A8F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Editor.Shared.Validation", "UnityRuntimePackage\com.company.unity-table-runtime\Validation~\Editor.Shared.Validation.csproj", "{1143FDDB-4A00-454A-AD70-3AB57312680A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -34,8 +40,14 @@ Global
 		{B5701981-FC95-47C7-AE50-2AE5BAF0D41F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B5701981-FC95-47C7-AE50-2AE5BAF0D41F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B5701981-FC95-47C7-AE50-2AE5BAF0D41F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1143FDDB-4A00-454A-AD70-3AB57312680A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1143FDDB-4A00-454A-AD70-3AB57312680A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1143FDDB-4A00-454A-AD70-3AB57312680A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1143FDDB-4A00-454A-AD70-3AB57312680A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{B5701981-FC95-47C7-AE50-2AE5BAF0D41F} = {EF752733-9B8A-46C8-BC89-61F7B14977DF}
+		{3FF97DB5-8FB7-4FF6-80BC-4A0D6F231A8F} = {885A01B7-7262-4A1D-AB4A-871DB4B31D31}
+		{1143FDDB-4A00-454A-AD70-3AB57312680A} = {3FF97DB5-8FB7-4FF6-80BC-4A0D6F231A8F}
 	EndGlobalSection
 EndGlobal

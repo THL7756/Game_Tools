@@ -1,6 +1,6 @@
 // 用途：实现配置表搜索、筛选、预览、校验和 JSON/C# 打表交互。
 // 编写日期：2026-10-08
-// 最近修改日期：2026-10-08
+// 最近修改日期：2026-10-14
 // 作者：Codex（按用户需求修改）
 
 using System.ComponentModel;
@@ -34,6 +34,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
     private string activeFilter = "all";
     private DateTime lastSyncTime = DateTime.Now;
     private bool isInitializing = true;
+    private bool isRefreshingTables;
     private PreviewViewModel? currentPreview;
     private bool isRefreshingPreview;
 
@@ -48,7 +49,6 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         ServerCheckBox.IsChecked = settings.OutputTargets.HasFlag(ExportTarget.Server);
         ClientCodeCheckBox.IsChecked = settings.CodeTargets.HasFlag(ExportTarget.Client);
         ServerCodeCheckBox.IsChecked = settings.CodeTargets.HasFlag(ExportTarget.Server);
-        Loaded += (_, _) => RefreshTables(selectAll: false);
         ThemeManager.ThemeChanged += (_, _) => Dispatcher.BeginInvoke(RefreshTheme);
         PreviewGrid.SelectedCellsChanged += (_, _) => ApplyPreviewSelectionVisuals();
         ApplyLayoutSizes();
@@ -57,6 +57,12 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
 
     public void RefreshTables(bool selectAll)
     {
+        if (isRefreshingTables)
+            return;
+
+        isRefreshingTables = true;
+        try
+        {
         var selectedKeys = tables.Where(table => table.IsSelected)
             .Select(table => table.FavoriteKey)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -126,6 +132,11 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         }
 
         UpdateSelectionUi();
+        }
+        finally
+        {
+            isRefreshingTables = false;
+        }
     }
 
     public void SelectAll()

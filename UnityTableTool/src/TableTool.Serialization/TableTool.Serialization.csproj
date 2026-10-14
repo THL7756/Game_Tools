@@ -4,8 +4,12 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <UnityRuntimePackageDirectory Condition="'$(UnityRuntimePackageDirectory)' == ''">$(MSBuildThisFileDirectory)..\..\UnityRuntimePackage</UnityRuntimePackageDirectory>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="$(UnityRuntimePackageDirectory)\com.company.unity-table-runtime\Editor\Shared\Serialization\**\*.cs"
+             Link="PackageShared\Serialization\%(RecursiveDir)%(Filename)%(Extension)" />
     <ProjectReference Include="..\TableTool.Core\TableTool.Core.csproj" />
   </ItemGroup>
 </Project>

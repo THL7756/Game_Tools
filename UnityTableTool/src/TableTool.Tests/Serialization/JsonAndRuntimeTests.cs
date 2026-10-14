@@ -1,5 +1,6 @@
 // 用途：验证精简后的 JSON 协议以及 Unity Runtime 的字段和数组解析行为。
 // 编写日期：2026-10-11
+// 最近修改日期：2026-10-14
 // 作者：Codex（按用户需求修改）
 
 using System.Text;
@@ -57,6 +58,33 @@ public sealed class JsonAndRuntimeTests
 
         Assert.Equal([1, 2], values);
         Assert.Equal("@", table.Separators.Inner);
+    }
+
+    [Fact]
+    public void TableManagerSkipsAnIdenticalPayloadAndKeepsLoadedTableNames()
+    {
+        var data = Encoding.UTF8.GetBytes(new JsonTableExporter().Export(CreateSkillDocument()));
+        var manager = new TableManager();
+
+        Assert.True(manager.LoadIfChanged("Skill", data));
+        Assert.False(manager.LoadIfChanged("Skill", data.ToArray()));
+        Assert.True(manager.IsLoaded("Skill"));
+        Assert.Contains("Skill", manager.LoadedTableNames);
+        Assert.True(manager.Has("Skill", "1007"));
+
+        manager.Unload("Skill");
+        Assert.False(manager.IsLoaded("Skill"));
+    }
+
+    [Fact]
+    public void TableManagerReloadsWhenPayloadChanges()
+    {
+        var first = Encoding.UTF8.GetBytes(new JsonTableExporter().Export(CreateSkillDocument()));
+        var second = Encoding.UTF8.GetBytes(new JsonTableExporter().Export(CreateSkillDocument("3#4")));
+        var manager = new TableManager();
+
+        Assert.True(manager.LoadIfChanged("Skill", first));
+        Assert.True(manager.LoadIfChanged("Skill", second));
     }
 
     private static TableDocument CreateSkillDocument(string values = "1#2") => new(

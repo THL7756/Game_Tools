@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <UnityRuntimePackageDirectory Condition="'$(UnityRuntimePackageDirectory)' == ''">$(MSBuildThisFileDirectory)..\..\UnityRuntimePackage</UnityRuntimePackageDirectory>
   </PropertyGroup>
   <ItemGroup>
@@ -16,6 +17,8 @@
            Text="Unity Runtime Package shared code was not found at '$(UnityRuntimePackageDirectory)\com.company.unity-table-runtime\Runtime\Shared'. Set UnityRuntimePackageDirectory to the package root." />
   </Target>
   <ItemGroup>
+    <Compile Include="$(UnityRuntimePackageDirectory)\com.company.unity-table-runtime\Editor\Shared\Core\**\*.cs"
+             Link="PackageShared\Core\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="$(UnityRuntimePackageDirectory)\com.company.unity-table-runtime\Runtime\Shared\*.cs"
              Link="RuntimeShared\%(Filename)%(Extension)" />
   </ItemGroup>

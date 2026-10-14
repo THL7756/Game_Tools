@@ -1,0 +1,7 @@
+<!-- 用途：隔离 Unity Editor 共享代码验证工程的 NuGet 中间文件，避免与 Runtime.Validation 共用 assets 文件。编写日期：2026-10-14；作者：Codex。 -->
+<Project>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Editor.Shared.Validation'">
+    <BaseIntermediateOutputPath>obj\EditorShared\</BaseIntermediateOutputPath>
+    <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
+  </PropertyGroup>
+</Project>

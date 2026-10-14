@@ -1,0 +1,29 @@
+{
+  "name": "Company.UnityTableTool.Editor",
+  "rootNamespace": "Company.UnityTableTool.Editor",
+  "references": [
+    "Company.UnityTableRuntime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [
+    "ExcelDataReader.dll",
+    "ExcelDataReader.DataSet.dll",
+    "System.Text.Encoding.CodePages.dll",
+    "Microsoft.Bcl.AsyncInterfaces.dll",
+    "System.Buffers.dll",
+    "System.Memory.dll",
+    "System.Runtime.CompilerServices.Unsafe.dll",
+    "System.Text.Encodings.Web.dll",
+    "System.Text.Json.dll",
+    "System.Threading.Tasks.Extensions.dll"
+  ],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

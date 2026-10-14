@@ -25,6 +25,20 @@ UnityRuntimePackage/com.company.unity-table-runtime
 
 路径相对于 `manifest.json` 所在目录，Windows 路径建议使用 `/`。工具本身的“Unity 包目录”设置应指向包含 `com.company.unity-table-runtime` 的目录，例如仓库中的 `UnityRuntimePackage`，不要只指向包内的 `Runtime` 目录。
 
+## Unity Editor 轻量打表工具
+
+安装包后可在 Unity 菜单 `Tools/UnityTableTool/Table Tool` 打开轻量工具。先在项目中创建设置资产：
+
+```text
+Assets -> Create -> UnityTableTool -> Table Tool Settings
+```
+
+设置资产保存源表目录、客户端/服务器数据目录、客户端/服务器代码目录、输出目标和数组分隔符。源表目录支持 `.xlsx`、`.xls`、`.csv` 和 `.tsv`，会递归保留 Excel 的真实 Sheet 名。
+
+窗口中的“刷新表列表”才会扫描源表；“开始打表”会在必要时先刷新一次，然后执行与桌面 GUI 相同的字段类型、数组、主键、单例、同名表、localization、beans、map 和跨表引用校验。错误会阻止导出，并在 Unity Console 中保留源文件、Sheet、行列和字段信息。窗口重绘、切换焦点或重新打开窗口不会自动重复扫描。
+
+Excel 读取依赖和 `.xls` 所需的代码页程序集随包放在 `Editor/Plugins`，只参与 Unity Editor 编译，不会进入游戏 Runtime 程序集；JSON 读取依赖放在 `Runtime/Plugins`，供 Runtime 的 JSON/UTB1 读取使用。
+
 ## 输出文件放置
 
 建议把 UnityTableTool 的客户端数据目录设为 `Assets/Resources/Tables`，客户端代码目录设为 `Assets/Scripts/GeneratedTables`：

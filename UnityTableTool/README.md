@@ -1,6 +1,6 @@
 # UnityTableTool
 
-UnityTableTool 是一个 Windows 本地配置表工具：扫描 Excel/CSV/TSV，检查表结构和数据，合并同名分表与引用表，并按客户端/服务器分别导出 JSON 和 C#。项目同时提供一个无 UnityEngine 依赖的 Unity Runtime Package，用于在 Unity 中加载客户端表。
+UnityTableTool 是一个 Windows 本地配置表工具：扫描 Excel/CSV/TSV，检查表结构和数据，合并同名分表与引用表，并按客户端/服务器分别导出 JSON 和 C#。项目同时提供一个无 UnityEngine 依赖的 Unity Runtime Package，用于在 Unity 中加载客户端表，并提供 Unity Editor 内的轻量表列表和打表工具。
 
 当前发布脚本版本为 `2.4.0`。工具的正式 GUI 流程目前输出 JSON 和 C#；UTB1 `.bytes` 导出器已在序列化库中提供，但 GUI 尚未提供 `.bytes` 勾选项。
 
@@ -50,6 +50,8 @@ MyUnityProject/Packages/com.company.unity-table-runtime/package.json
 ```
 
 `file:` 路径按 `manifest.json` 的实际位置调整，Windows 路径建议使用 `/`。包的最低 Unity 版本声明为 `2021.3`，程序集名称为 `Company.UnityTableRuntime`。
+
+安装包后可在 Unity 菜单 `Tools/UnityTableTool/Table Tool` 打开轻量工具。通过 `Assets/Create/UnityTableTool/Table Tool Settings` 创建设置资产，配置源表和客户端/服务器输出目录，再点击“刷新表列表”和“开始打表”。Unity Editor 端与桌面 GUI 使用同一套表解析、校验、分表合并和导出规则；运行时程序集仍只负责加载已导出的 JSON/UTB1。
 
 ### 4. 导出客户端文件
 

@@ -16,6 +16,8 @@ UnityTableTool 当前定位是 Windows 本地配置表检查和导出工具，�
 - GUI 支持搜索、收藏、最近表、Sheet 预览、问题定位、客户端/服务器输出范围和主题设置。
 - 生成客户端/服务器 JSON 与 C#；客户端 C# 包含 Runtime 行适配器。
 - 序列化库支持 UTB1 `.bytes`，Unity Runtime 支持 JSON/UTB1 自动读取、主键查询、单例查询、批量转换。
+- Unity 包提供 Editor 端轻量表列表和打表窗口，直接复用完整解析、校验、分表合并和导出规则，支持 `.xlsx`、`.xls`、`.csv`、`.tsv`。
+- Runtime `TableManager` 对相同表名、格式和字节内容执行幂等加载，避免界面或宿主生命周期重复解析。
 - 输出使用 staging 和原子替换，只覆盖本次生成文件，保留输出目录中的其他文件。
 - 测试项目覆盖表校验、引用、JSON/Runtime 和导出目录保护。
 
