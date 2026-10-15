@@ -73,6 +73,7 @@ MyUnityProject/Packages/com.company.unity-table-runtime/package.json
 - 输入支持 `.xlsx`、`.xls`、`.csv`、`.tsv`，Excel 的每个 Sheet 都会单独解析。
 - 字段类型支持 `int`、`long`、`float`、`double`、`bool`、`string`、`enum(...)`、`Vector2/3/4`、`Color`、`Quaternion`、一到三维数组，以及 `localization`、递归 `beans(...)` 和 `map(key)(string)(beans(...))`。
 - `localization` 从逻辑表 `localization` 的 `id` 列查键；beans 子字段使用 `字段名#类型`；map 条目使用 `条目;条目`、`key|字符串值#bean字段...`，重复 key 或缺失引用会阻断受影响表及其依赖。
+- 多语言字段只输出字符串键（例如 `"label": "greeting"`），翻译集中在每端一份的 `localization.json`；Runtime 加载一次后通过字典索引查询文本。
 - 字段名以 `<逻辑表名>_id` 结尾时会检查目标表和目标主键值，例如 `item_id` 会引用 `item` 表。
 - `c`、`s`、`cs` 或空值决定字段进入客户端、服务器或两端；第 1 行单元格以 `##` 开头或字段名以 `##` 开头表示注释列，整行首个单元格以 `##` 开头表示注释行；`#test_`/`#ceshi` 字段和行只校验、不导出。
 - 同名逻辑表可以分布在多个文件或 Sheet 中；合并前必须逐列比较字段名称、顺序、类型、默认值和端标记，冲突会阻断导出并显示双方坐标；选择其中一份时，工具会合并通过 schema 检查的分表并递归加入引用表。
@@ -190,6 +191,21 @@ public sealed class SkillItemView : MonoBehaviour
     }
 }
 ```
+
+### 多语言查询
+
+业务表的多语言值类型只保留 `Key`。在查询文本前，将语言表加载一次：
+
+```csharp
+var tables = TableBootstrap.Tables;
+var localizationAsset = UnityEngine.Resources.Load<UnityEngine.TextAsset>("Tables/localization");
+if (localizationAsset == null)
+    throw new System.InvalidOperationException("找不到 localization.json");
+tables.Load("localization", localizationAsset.bytes);
+var text = tables.GetLocalizationText("greeting", "zh-CN");
+```
+
+切换语言时传入新的语言代码即可，无需遍历或重载业务表。缺语言或空文本返回 `null`，未加载语言表或 key 不存在时抛出 `KeyNotFoundException`。不再支持旧的多语言对象 JSON，升级时需同步更新 Runtime 包、重新导出数据和 C#。完整示例见 [Unity Runtime 接入](docs/RuntimeIntegration.md)。
 
 ### 从 Addressables、AssetBundle 或自定义资源加载
 

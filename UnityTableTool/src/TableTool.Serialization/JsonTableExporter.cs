@@ -1,5 +1,6 @@
-// 用途：把正式配置表序列化为 JSON 数据，并将复杂字段输出为结构化对象。
+// 用途：把正式配置表序列化为 JSON，多语言仅输出键，beans 和 map 输出结构化对象。
 // 编写日期：2026-10-14
+// 最近修改日期：2026-10-15
 // 作者：Codex（按用户需求修改）
 
 using System.Text.Json;
@@ -19,13 +20,12 @@ public sealed class JsonTableExporter
 
     public string Export(
         TableDocument document,
-        ArraySeparatorOptions? separators = null,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<string, string?>>? localizationCatalog = null)
+        ArraySeparatorOptions? separators = null)
     {
         separators ??= ArraySeparatorOptions.Default;
         var rows = document.Rows.Where(row => !row.IsTest).Select(row => document.Schema.Fields.ToDictionary(
             field => field.Name,
-            field => GetJsonValue(row, field, separators, localizationCatalog),
+            field => GetJsonValue(row, field, separators),
             StringComparer.OrdinalIgnoreCase)).ToArray();
         var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
         {
@@ -57,13 +57,12 @@ public sealed class JsonTableExporter
     private static object? GetJsonValue(
         TableRow row,
         FieldSchema field,
-        ArraySeparatorOptions separators,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<string, string?>>? localizationCatalog)
+        ArraySeparatorOptions separators)
     {
         var raw = row.GetValue(field);
         var value = string.IsNullOrWhiteSpace(raw) ? field.DefaultValue : raw;
         if (!field.Type.IsComplex)
             return value;
-        return ComplexValueSerializer.ParseAndSerialize(value, field.Type, separators, localizationCatalog);
+        return ComplexValueSerializer.ParseAndSerialize(value, field.Type, separators);
     }
 }

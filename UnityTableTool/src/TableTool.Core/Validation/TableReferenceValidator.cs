@@ -31,10 +31,47 @@ public static class TableReferenceValidator
         var localizationHasId = localizationTables.Any(document =>
             document.Schema.Fields.Any(field => field.Name.Equals("id", StringComparison.OrdinalIgnoreCase)));
         var issues = new List<ValidationIssue>();
+        var localizationStructureIssues = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var document in selectedDocuments)
         foreach (var field in document.Schema.AllFields)
-        foreach (var row in document.Rows.Where(row => !row.IsTest))
+        {
+            if (!ComplexTypeReferenceWalker.GetReferences(field).Any(reference => reference.IsLocalization))
+                continue;
+
+            if (localizationTables.Length == 0)
+            {
+                issues.Add(new ValidationIssue(
+                    ErrorCodes.LocalizationKeyMissing,
+                    ValidationSeverity.Error,
+                    $"字段“{field.Name}”依赖的 localization 表未找到。",
+                    document.SourceName,
+                    field.TypeRow,
+                    field.SourceColumn + 1,
+                    field.Name,
+                    Suggestion: "补充逻辑表 localization，并包含 id 键列。"));
+                continue;
+            }
+
+            var localization = localizationTables[0];
+            if (!localizationHasId && localizationStructureIssues.Add(localization.SourceName))
+            {
+                var firstField = localization.Schema.Fields.FirstOrDefault();
+                issues.Add(new ValidationIssue(
+                    ErrorCodes.LocalizationKeyMissing,
+                    ValidationSeverity.Error,
+                    "localization 表必须包含名为 id 的键列。",
+                    localization.SourceName,
+                    firstField?.TypeRow,
+                    firstField is null ? null : firstField.SourceColumn + 1,
+                    Suggestion: "将 localization 表的键列命名为 id。"));
+            }
+        }
+
+        foreach (var document in selectedDocuments)
+        foreach (var field in document.Schema.AllFields)
+        // 测试行只是不导出，仍然必须参与复杂字段和普通引用校验。
+        foreach (var row in document.Rows)
         {
             var raw = row.GetValue(field);
             var value = string.IsNullOrWhiteSpace(raw) ? field.DefaultValue : raw;
@@ -56,17 +93,8 @@ public static class TableReferenceValidator
                 var sourceRow = document.Schema.IsSingleton ? field.NameRow : row.SourceRow;
                 if (item.IsLocalization)
                 {
-                    if (localizationTables.Length > 0 && !localizationHasId)
-                    {
-                        issues.Add(new ValidationIssue(
-                            ErrorCodes.LocalizationKeyMissing,
-                            ValidationSeverity.Error,
-                            "localization 表必须包含名为 id 的键列。",
-                            localizationTables[0].SourceName,
-                            localizationTables[0].Schema.Fields.FirstOrDefault()?.TypeRow,
-                            localizationTables[0].Schema.Fields.FirstOrDefault()?.SourceColumn + 1,
-                            Suggestion: "将 localization 表的键列命名为 id。"));
-                    }
+                    if (localizationTables.Length == 0 || !localizationHasId)
+                        continue;
                     var key = item.Value is RuntimeLocalizationValue localization
                         ? localization.Key
                         : Convert.ToString(item.Value, CultureInfo.InvariantCulture);

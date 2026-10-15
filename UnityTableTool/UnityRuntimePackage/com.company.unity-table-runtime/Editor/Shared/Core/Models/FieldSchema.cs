@@ -12,27 +12,28 @@ using System.Text.Json;
 
 using TableTool.Core.Parsing;
 
-namespace TableTool.Core.Models;
-
-public enum FieldTarget
+namespace TableTool.Core.Models
 {
-    Both,
-    Client,
-    Server
-}
+    public enum FieldTarget
+    {
+        Both,
+        Client,
+        Server
+    }
 
-public sealed record FieldSchema(
-    int SourceColumn,
-    string Name,
-    string Description,
-    TypeDescriptor Type,
-    FieldTarget Target,
-    string? DefaultValue,
-    int NameRow = 4,
-    int TypeRow = 3,
-    int TargetRow = 5,
-    int DefaultRow = 6,
-    bool IsTest = false)
-{
-    public string Identity => $"{NameRow}:{SourceColumn}:{Name}";
+    public sealed record FieldSchema(
+        int SourceColumn,
+        string Name,
+        string Description,
+        TypeDescriptor Type,
+        FieldTarget Target,
+        string? DefaultValue,
+        int NameRow = 4,
+        int TypeRow = 3,
+        int TargetRow = 5,
+        int DefaultRow = 6,
+        bool IsTest = false)
+    {
+        public string Identity => $"{NameRow}:{SourceColumn}:{Name}";
+    }
 }

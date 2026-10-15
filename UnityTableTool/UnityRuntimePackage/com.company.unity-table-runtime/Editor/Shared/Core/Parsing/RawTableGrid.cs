@@ -10,8 +10,9 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
-namespace TableTool.Core.Parsing;
-
-public sealed record RawTableGrid(
-    string SourceName,
-    IReadOnlyList<IReadOnlyList<string?>> Rows);
+namespace TableTool.Core.Parsing
+{
+    public sealed record RawTableGrid(
+        string SourceName,
+        IReadOnlyList<IReadOnlyList<string?>> Rows);
+}

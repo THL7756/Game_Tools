@@ -13,35 +13,36 @@ using System.Text.Json;
 using TableTool.Core.Models;
 using TableTool.Core.Parsing;
 
-namespace TableTool.Core.Validation;
-
-public sealed record TableValidationBatch(
-    IReadOnlyList<TableDocument> Documents,
-    IReadOnlyList<ValidationIssue> Issues);
-
-public static class TableBatchValidator
+namespace TableTool.Core.Validation
 {
-    public static TableValidationBatch Validate(
-        IReadOnlyList<TableDocument> allDocuments,
-        IEnumerable<string> selectedSourceNames,
-        ArraySeparatorOptions? separators = null)
-    {
-        var selectedDocuments = TableSelectionResolver.Expand(allDocuments, selectedSourceNames).ToArray();
-        var issues = selectedDocuments
-            .SelectMany(document => document.ParseIssues ?? [])
-            .ToList();
-        issues.AddRange(new TableValidator(separators).Validate(selectedDocuments));
-        issues.AddRange(TableDocumentMerger.FindSchemaConflicts(selectedDocuments));
-        issues.AddRange(TableReferenceValidator.Validate(allDocuments, selectedDocuments, separators));
+    public sealed record TableValidationBatch(
+        IReadOnlyList<TableDocument> Documents,
+        IReadOnlyList<ValidationIssue> Issues);
 
-        return new TableValidationBatch(
-            selectedDocuments,
-            issues
-                .Distinct()
-                .OrderBy(issue => issue.Severity)
-                .ThenBy(issue => issue.SourceName, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(issue => issue.SourceRow ?? 0)
-                .ThenBy(issue => issue.SourceColumn ?? 0)
-                .ToArray());
+    public static class TableBatchValidator
+    {
+        public static TableValidationBatch Validate(
+            IReadOnlyList<TableDocument> allDocuments,
+            IEnumerable<string> selectedSourceNames,
+            ArraySeparatorOptions? separators = null)
+        {
+            var selectedDocuments = TableSelectionResolver.Expand(allDocuments, selectedSourceNames).ToArray();
+            var issues = selectedDocuments
+                .SelectMany(document => document.ParseIssues ?? Array.Empty<ValidationIssue>())
+                .ToList();
+            issues.AddRange(new TableValidator(separators).Validate(selectedDocuments));
+            issues.AddRange(TableDocumentMerger.FindSchemaConflicts(selectedDocuments));
+            issues.AddRange(TableReferenceValidator.Validate(allDocuments, selectedDocuments, separators));
+
+            return new TableValidationBatch(
+                selectedDocuments,
+                issues
+                    .Distinct()
+                    .OrderBy(issue => issue.Severity)
+                    .ThenBy(issue => issue.SourceName, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(issue => issue.SourceRow ?? 0)
+                    .ThenBy(issue => issue.SourceColumn ?? 0)
+                    .ToArray());
+        }
     }
 }

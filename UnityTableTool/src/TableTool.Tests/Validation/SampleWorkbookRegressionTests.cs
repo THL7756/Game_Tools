@@ -1,5 +1,6 @@
 // 用途：验证更新后的表格规范工作簿与解析规则保持一致。
 // 编写日期：2026-10-14
+// 最近修改日期：2026-10-15
 // 作者：Codex（按用户需求修改）
 
 using TableTool.Core.Parsing;
@@ -20,8 +21,19 @@ public sealed class SampleWorkbookRegressionTests
 
         Assert.NotNull(result.Document);
         Assert.Empty(result.Issues);
-        Assert.DoesNotContain(result.Document!.Schema.Fields, field => field.Name is "note" or "cube_special");
-        Assert.DoesNotContain(result.Document.Schema.Fields, field => field.Name is "localization" or "item_num");
+        var document = result.Document!;
+        for (var column = 1; column < grid.Rows[3].Count; column++)
+        {
+            var name = grid.Rows[3][column]?.Trim();
+            var marker = column < grid.Rows[0].Count ? grid.Rows[0][column]?.Trim() : null;
+            var ignored = string.IsNullOrWhiteSpace(name)
+                || name.StartsWith("##", StringComparison.Ordinal)
+                || marker?.StartsWith("##", StringComparison.Ordinal) == true;
+            if (ignored)
+                Assert.DoesNotContain(document.Schema.AllFields, field => field.SourceColumn == column);
+            else
+                Assert.Contains(document.Schema.AllFields, field => field.SourceColumn == column);
+        }
         Assert.Contains(result.Document.Schema.ValidationFields!, field => field.Name == "#test_note");
         Assert.Single(result.Document.Rows);
     }

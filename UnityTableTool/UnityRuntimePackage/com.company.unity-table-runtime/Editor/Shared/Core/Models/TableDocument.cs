@@ -10,10 +10,11 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
-namespace TableTool.Core.Models;
-
-public sealed record TableDocument(
-    string SourceName,
-    TableSchema Schema,
-    IReadOnlyList<TableRow> Rows,
-    IReadOnlyList<ValidationIssue>? ParseIssues = null);
+namespace TableTool.Core.Models
+{
+    public sealed record TableDocument(
+        string SourceName,
+        TableSchema Schema,
+        IReadOnlyList<TableRow> Rows,
+        IReadOnlyList<ValidationIssue>? ParseIssues = null);
+}

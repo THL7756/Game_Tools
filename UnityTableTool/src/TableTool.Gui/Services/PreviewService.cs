@@ -1,12 +1,11 @@
 // 用途：生成配置表预览、字段标题和校验高亮映射。
 // 编写日期：2026-10-08
-// 最近修改日期：2026-10-09
+// 最近修改日期：2026-10-15
 // 作者：Codex（按用户需求修改）
 
 using System.IO;
 using TableTool.Core.Models;
 using TableTool.Core.Validation;
-using TableTool.Gui.Views;
 
 namespace TableTool.Gui.Services;
 
@@ -61,17 +60,51 @@ public sealed class PreviewService
         IReadOnlyList<string> SheetNames,
         IReadOnlyList<ValidationIssue> Issues);
 
-    public PreviewViewModel Create(
-        TableModel table,
-        IReadOnlyList<ValidationIssue> batchIssues,
+    public TableValidationBatch Validate(
+        IReadOnlyList<TableModel> tables,
+        TableModel currentTable,
         ArraySeparatorOptions? separators = null)
     {
+        var allDocuments = tables.SelectMany(table => table.Sheets.Select(sheet => sheet.Document)).ToArray();
+        var sources = tables.Where(table => table.IsSelected)
+            .Append(currentTable)
+            .SelectMany(table => table.Sheets.Select(sheet => sheet.Document.SourceName))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+        var result = TableBatchValidator.Validate(allDocuments, sources, separators);
+        UpdateSheetStates(currentTable.Sheets, result.Issues);
+        return result;
+    }
+
+    public void UpdateSheetStates(
+        IEnumerable<TableSheetModel> sheets,
+        IReadOnlyList<ValidationIssue> issues)
+    {
+        var bySource = issues.ToLookup(issue => issue.SourceName, StringComparer.OrdinalIgnoreCase);
+        foreach (var sheet in sheets)
+        {
+            var ownIssues = bySource[sheet.Document.SourceName].Distinct().ToArray();
+            var level = ValidationHighlightResolver.GetHighestLevel(ownIssues);
+            var marker = level switch
+            {
+                ValidationHighlightLevel.Error => "错",
+                ValidationHighlightLevel.Warning => "警",
+                _ => string.Empty
+            };
+            var tooltip = string.Join(Environment.NewLine, ownIssues
+                .Where(issue => issue.Severity != ValidationSeverity.Info)
+                .OrderByDescending(issue => issue.Severity)
+                .Select(issue => $"{ValidationIssueFormatter.Location(issue)}：{ValidationIssueFormatter.Detail(issue)}"));
+            sheet.SetValidationState(ToHighlightName(level), marker, tooltip);
+        }
+    }
+
+    public PreviewViewModel Create(
+        TableModel table,
+        IReadOnlyList<ValidationIssue> batchIssues)
+    {
         var document = table.CurrentSheet.Document;
-        var ownIssues = (document.ParseIssues ?? [])
-            .Concat(new TableValidator(separators).Validate(document));
-        var issues = ownIssues
-            .Concat(batchIssues.Where(issue =>
-                string.Equals(issue.SourceName, document.SourceName, StringComparison.OrdinalIgnoreCase)))
+        var issues = batchIssues.Where(issue =>
+                string.Equals(issue.SourceName, document.SourceName, StringComparison.OrdinalIgnoreCase))
             .Distinct()
             .OrderBy(issue => issue.Severity)
             .ThenBy(issue => issue.SourceRow ?? 0)

@@ -12,19 +12,20 @@ using System.Text.Json;
 
 using TableTool.Core.Models;
 
-namespace TableTool.Serialization;
-
-public sealed class ManifestExporter
+namespace TableTool.Serialization
 {
-    public string Export(TableDocument document, IEnumerable<string> formats)
+    public sealed class ManifestExporter
     {
-        return JsonSerializer.Serialize(new
+        public string Export(TableDocument document, IEnumerable<string> formats)
         {
-            tableName = document.Schema.Name,
-            isSingleton = document.Schema.IsSingleton,
-            schemaHash = SchemaHasher.Compute(document.Schema),
-            rowCount = document.Rows.Count(row => !row.IsTest),
-            formats = formats.OrderBy(format => format, StringComparer.Ordinal).ToArray()
-        }, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(new
+            {
+                tableName = document.Schema.Name,
+                isSingleton = document.Schema.IsSingleton,
+                schemaHash = SchemaHasher.Compute(document.Schema),
+                rowCount = document.Rows.Count(row => !row.IsTest),
+                formats = formats.OrderBy(format => format, StringComparer.Ordinal).ToArray()
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
     }
 }

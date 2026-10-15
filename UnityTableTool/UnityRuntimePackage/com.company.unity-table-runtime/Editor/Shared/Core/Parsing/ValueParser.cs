@@ -13,19 +13,20 @@ using System.Text.Json;
 using Company.UnityTableRuntime.Shared;
 using TableTool.Core.Models;
 
-namespace TableTool.Core.Parsing;
-
-public static class ValueParser
+namespace TableTool.Core.Parsing
 {
-    public static object Parse(
-        string text,
-        TypeDescriptor type,
-        ArraySeparatorOptions? separators = null)
+    public static class ValueParser
     {
-        var sharedType = type.ToRuntime();
-        var sharedSeparators = separators is null
-            ? RuntimeArraySeparators.Default
-            : new RuntimeArraySeparators(separators.Inner, separators.Middle, separators.Outer);
-        return RuntimeValueParser.Parse(text, sharedType, sharedSeparators);
+        public static object Parse(
+            string text,
+            TypeDescriptor type,
+            ArraySeparatorOptions? separators = null)
+        {
+            var sharedType = type.ToRuntime();
+            var sharedSeparators = separators is null
+                ? RuntimeArraySeparators.Default
+                : new RuntimeArraySeparators(separators.Inner, separators.Middle, separators.Outer);
+            return RuntimeValueParser.Parse(text, sharedType, sharedSeparators);
+        }
     }
 }

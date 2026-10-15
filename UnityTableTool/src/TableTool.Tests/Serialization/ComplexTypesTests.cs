@@ -1,5 +1,6 @@
 // 用途：验证 localization、beans、map 的类型解析、结构化 JSON 导出和 Runtime 读取。
 // 编写日期：2026-10-14
+// 最近修改日期：2026-10-15
 // 作者：Codex（按用户需求修改）
 
 using System.Text;
@@ -69,20 +70,17 @@ public sealed class ComplexTypesTests
     [Fact]
     public void ExportsComplexValuesAsStructuredJsonAndRuntimeReadsThem()
     {
-        var localization = CreateLocalizationDocument();
         var document = CreateComplexDocument();
-        var catalog = ComplexValueSerializer.BuildLocalizationCatalog([localization, document]);
-        var json = new JsonTableExporter().Export(document, null, catalog);
+        var json = new JsonTableExporter().Export(document);
         using var parsed = JsonDocument.Parse(json);
         var row = parsed.RootElement.GetProperty("rows")[0];
-        Assert.Equal("greeting", row.GetProperty("label").GetProperty("key").GetString());
-        Assert.Equal("你好", row.GetProperty("label").GetProperty("translations").GetProperty("zh-CN").GetString());
+        Assert.Equal("greeting", row.GetProperty("label").GetString());
         Assert.Equal(10, row.GetProperty("items").GetProperty("1").GetProperty("bean").GetProperty("count").GetInt32());
 
         var table = JsonTableDataReader.Read(Encoding.UTF8.GetBytes(json));
         Assert.True(table.TryGet("1", out var raw));
         var view = table.View(raw);
-        Assert.Contains("greeting", view.GetRaw("label"));
+        Assert.Equal("greeting", view.GetRaw("label"));
         Assert.Contains("\"1\"", view.GetRaw("items"));
         var runtimeMap = view.Read<object>("items");
         var runtimeEntries = (System.Collections.IEnumerable)runtimeMap.GetType().GetProperty("Entries")!.GetValue(runtimeMap)!;
@@ -100,24 +98,9 @@ public sealed class ComplexTypesTests
         Assert.Contains("public sealed class ItemsEntry", output);
         Assert.Contains("Dictionary<int, ItemsEntry>", output);
         Assert.Contains("RuntimeMapValue", output);
+        Assert.Contains("Key = value.Key", output);
+        Assert.DoesNotContain("Translations", output);
     }
-
-    private static TableDocument CreateLocalizationDocument() => new(
-        "localization.xlsx::localization",
-        new TableSchema(
-            "localization",
-            [
-                new FieldSchema(1, "id", string.Empty, TypeDescriptor.Parse("string"), FieldTarget.Both, null),
-                new FieldSchema(2, "zh-CN", string.Empty, TypeDescriptor.Parse("string"), FieldTarget.Both, null),
-                new FieldSchema(3, "en-US", string.Empty, TypeDescriptor.Parse("string"), FieldTarget.Both, null)
-            ],
-            "id"),
-        [new TableRow(7, false, new Dictionary<string, string?>
-        {
-            ["id"] = "greeting",
-            ["zh-CN"] = "你好",
-            ["en-US"] = "Hello"
-        })]);
 
     private static TableDocument CreateComplexDocument() => new(
         "complex.xlsx::Items",

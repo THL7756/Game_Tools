@@ -1,5 +1,6 @@
 // 用途：提供工具端和 Unity Runtime 共用的标量、数组及复杂字段值解析，并保留结构化结果。
 // 编写日期：2026-10-14
+// 最近修改日期：2026-10-15
 // 作者：Codex（按用户需求修改）
 
 #nullable enable
@@ -14,21 +15,6 @@ using System.Text.Json;
 
 namespace Company.UnityTableRuntime.Shared
 {
-    public sealed class RuntimeLocalizationValue
-    {
-        public RuntimeLocalizationValue(string key, IReadOnlyDictionary<string, string?>? translations = null)
-        {
-            Key = key;
-            Translations = translations ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-        }
-
-        public string Key { get; }
-        public IReadOnlyDictionary<string, string?> Translations { get; }
-
-        public string? GetText(string language) =>
-            Translations.TryGetValue(language, out var value) ? value : null;
-    }
-
     public sealed class RuntimeBeanValue
     {
         public RuntimeBeanValue(IReadOnlyDictionary<string, object?> fields)
@@ -79,6 +65,8 @@ namespace Company.UnityTableRuntime.Shared
                 throw new FormatException("数组分隔符设置无效。");
 
             var value = text?.Trim() ?? string.Empty;
+            if (type.IsComplex && type.Dimensions > 0 && value.StartsWith("[", StringComparison.Ordinal))
+                return ParseStructuredJson(value, type, separators);
             if (type.Dimensions == 0)
                 return ParseScalar(value, type, separators);
             return ParseLevel(value, type, separators, 0);
@@ -227,19 +215,12 @@ namespace Company.UnityTableRuntime.Shared
 
             if (type.IsLocalization)
             {
-                if (element.ValueKind != JsonValueKind.Object)
-                    throw new FormatException("Localization JSON must be an object.");
-                var key = element.TryGetProperty("key", out var keyProperty) ? keyProperty.GetString() : null;
+                if (element.ValueKind != JsonValueKind.String)
+                    throw new FormatException("Localization JSON must be a key string.");
+                var key = element.GetString();
                 if (string.IsNullOrWhiteSpace(key))
                     throw new FormatException("Localization JSON is missing key.");
-                var translations = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-                if (element.TryGetProperty("translations", out var translationProperty)
-                    && translationProperty.ValueKind == JsonValueKind.Object)
-                {
-                    foreach (var property in translationProperty.EnumerateObject())
-                        translations[property.Name] = property.Value.ValueKind == JsonValueKind.Null ? null : property.Value.ToString();
-                }
-                return new RuntimeLocalizationValue(key!, translations);
+                return new RuntimeLocalizationValue(key!);
             }
 
             if (type.IsBeans)
@@ -575,8 +556,6 @@ namespace Company.UnityTableRuntime.Shared
             {
                 if (member.Name.Equals("Key", StringComparison.OrdinalIgnoreCase))
                     member.SetValue(instance, localization.Key);
-                else if (member.Name.Equals("Translations", StringComparison.OrdinalIgnoreCase))
-                    member.SetValue(instance, localization.Translations);
             }
             return instance;
         }

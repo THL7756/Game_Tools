@@ -1,10 +1,10 @@
-<!-- 用途：在没有 Unity Editor 的环境中验证 Unity Editor 共享解析、校验和导出源码。编写日期：2026-10-14；作者：Codex。 -->
+<!-- 用途：以 C# 9 验证 Unity Editor 共享源码，避免使用 Unity 2021.3 不支持的语法和隐式 using。编写日期：2026-10-14；修改日期：2026-10-15；作者：Codex。 -->
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>9.0</LangVersion>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <IsPackable>false</IsPackable>
     <BaseOutputPath>bin\EditorShared\</BaseOutputPath>

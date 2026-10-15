@@ -1,3 +1,8 @@
+// 用途：验证同逻辑表分表主键重复定位，并防止不同逻辑表之间误报。
+// 编写日期：2026-10-14
+// 最近修改日期：2026-10-15
+// 作者：Codex（按用户需求修改）
+
 using TableTool.Core.Models;
 using TableTool.Core.Parsing;
 using TableTool.Core.Validation;
@@ -47,6 +52,20 @@ public sealed class PrimaryKeyValidationTests
 
         Assert.DoesNotContain(result.Issues, issue =>
             issue.Code == ErrorCodes.PrimaryKeyDuplicate);
+    }
+
+    [Fact]
+    public void AllowsTheSameKeyInDifferentLogicalTables()
+    {
+        var skill = CreateSkill("tables.xlsx::Skill", 7, "1007");
+        var item = CreateSkill("tables.xlsx::Item", 7, "1007") with
+        {
+            Schema = CreateSkillSchema() with { Name = "Item" }
+        };
+
+        var issues = TableBatchValidator.Validate([skill, item], [skill.SourceName, item.SourceName]).Issues;
+
+        Assert.DoesNotContain(issues, issue => issue.Code == ErrorCodes.PrimaryKeyDuplicate);
     }
 
     [Fact]

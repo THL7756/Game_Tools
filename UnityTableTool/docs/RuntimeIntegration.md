@@ -15,6 +15,8 @@ UnityRuntimePackage/com.company.unity-table-runtime
 
 确认 `MyUnityProject/Packages/com.company.unity-table-runtime/package.json` 存在，重新打开 Unity 后 Package Manager 会识别该包。
 
+复制前请确认包目录不包含 .NET 构建目录：`Runtime/obj` 和 `Runtime/bin` 必须删除。包内源码使用 C# 9 可用语法，Unity 会递归编译包内的 `.cs` 文件；如果复制了旧生成文件，或使用了未转换的文件范围命名空间/集合表达式，就可能出现 `CS8773`。遇到该错误时，关闭 Unity，重新复制已清理的源包，再重新打开项目。
+
 ### 使用 manifest 本地路径
 
 在 `MyUnityProject/Packages/manifest.json` 的 `dependencies` 中加入：
@@ -95,12 +97,19 @@ var config = Tables.GetSingleton("GlobalConfig", GlobalConfigTableAdapter.FromRo
 ```csharp
 using Company.UnityTableRuntime.Shared;
 
+var localizationAsset = Resources.Load<TextAsset>("Tables/localization");
+if (localizationAsset == null)
+    throw new System.InvalidOperationException("找不到 localization.json");
+Tables.Load("localization", localizationAsset.bytes);
+
 var label = Tables.Get("Items", "10001", row => row.Read<RuntimeLocalizationValue>("label"));
 var map = Tables.Get("Items", "10001", row => row.Read<RuntimeMapValue>("item_map"));
-var text = label.GetText("zh-CN") ?? label.Key;
+var text = Tables.GetLocalizationText(label.Key, "zh-CN") ?? label.Key;
 ```
 
-工具导出的 localization JSON 形如 `{ "key": "greeting", "translations": { "zh-CN": "你好" } }`；缺少语言时 `GetText` 返回空值并保留 key。`TableRowView.Read<T>` 也能直接读取结构化 JSON，再由生成适配器转换为强类型嵌套对象。
+业务表的多语言 JSON 只保存键，例如 `"label": "greeting"`；语言文本只保存在 `localization.json`。将语言表以名称 `"localization"` 加载一次后，使用 `GetLocalizationText(key, language)` 查询；底层复用加载时建立的主键和字段字典，不逐行遍历。语言代码不区分大小写，key 与普通主键一样区分大小写。缺语言或空文本返回 `null`，语言列默认值仍生效；未加载表或 key 不存在时抛出 `KeyNotFoundException`。不自动回退语言，示例中的 `?? label.Key` 是调用方的显示策略。
+
+`RuntimeLocalizationValue` 和生成的多语言值类型只包含 `Key`。切换语言时传入新的语言代码，无需重新读取业务表；重载、卸载或清空语言表会立即影响后续文本查询。旧的多语言对象 JSON 不再支持，升级时需同步更新 Runtime 包、重新导出的 JSON/UTB1 和生成 C#。
 
 不存在的表、主键或单例会抛出 `KeyNotFoundException`；需要无异常判断时先使用 `Has`。`GetAll` 返回生成类型列表，显示 UI 时可以直接遍历并实例化预制体：
 

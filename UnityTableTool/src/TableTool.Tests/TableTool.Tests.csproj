@@ -1,3 +1,4 @@
+<!-- 用途：配置核心、导出和不依赖 WPF 的预览服务回归测试。编写日期：2026-10-14；最近修改：2026-10-15；作者：Codex。 -->
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -12,5 +13,11 @@
     <ProjectReference Include="..\TableTool.Core\TableTool.Core.csproj" />
     <ProjectReference Include="..\TableTool.Serialization\TableTool.Serialization.csproj" />
     <ProjectReference Include="..\..\UnityRuntimePackage\com.company.unity-table-runtime\Validation~\Runtime.Validation.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\TableTool.Gui\Models\AppSettings.cs" Link="Gui\AppSettings.cs" />
+    <Compile Include="..\TableTool.Gui\Services\TableCatalogService.cs" Link="Gui\TableCatalogService.cs" />
+    <Compile Include="..\TableTool.Gui\Services\PreviewService.cs" Link="Gui\PreviewService.cs" />
+    <Compile Include="..\TableTool.Gui\Services\ValidationIssueFormatter.cs" Link="Gui\ValidationIssueFormatter.cs" />
   </ItemGroup>
 </Project>

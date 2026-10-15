@@ -12,55 +12,56 @@ using System.Text.Json;
 
 using TableTool.Core.Models;
 
-namespace TableTool.Core.Parsing;
-
-public sealed record ComplexTypeReference(
-    string FieldName,
-    TypeDescriptor Type,
-    bool IsLocalization = false);
-
-public static class ComplexTypeReferenceWalker
+namespace TableTool.Core.Parsing
 {
-    public static IReadOnlyList<ComplexTypeReference> GetReferences(FieldSchema field)
-    {
-        var result = new List<ComplexTypeReference>();
-        AddField(result, field.Name, field.Type);
-        return result;
-    }
+    public sealed record ComplexTypeReference(
+        string FieldName,
+        TypeDescriptor Type,
+        bool IsLocalization = false);
 
-    public static IReadOnlyList<ComplexTypeReference> GetReferences(TypeDescriptor type)
+    public static class ComplexTypeReferenceWalker
     {
-        var result = new List<ComplexTypeReference>();
-        AddType(result, string.Empty, type);
-        return result;
-    }
-
-    private static void AddField(ICollection<ComplexTypeReference> result, string fieldName, TypeDescriptor type)
-    {
-        if (fieldName.EndsWith("_id", StringComparison.OrdinalIgnoreCase) && fieldName.Length > 3)
-            result.Add(new ComplexTypeReference(fieldName, type));
-        AddType(result, fieldName, type);
-    }
-
-    private static void AddType(ICollection<ComplexTypeReference> result, string prefix, TypeDescriptor type)
-    {
-        if (type.IsLocalization)
+        public static IReadOnlyList<ComplexTypeReference> GetReferences(FieldSchema field)
         {
-            result.Add(new ComplexTypeReference(prefix, type, true));
-            return;
+            var result = new List<ComplexTypeReference>();
+            AddField(result, field.Name, field.Type);
+            return result;
         }
 
-        if (type.IsBeans)
+        public static IReadOnlyList<ComplexTypeReference> GetReferences(TypeDescriptor type)
         {
-            foreach (var beanField in type.BeanFields ?? [])
+            var result = new List<ComplexTypeReference>();
+            AddType(result, string.Empty, type);
+            return result;
+        }
+
+        private static void AddField(ICollection<ComplexTypeReference> result, string fieldName, TypeDescriptor type)
+        {
+            if (fieldName.EndsWith("_id", StringComparison.OrdinalIgnoreCase) && fieldName.Length > 3)
+                result.Add(new ComplexTypeReference(fieldName, type));
+            AddType(result, fieldName, type);
+        }
+
+        private static void AddType(ICollection<ComplexTypeReference> result, string prefix, TypeDescriptor type)
+        {
+            if (type.IsLocalization)
             {
-                var name = string.IsNullOrWhiteSpace(prefix) ? beanField.Name : $"{prefix}.{beanField.Name}";
-                AddField(result, name, beanField.Type);
+                result.Add(new ComplexTypeReference(prefix, type, true));
+                return;
             }
-            return;
-        }
 
-        if (type.IsMap && type.BeanType is not null)
-            AddType(result, prefix, type.BeanType);
+            if (type.IsBeans)
+            {
+                foreach (var beanField in type.BeanFields ?? Array.Empty<BeanFieldDescriptor>())
+                {
+                    var name = string.IsNullOrWhiteSpace(prefix) ? beanField.Name : $"{prefix}.{beanField.Name}";
+                    AddField(result, name, beanField.Type);
+                }
+                return;
+            }
+
+            if (type.IsMap && type.BeanType is not null)
+                AddType(result, prefix, type.BeanType);
+        }
     }
 }

@@ -1,6 +1,6 @@
 // 用途：实现配置表搜索、筛选、预览、校验和 JSON/C# 打表交互。
 // 编写日期：2026-10-08
-// 最近修改日期：2026-10-14
+// 最近修改日期：2026-10-15
 // 作者：Codex（按用户需求修改）
 
 using System.ComponentModel;
@@ -205,21 +205,11 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
 
     private void UpdatePreview(TableModel table)
     {
-        var allDocuments = tables.SelectMany(item => item.Sheets.Select(sheet => sheet.Document)).ToArray();
-        var selectedSourceNames = tables
-            .Where(item => item.IsSelected)
-            .SelectMany(item => item.Sheets.Select(sheet => sheet.Document.SourceName));
-        var validationSources = selectedSourceNames
-            .Append(table.CurrentSheet.Document.SourceName)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-        batchIssues = TableBatchValidator.Validate(allDocuments, validationSources, GetArraySeparators()).Issues;
-        var preview = previewService.Create(table, batchIssues, GetArraySeparators());
+        var validation = previewService.Validate(tables, table, GetArraySeparators());
+        batchIssues = validation.Issues;
+        var preview = previewService.Create(table, batchIssues);
         currentPreview = preview;
-        var displayIssues = batchIssues
-            .Concat(preview.Issues)
-            .Distinct()
-            .ToArray();
+        var displayIssues = batchIssues;
         PreviewTitleText.Text = preview.Title;
         ModifiedText.Text = preview.ModifiedText;
         SourceText.Text = preview.SourceText;
@@ -228,23 +218,17 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         var errorCount = displayIssues.Count(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal)
             + catalogErrors.Count;
         var warningCount = displayIssues.Count(issue => issue.Severity == ValidationSeverity.Warning);
-        ErrorSummaryText.Text = string.Format("{0} 错误", errorCount);
-        WarningSummaryText.Text = string.Format("{0} 警告", warningCount);
-        var validationSignature = string.Join("|", validationSources.OrderBy(name => name, StringComparer.OrdinalIgnoreCase))
+        var validationSignature = string.Join("|", validation.Documents.Select(document => document.SourceName).OrderBy(name => name, StringComparer.OrdinalIgnoreCase))
             + $"::{errorCount}:{warningCount}";
         if (!string.Equals(lastValidationSignature, validationSignature, StringComparison.Ordinal))
         {
             lastValidationSignature = validationSignature;
-            ToolLogService.Info("校验", $"检查 {displayIssues.Length} 条问题：{errorCount} 错误，{warningCount} 警告。");
+            ToolLogService.Info("校验", $"检查 {displayIssues.Count} 条问题：{errorCount} 错误，{warningCount} 警告。");
         }
-        UpdateSheetValidationStates(table, preview.Issues);
 
         BuildPreviewColumns(preview);
         PreviewGrid.ItemsSource = preview.Rows;
-        IssuesList.ItemsSource = displayIssues
-            .Select(IssueDisplayItem.FromIssue)
-            .Concat(catalogErrors.Select(error => IssueDisplayItem.CatalogError(error)))
-            .ToArray();
+        ShowIssues(displayIssues);
     }
 
     private void BuildPreviewColumns(PreviewViewModel preview)
@@ -467,29 +451,13 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         SettingsStore.Save(settings);
     }
 
-    private void UpdateSheetValidationStates(TableModel table, IReadOnlyList<ValidationIssue> previewIssues)
+    private void ShowIssues(IEnumerable<ValidationIssue> issues)
     {
-        foreach (var sheet in table.Sheets)
-        {
-            var issues = (sheet.Document.ParseIssues ?? [])
-                .Concat(new TableValidator(GetArraySeparators()).Validate(sheet.Document))
-                .Concat(batchIssues.Where(issue => string.Equals(issue.SourceName, sheet.Document.SourceName, StringComparison.OrdinalIgnoreCase)))
-                .Concat(sheet == table.CurrentSheet ? previewIssues : [])
-                .Distinct()
-                .ToArray();
-            var level = ValidationHighlightResolver.GetHighestLevel(issues);
-            var (levelName, marker) = level switch
-            {
-                ValidationHighlightLevel.Error => ("Error", "错"),
-                ValidationHighlightLevel.Warning => ("Warning", "警"),
-                _ => ("None", string.Empty)
-            };
-            var highestIssue = issues.FirstOrDefault(issue => level == ValidationHighlightLevel.Error
-                ? issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal
-                : issue.Severity == ValidationSeverity.Warning);
-            var tooltip = highestIssue is null ? string.Empty : ValidationIssueFormatter.Detail(highestIssue);
-            sheet.SetValidationState(levelName, marker, tooltip);
-        }
+        var displayIssues = issues.Distinct().OrderByDescending(issue => issue.Severity).ToArray();
+        ErrorSummaryText.Text = $"{displayIssues.Count(issue => issue.Severity is ValidationSeverity.Error or ValidationSeverity.Fatal) + catalogErrors.Count} 错误";
+        WarningSummaryText.Text = $"{displayIssues.Count(issue => issue.Severity == ValidationSeverity.Warning)} 警告";
+        IssuesList.ItemsSource = displayIssues.Select(IssueDisplayItem.FromIssue)
+            .Concat(catalogErrors.Select(IssueDisplayItem.CatalogError)).ToArray();
     }
 
     private Brush GetHighlightBrush(string level) => level switch
@@ -521,11 +489,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
         ReadOnlyText.Text = "只读预览 · 0 个字段";
         PreviewGrid.ItemsSource = null;
         PreviewGrid.Columns.Clear();
-        IssuesList.ItemsSource = catalogErrors
-            .Select(IssueDisplayItem.CatalogError)
-            .ToArray();
-        ErrorSummaryText.Text = "0 错误";
-        WarningSummaryText.Text = "0 警告";
+        ShowIssues([]);
     }
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -676,9 +640,7 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
 
         if (catalogErrors.Count > 0 && tables.Count == 0)
         {
-            IssuesList.ItemsSource = catalogErrors
-                .Select(IssueDisplayItem.CatalogError)
-                .ToArray();
+            ShowIssues([]);
             ToolLogService.Error("打表", "存在无法读取的表，已停止打表。");
             OpenLogsRequested?.Invoke(this, EventArgs.Empty);
             ShowBuildResultDialog(success: false);
@@ -698,13 +660,9 @@ public partial class WorkbenchView : System.Windows.Controls.UserControl
             ToolLogService.Add(NormalizeBuildLevel(log.Level), "打表", log.Message);
         if (catalogErrors.Count > 0)
             ToolLogService.Warning("配置表", "部分文件读取失败，本次打表使用已保留的内存数据。");
-        IssuesList.ItemsSource = batchIssues
-            .Concat(result.Issues)
-            .Distinct()
-            .OrderBy(issue => issue.Severity)
-            .Select(IssueDisplayItem.FromIssue)
-            .Concat(catalogErrors.Select(error => IssueDisplayItem.CatalogError(error)))
-            .ToArray();
+        var displayIssues = batchIssues.Concat(result.Issues).Distinct().ToArray();
+        previewService.UpdateSheetStates(tables.SelectMany(table => table.Sheets), displayIssues);
+        ShowIssues(displayIssues);
 
         if (result.Success)
         {

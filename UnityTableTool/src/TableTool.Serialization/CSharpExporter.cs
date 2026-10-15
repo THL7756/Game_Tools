@@ -1,5 +1,6 @@
 // 用途：生成客户端/服务器 C# 数据类，并为复杂字段生成强类型嵌套值和 Runtime 适配器。
 // 编写日期：2026-10-14
+// 最近修改日期：2026-10-15
 // 作者：Codex（按用户需求修改）
 
 using System.Text;
@@ -77,7 +78,6 @@ public static class CSharpExporter
             builder.AppendLine($"{indent}public sealed class {typeName}");
             builder.AppendLine($"{indent}{{");
             builder.AppendLine($"{indent}    public string Key;");
-            builder.AppendLine($"{indent}    public IReadOnlyDictionary<string, string?> Translations;");
             builder.AppendLine($"{indent}}}");
             return;
         }
@@ -170,7 +170,7 @@ public static class CSharpExporter
         if (type.IsLocalization)
         {
             builder.AppendLine();
-            builder.AppendLine($"{indent}private static {targetType} {helperName}(RuntimeLocalizationValue value) => new {targetType} {{ Key = value.Key, Translations = value.Translations }};");
+            builder.AppendLine($"{indent}private static {targetType} {helperName}(RuntimeLocalizationValue value) => new {targetType} {{ Key = value.Key }};");
             return;
         }
         if (type.IsBeans)

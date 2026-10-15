@@ -13,16 +13,17 @@ using System.Text.Json;
 using System.Security.Cryptography;
 using TableTool.Core.Models;
 
-namespace TableTool.Serialization;
-
-public static class SchemaHasher
+namespace TableTool.Serialization
 {
-    public static string Compute(TableSchema schema)
+    public static class SchemaHasher
     {
-        var canonical = $"singleton={schema.IsSingleton}\n" + string.Join("\n", schema.Fields.Select(field =>
-            $"{field.Name}|{field.Type.BaseType}|{field.Type.Dimensions}|{field.Target}|{field.DefaultValue ?? string.Empty}"));
-        using var sha256 = SHA256.Create();
-        var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(canonical));
-        return BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
+        public static string Compute(TableSchema schema)
+        {
+            var canonical = $"singleton={schema.IsSingleton}\n" + string.Join("\n", schema.Fields.Select(field =>
+                $"{field.Name}|{field.Type.BaseType}|{field.Type.Dimensions}|{field.Target}|{field.DefaultValue ?? string.Empty}"));
+            using var sha256 = SHA256.Create();
+            var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(canonical));
+            return BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
+        }
     }
 }

@@ -29,6 +29,7 @@
 | JSON/bytes 没有端别字段 | 这是预期行为，端别由导出选择和 `Data_c`/`Data_s` 目录决定。 |
 | `RUNTIME_FORMAT_UNKNOWN` | 确认文件是有效 JSON 或以 `UTB1` 开头的 bytes。 |
 | Unity 找不到 Runtime 类型 | 确认目录是 `Packages/com.company.unity-table-runtime`，且 `package.json` 存在；脚本中使用 `using Company.UnityTableRuntime;`。 |
+| Unity 报 `CS8773`、指出 `Runtime.GlobalUsings.g.cs` 或 `file-scoped namespace` 不支持 C# 9 | 确认使用的是已转换为 C# 9 语法的包源；不要升级 Unity 的 C# 版本。关闭 Unity，删除旧的 `Packages/com.company.unity-table-runtime`，从仓库重新复制 `UnityRuntimePackage/com.company.unity-table-runtime`，并确认包内没有 `Runtime/obj`、`Runtime/bin`。 |
 | Unity 找不到 `Skill.json` | 如果使用 `Resources.Load<TextAsset>("Tables/Skill")`，文件必须位于 `Assets/Resources/Tables/Skill.json`，加载路径不写扩展名。 |
 | Runtime 字段转换失败 | 确认客户端 JSON 和客户端 C# 来自同一次导出；字段类型、默认值和数组分隔符由 JSON 的 `fields` 与 `arraySeparators` 提供。 |
 | 想使用 `.bytes` 但 GUI 没有文件 | 当前 GUI 只生成 JSON/C#；请通过 `ExportService` 启用 `GenerateBytes`，或继续使用 JSON。 |

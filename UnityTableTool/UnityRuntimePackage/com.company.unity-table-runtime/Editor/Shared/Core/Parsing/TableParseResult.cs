@@ -12,19 +12,20 @@ using System.Text.Json;
 
 using TableTool.Core.Models;
 
-namespace TableTool.Core.Parsing;
-
-public sealed record TableParseResult(
-    TableDocument? Document,
-    IReadOnlyList<ValidationIssue> Issues,
-    bool IsFormal)
+namespace TableTool.Core.Parsing
 {
-    public static TableParseResult Informal(string sourceName, string message) => new(
-        null,
-        [new ValidationIssue(
-            "TABLE_NOT_FORMAL",
-            ValidationSeverity.Info,
-            message,
-            sourceName)],
-        false);
+    public sealed record TableParseResult(
+        TableDocument? Document,
+        IReadOnlyList<ValidationIssue> Issues,
+        bool IsFormal)
+    {
+        public static TableParseResult Informal(string sourceName, string message) => new(
+            null,
+            new[] { new ValidationIssue(
+                "TABLE_NOT_FORMAL",
+                ValidationSeverity.Info,
+                message,
+                sourceName) },
+            false);
+    }
 }

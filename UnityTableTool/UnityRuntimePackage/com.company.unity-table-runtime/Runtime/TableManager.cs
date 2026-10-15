@@ -1,7 +1,7 @@
 #nullable enable
 // 用途：管理已生成客户端表的加载、主键查询、单例查询和批量转换。
 // 编写日期：2026-10-10
-// 最近修改日期：2026-10-14
+// 最近修改日期：2026-10-15
 // 作者：Codex（按用户需求修改）
 
 using System;
@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Company.UnityTableRuntime
 {
-    public sealed class TableManager
+    public sealed partial class TableManager
     {
         private readonly Dictionary<string, LoadedTable> tables = new(StringComparer.Ordinal);
 

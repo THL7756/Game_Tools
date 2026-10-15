@@ -143,6 +143,7 @@ public sealed class TableValidator
                             return key is null
                                 ? null
                                 : new PrimaryKeyOccurrence(
+                                    document.Schema.Name,
                                     key,
                                     row.SourceName ?? document.SourceName,
                                     row.SourceRow,
@@ -156,7 +157,8 @@ public sealed class TableValidator
             .ToArray();
 
         return occurrences
-            .GroupBy(item => item.Key, StringComparer.Ordinal)
+            .GroupBy(item => item.TableName, StringComparer.OrdinalIgnoreCase)
+            .SelectMany(table => table.GroupBy(item => item.Key, StringComparer.Ordinal))
             .Where(group => group.Count() > 1)
             .SelectMany(group =>
             {
@@ -200,6 +202,7 @@ public sealed class TableValidator
     }
 
     private sealed record PrimaryKeyOccurrence(
+        string TableName,
         string Key,
         string SourceName,
         int SourceRow,

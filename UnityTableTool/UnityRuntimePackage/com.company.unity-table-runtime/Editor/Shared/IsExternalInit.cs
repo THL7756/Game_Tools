@@ -2,8 +2,9 @@
 // 编写日期：2026-10-14
 // 作者：Codex（按用户需求修改）
 
-namespace System.Runtime.CompilerServices;
-
-internal static class IsExternalInit
+namespace System.Runtime.CompilerServices
 {
+    internal static class IsExternalInit
+    {
+    }
 }

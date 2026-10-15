@@ -1,5 +1,6 @@
 // 用途：将客户端/服务器表数据封装为带 UTB1 头、长度和 CRC 的二进制文件。
 // 编写日期：2026-10-10
+// 最近修改日期：2026-10-15
 // 作者：Codex（按用户需求修改）
 
 using System.Buffers.Binary;
@@ -13,10 +14,9 @@ public sealed class BinaryTableExporter
 {
     public byte[] Export(
         TableDocument document,
-        ArraySeparatorOptions? separators = null,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<string, string?>>? localizationCatalog = null)
+        ArraySeparatorOptions? separators = null)
     {
-        var payload = Encoding.UTF8.GetBytes(new JsonTableExporter().Export(document, separators, localizationCatalog));
+        var payload = Encoding.UTF8.GetBytes(new JsonTableExporter().Export(document, separators));
         var tableName = Encoding.UTF8.GetBytes(document.Schema.Name);
         var schemaHash = Encoding.UTF8.GetBytes(SchemaHasher.Compute(document.Schema));
         var crc = Crc32.Compute(payload);

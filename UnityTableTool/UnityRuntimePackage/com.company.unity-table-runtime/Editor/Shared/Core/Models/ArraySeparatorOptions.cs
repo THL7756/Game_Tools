@@ -10,25 +10,26 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
-namespace TableTool.Core.Models;
-
-public sealed record ArraySeparatorOptions(
-    string Inner = "#",
-    string Middle = "|",
-    string Outer = ";")
+namespace TableTool.Core.Models
 {
-    public static ArraySeparatorOptions Default { get; } = new();
+    public sealed record ArraySeparatorOptions(
+        string Inner = "#",
+        string Middle = "|",
+        string Outer = ";")
+    {
+        public static ArraySeparatorOptions Default { get; } = new();
 
-    public bool IsValid => IsSingle(Inner)
-        && IsSingle(Middle)
-        && IsSingle(Outer)
-        && Inner != Middle
-        && Inner != Outer
-        && Middle != Outer
-        && Inner != ","
-        && Middle != ","
-        && Outer != ",";
+        public bool IsValid => IsSingle(Inner)
+            && IsSingle(Middle)
+            && IsSingle(Outer)
+            && Inner != Middle
+            && Inner != Outer
+            && Middle != Outer
+            && Inner != ","
+            && Middle != ","
+            && Outer != ",";
 
-    private static bool IsSingle(string value) =>
-        value.Length == 1 && !char.IsWhiteSpace(value[0]);
+        private static bool IsSingle(string value) =>
+            value.Length == 1 && !char.IsWhiteSpace(value[0]);
+    }
 }

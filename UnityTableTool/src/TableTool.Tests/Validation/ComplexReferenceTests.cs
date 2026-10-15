@@ -42,6 +42,53 @@ public sealed class ComplexReferenceTests
         Assert.Contains(issues, issue => issue.Code == ErrorCodes.LocalizationKeyMissing);
     }
 
+    [Fact]
+    public void ValidatesNestedReferencesInTestRows()
+    {
+        var source = CreateSourceDocument("source.xlsx::Inventory", "999#2", "greeting") with
+        {
+            Rows =
+            [
+                new TableRow(7, false, new Dictionary<string, string?>
+                {
+                    ["id"] = "1",
+                    ["bundle"] = "1001#2",
+                    ["label"] = "greeting"
+                }),
+                new TableRow(8, true, new Dictionary<string, string?>
+                {
+                    ["id"] = "2",
+                    ["bundle"] = "9999#2",
+                    ["label"] = "greeting"
+                })
+            ]
+        };
+        var item = CreateItemDocument();
+        var localization = CreateLocalizationDocument();
+
+        var issues = TableReferenceValidator.Validate(
+            [source, item, localization],
+            [source]);
+
+        Assert.Contains(issues, issue => issue.Code == ErrorCodes.TableReferenceKeyMissing
+            && issue.SourceRow == 8);
+    }
+
+    [Fact]
+    public void ReportsMissingLocalizationTableEvenWhenTheValueIsEmpty()
+    {
+        var source = CreateSourceDocument("source.xlsx::Inventory", "1001#2", string.Empty);
+        var item = CreateItemDocument();
+
+        var issues = TableReferenceValidator.Validate(
+            [source, item],
+            [source]);
+
+        Assert.Contains(issues, issue => issue.Code == ErrorCodes.LocalizationKeyMissing
+            && issue.SourceName == source.SourceName
+            && issue.FieldName == "label");
+    }
+
     private static TableDocument CreateSourceDocument(string sourceName, string beanValue, string localizationKey) => new(
         sourceName,
         new TableSchema(

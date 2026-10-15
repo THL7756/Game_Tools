@@ -10,23 +10,24 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
-namespace TableTool.Core.Models;
-
-public enum ValidationSeverity
+namespace TableTool.Core.Models
 {
-    Info,
-    Warning,
-    Error,
-    Fatal
-}
+    public enum ValidationSeverity
+    {
+        Info,
+        Warning,
+        Error,
+        Fatal
+    }
 
-public sealed record ValidationIssue(
-    string Code,
-    ValidationSeverity Severity,
-    string Message,
-    string SourceName,
-    int? SourceRow = null,
-    int? SourceColumn = null,
-    string? FieldName = null,
-    string? Key = null,
-    string? Suggestion = null);
+    public sealed record ValidationIssue(
+        string Code,
+        ValidationSeverity Severity,
+        string Message,
+        string SourceName,
+        int? SourceRow = null,
+        int? SourceColumn = null,
+        string? FieldName = null,
+        string? Key = null,
+        string? Suggestion = null);
+}

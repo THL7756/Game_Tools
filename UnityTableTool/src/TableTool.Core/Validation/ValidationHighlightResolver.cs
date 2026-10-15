@@ -51,15 +51,31 @@ public static class ValidationHighlightResolver
                 continue;
 
             var highlight = new ValidationHighlight(level, issue.Code, issue.Message);
-            if (issue.SourceRow is int sourceRow && !string.IsNullOrWhiteSpace(issue.FieldName))
+            // 单例预览把名称、类型、值和端标记重排为一行，按定义行保留其字段定位。
+            if (document.Schema.IsSingleton && issue.SourceRow is int definitionRow
+                && !string.IsNullOrWhiteSpace(issue.FieldName))
             {
-                var key = CellKey(sourceRow, issue.FieldName);
+                var key = CellKey(definitionRow, issue.FieldName);
                 cells[key] = KeepHighest(cells.GetValueOrDefault(key), highlight);
             }
             if (issue.SourceColumn is int sourceColumn && sourceColumn > 0)
-                columns[sourceColumn - 1] = KeepHighest(columns.GetValueOrDefault(sourceColumn - 1), highlight);
-            if (!string.IsNullOrWhiteSpace(issue.FieldName))
             {
+                var column = sourceColumn - 1;
+                if (issue.SourceRow is int sourceRow)
+                {
+                    var key = CellKey(sourceRow, column);
+                    cells[key] = KeepHighest(cells.GetValueOrDefault(key), highlight);
+                }
+                if (!document.Schema.IsSingleton || issue.SourceRow is null)
+                    columns[column] = KeepHighest(columns.GetValueOrDefault(column), highlight);
+            }
+            else if (!string.IsNullOrWhiteSpace(issue.FieldName))
+            {
+                if (issue.SourceRow is int sourceRow)
+                {
+                    var key = CellKey(sourceRow, issue.FieldName);
+                    cells[key] = KeepHighest(cells.GetValueOrDefault(key), highlight);
+                }
                 fields[issue.FieldName] = KeepHighest(fields.GetValueOrDefault(issue.FieldName), highlight);
             }
         }
