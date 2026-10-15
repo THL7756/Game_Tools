@@ -11,6 +11,6 @@
 
 Excel 读取依赖（含 `.xls` 所需的代码页程序集）随包放在 `Editor/Plugins`，不会进入 Runtime 程序集；JSON 读取所需依赖放在 `Runtime/Plugins`，用于 Runtime 的 JSON/UTB1 读取。桌面 GUI 项目也直接编译 `Editor/Shared` 中的同一套解析、校验和导出源码，保证两端规则一致。
 
-多语言字段在业务 JSON 中只保存键，例如 `"label": "greeting"`；翻译集中在独立的 `localization.json`。运行时先调用 `tables.Load("localization", bytes)` 加载一次语言表，再用 `tables.GetLocalizationText(key, "zh-CN")` 查询，内部直接使用主键和字段字典，不逐行遍历。多语言值类型只含 `Key`；缺语言返回 `null`，缺表或缺键抛出 `KeyNotFoundException`。
+多语言字段在业务 JSON 中只保存键，例如 `"label": "greeting"`；翻译集中在独立的 `localization.json`。运行时先调用 `tables.Load("localization", bytes)` 加载一次语言表，再用 `tables.GetLocalizationText(key, "zh_CN")` 查询，内部直接使用主键和字段字典，不逐行遍历。多语言值类型只含 `Key`；缺语言返回 `null`，缺表或缺键抛出 `KeyNotFoundException`。
 
 此版本不再读取旧的多语言对象 JSON，更新时需同步更新包、重新打表生成 JSON/UTB1 和 C#。完整用法见仓库的 `docs/RuntimeIntegration.md`。

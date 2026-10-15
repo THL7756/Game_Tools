@@ -43,10 +43,10 @@ GUI 当前在 `BuildService` 中固定使用 `generateBytes: false`，所以正�
   "isSingleton": true,
   "primaryKey": null,
   "fields": [
-    { "name": "language", "type": "string", "defaultValue": "zh-CN" }
+    { "name": "language", "type": "string", "defaultValue": "zh_CN" }
   ],
   "arraySeparators": { "inner": "#", "middle": "|", "outer": ";" },
-  "data": { "language": "zh-CN" }
+  "data": { "language": "zh_CN" }
 }
 ```
 

@@ -202,7 +202,7 @@ var localizationAsset = UnityEngine.Resources.Load<UnityEngine.TextAsset>("Table
 if (localizationAsset == null)
     throw new System.InvalidOperationException("找不到 localization.json");
 tables.Load("localization", localizationAsset.bytes);
-var text = tables.GetLocalizationText("greeting", "zh-CN");
+var text = tables.GetLocalizationText("greeting", "zh_CN");
 ```
 
 切换语言时传入新的语言代码即可，无需遍历或重载业务表。缺语言或空文本返回 `null`，未加载语言表或 key 不存在时抛出 `KeyNotFoundException`。不再支持旧的多语言对象 JSON，升级时需同步更新 Runtime 包、重新导出数据和 C#。完整示例见 [Unity Runtime 接入](docs/RuntimeIntegration.md)。

@@ -83,6 +83,8 @@ namespace TableTool.Core.Parsing
                     EmptyToNull(Get(defaults, i)),
                     IsTest: isTestColumn);
 
+                issues.AddRange(FieldNameValidator.Validate(field, grid.SourceName));
+
                 if (!fieldNames.Add(name))
                 {
                     if (firstFields.TryGetValue(name, out var firstField)
@@ -274,6 +276,8 @@ namespace TableTool.Core.Parsing
                     rowTargetColumn >= 0 ? rowIndex + 1 : 0,
                     rowIndex + 1,
                     IsTestColumn(id));
+                issues.AddRange(FieldNameValidator.Validate(
+                    field, grid.SourceName, nameColumn + 1, typeColumnForRow + 1));
                 rawCells[field.SourceColumn] = data;
                 rawFieldValues[field.Identity] = data;
                 values.TryAdd(id, data);

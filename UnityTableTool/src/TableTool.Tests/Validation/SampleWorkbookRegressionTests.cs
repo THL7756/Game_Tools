@@ -66,6 +66,10 @@ public sealed class SampleWorkbookRegressionTests
 
         Assert.NotNull(localization);
         Assert.Equal("id", localization!.Schema.PrimaryKey);
+        Assert.Contains(localization.Schema.Fields, field => field.Name == "zh_CN");
+        Assert.Contains(localization.Schema.Fields, field => field.Name == "en_US");
+        Assert.DoesNotContain(localization.Schema.Fields, field => field.Name.Contains('-'));
+        Assert.Empty(localization.ParseIssues!);
         Assert.NotNull(complex);
         Assert.Equal("localization", complex!.Schema.Fields.Single(field => field.Name == "label").Type.BaseType);
         Assert.Equal("map", complex.Schema.Fields.Single(field => field.Name == "item_map").Type.BaseType);

@@ -27,6 +27,7 @@ namespace TableTool.Core.Validation
         public const string TableMergeInvalid = "TABLE_MERGE_ERROR";
         public const string FieldNameDuplicate = "FIELD_NAME_DUPLICATE";
         public const string FieldNameMissing = "FIELD_NAME_MISSING";
+        public const string FieldNameInvalid = "FIELD_NAME_INVALID";
         public const string EnumValueInvalid = "ENUM_VALUE_INVALID";
         public const string EnumCSharpInvalid = "ENUM_CSHARP_IDENTIFIER_INVALID";
         public const string LocalizationKeyMissing = "LOCALIZATION_KEY_MISSING";

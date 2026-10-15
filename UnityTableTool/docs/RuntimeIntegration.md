@@ -104,7 +104,7 @@ Tables.Load("localization", localizationAsset.bytes);
 
 var label = Tables.Get("Items", "10001", row => row.Read<RuntimeLocalizationValue>("label"));
 var map = Tables.Get("Items", "10001", row => row.Read<RuntimeMapValue>("item_map"));
-var text = Tables.GetLocalizationText(label.Key, "zh-CN") ?? label.Key;
+var text = Tables.GetLocalizationText(label.Key, "zh_CN") ?? label.Key;
 ```
 
 业务表的多语言 JSON 只保存键，例如 `"label": "greeting"`；语言文本只保存在 `localization.json`。将语言表以名称 `"localization"` 加载一次后，使用 `GetLocalizationText(key, language)` 查询；底层复用加载时建立的主键和字段字典，不逐行遍历。语言代码不区分大小写，key 与普通主键一样区分大小写。缺语言或空文本返回 `null`，语言列默认值仍生效；未加载表或 key 不存在时抛出 `KeyNotFoundException`。不自动回退语言，示例中的 `?? label.Key` 是调用方的显示策略。

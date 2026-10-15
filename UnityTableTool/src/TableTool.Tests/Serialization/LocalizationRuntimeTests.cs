@@ -13,17 +13,23 @@ namespace TableTool.Tests.Serialization;
 
 public sealed class LocalizationRuntimeTests
 {
-    [Fact]
-    public void QueriesLanguagesFromTheLoadedTableAndKeepsKeyCaseSensitivity()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void QueriesLanguagesFromTheLoadedTableAndKeepsKeyCaseSensitivity(bool binary)
     {
         var manager = new TableManager();
-        manager.Load("localization", ExportLocalization());
+        manager.Load("localization", binary
+            ? new BinaryTableExporter().Export(CreateLocalizationDocument())
+            : ExportLocalization());
 
-        Assert.Equal("你好", manager.GetLocalizationText("greeting", "zh-CN"));
-        Assert.Equal("Hello", manager.GetLocalizationText("greeting", "EN-us"));
-        Assert.Null(manager.GetLocalizationText("greeting", "fr-FR"));
+        Assert.Equal("你好", manager.GetLocalizationText("greeting", "zh_CN"));
+        Assert.Equal("Hello", manager.GetLocalizationText("greeting", "EN_us"));
+        Assert.Null(manager.GetLocalizationText("greeting", "fr_FR"));
+        Assert.Null(manager.GetLocalizationText("greeting", "zh-CN"));
+        Assert.Null(manager.GetLocalizationText("greeting", "en-US"));
         Assert.Null(manager.GetLocalizationText("greeting", "id"));
-        Assert.Throws<KeyNotFoundException>(() => manager.GetLocalizationText("Greeting", "en-US"));
+        Assert.Throws<KeyNotFoundException>(() => manager.GetLocalizationText("Greeting", "en_US"));
     }
 
     [Theory]
@@ -34,7 +40,7 @@ public sealed class LocalizationRuntimeTests
     {
         var manager = new TableManager();
         manager.Load("localization", ExportLocalization(text));
-        Assert.Null(manager.GetLocalizationText("greeting", "en-US"));
+        Assert.Null(manager.GetLocalizationText("greeting", "en_US"));
     }
 
     [Fact]
@@ -45,31 +51,31 @@ public sealed class LocalizationRuntimeTests
         {
             Schema = document.Schema with
             {
-                Fields = document.Schema.Fields.Select(field => field.Name == "en-US"
+                Fields = document.Schema.Fields.Select(field => field.Name == "en_US"
                     ? field with { DefaultValue = "Default text" } : field).ToArray()
             }
         };
         var manager = new TableManager();
         manager.Load("localization", Encoding.UTF8.GetBytes(new JsonTableExporter().Export(document)));
-        Assert.Equal("Default text", manager.GetLocalizationText("greeting", "en-US"));
+        Assert.Equal("Default text", manager.GetLocalizationText("greeting", "en_US"));
     }
 
     [Fact]
     public void ReloadAndUnloadImmediatelyAffectTextQueries()
     {
         var manager = new TableManager();
-        Assert.Throws<KeyNotFoundException>(() => manager.GetLocalizationText("greeting", "en-US"));
+        Assert.Throws<KeyNotFoundException>(() => manager.GetLocalizationText("greeting", "en_US"));
         var initial = ExportLocalization();
         Assert.True(manager.LoadIfChanged("localization", initial));
         Assert.False(manager.LoadIfChanged("localization", initial));
         Assert.True(manager.LoadIfChanged("localization", ExportLocalization("Hi")));
-        Assert.Equal("Hi", manager.GetLocalizationText("greeting", "en-US"));
+        Assert.Equal("Hi", manager.GetLocalizationText("greeting", "en_US"));
 
         manager.Unload("localization");
-        Assert.Throws<KeyNotFoundException>(() => manager.GetLocalizationText("greeting", "en-US"));
+        Assert.Throws<KeyNotFoundException>(() => manager.GetLocalizationText("greeting", "en_US"));
         manager.Load("localization", initial);
         manager.Clear();
-        Assert.Throws<KeyNotFoundException>(() => manager.GetLocalizationText("greeting", "en-US"));
+        Assert.Throws<KeyNotFoundException>(() => manager.GetLocalizationText("greeting", "en_US"));
     }
 
     private static byte[] ExportLocalization(string? english = "Hello") =>
@@ -80,11 +86,11 @@ public sealed class LocalizationRuntimeTests
         new TableSchema("localization",
         [
             new FieldSchema(1, "id", string.Empty, TypeDescriptor.Parse("string"), FieldTarget.Both, null),
-            new FieldSchema(2, "zh-CN", string.Empty, TypeDescriptor.Parse("string"), FieldTarget.Client, null),
-            new FieldSchema(3, "en-US", string.Empty, TypeDescriptor.Parse("string"), FieldTarget.Both, null)
+            new FieldSchema(2, "zh_CN", string.Empty, TypeDescriptor.Parse("string"), FieldTarget.Client, null),
+            new FieldSchema(3, "en_US", string.Empty, TypeDescriptor.Parse("string"), FieldTarget.Both, null)
         ], "id"),
         [new TableRow(7, false, new Dictionary<string, string?>
         {
-            ["id"] = "greeting", ["zh-CN"] = "你好", ["en-US"] = english
+            ["id"] = "greeting", ["zh_CN"] = "你好", ["en_US"] = english
         })]);
 }

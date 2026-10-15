@@ -6,6 +6,7 @@
 
 | 现象或错误 | 处理方式 |
 | --- | --- |
+| `FIELD_NAME_INVALID` | 字段名包含连字符 `-`，请改为下划线 `_`。普通字段和单例字段检查名称单元格，beans/map 子字段检查类型定义单元格。语言表使用 `zh_CN`、`en_US`，修改后同步重新导出数据和 C# 并更新查询参数。 |
 | `FIELD_TYPE_UNKNOWN` | 检查字段类型是否为 `int`、`long`、`float`、`double`、`bool`、`string`、`Vector2`、`Vector3`、`Vector4`、`Color` 或 `Quaternion`。 |
 | `FIELD_ARRAY_SEPARATOR_INVALID` | 检查一维 `#`、二维 `|` 和 `#`、三维 `;`、`|` 和 `#` 是否按维度使用。 |
 | `PRIMARY_KEY_DUPLICATE` | 修改普通表第一字段的重复 key。 |

@@ -58,8 +58,8 @@ public sealed class LocalizationExportTests
 
                 using var catalog = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, target, "localization.json")));
                 var row = catalog.RootElement.GetProperty("rows")[0];
-                Assert.Equal("Hello", row.GetProperty("en-US").GetString());
-                Assert.Equal(target == "client", row.TryGetProperty("zh-CN", out _));
+                Assert.Equal("Hello", row.GetProperty("en_US").GetString());
+                Assert.Equal(target == "client", row.TryGetProperty("zh_CN", out _));
             }
         }
         finally
@@ -86,7 +86,7 @@ public sealed class LocalizationExportTests
     }
 
     [Theory]
-    [InlineData("localization", "{\"key\":\"greeting\",\"translations\":{\"en-US\":\"Hello\"}}")]
+    [InlineData("localization", "{\"key\":\"greeting\",\"translations\":{\"en_US\":\"Hello\"}}")]
     [InlineData("beans(label#localization)", "{\"label\":{\"key\":\"greeting\"}}")]
     [InlineData("localization()", "[{\"key\":\"greeting\"}]")]
     public void RejectsOldLocalizationObjects(string type, string raw)
