@@ -10,7 +10,7 @@ using TableTool.Core.Validation;
 
 namespace TableTool.Serialization;
 
-public static class CSharpExporter
+public static partial class CSharpExporter
 {
     public static string Export(TableDocument document, bool includeRuntimeAdapter = false)
     {
@@ -120,155 +120,6 @@ public static class CSharpExporter
         }
     }
 
-    private static void AppendRuntimeAdapter(StringBuilder builder, TableDocument document)
-    {
-        var typeName = $"{document.Schema.Name}Data";
-        var adapterName = $"{document.Schema.Name}TableAdapter";
-        builder.AppendLine();
-        builder.AppendLine($"public static class {adapterName}");
-        builder.AppendLine("{");
-        builder.AppendLine($"    public static {typeName} FromRow(TableRowView row) => new {typeName}()");
-        builder.AppendLine("    {");
-        foreach (var field in document.Schema.Fields)
-            builder.AppendLine($"        {ToPascal(field.Name)} = {ToReadExpression(field)},");
-        builder.AppendLine("    };");
-
-        foreach (var field in document.Schema.Fields.Where(field => field.Type.IsComplex))
-            AppendComplexReaders(builder, field.Type, ToComplexTypeName(field.Name, field.Type), typeName, "    ");
-
-        foreach (var group in document.Schema.Fields
-                     .SelectMany(field => EnumerateUnityTypes(field.Type))
-                     .Distinct())
-            AppendUnityReaders(builder, group.BaseType, group.Dimensions);
-        builder.AppendLine("}");
-    }
-
-    private static string ToReadExpression(FieldSchema field)
-    {
-        var key = Escape(field.Name);
-        if (field.Type.IsComplex)
-        {
-            var sourceType = ToRuntimeReadType(field.Type);
-            var helper = ToReaderName(ToComplexTypeName(field.Name, field.Type), field.Type);
-            return $"{helper}(row.Read<{sourceType}>(\"{key}\"))";
-        }
-        if (IsUnityType(field.Type.BaseType))
-        {
-            var method = $"Read{field.Type.BaseType}{(field.Type.Dimensions == 0 ? string.Empty : field.Type.Dimensions.ToString())}";
-            return $"{method}(row.Read<{ToComponentArrayType(field.Type.Dimensions)}>(\"{key}\"))";
-        }
-        return $"row.Read<{ToCSharpType(field.Type, field.Name)}>(\"{key}\")";
-    }
-
-    private static void AppendComplexReaders(StringBuilder builder, TypeDescriptor type, string typeName, string dataTypeName, string indent)
-    {
-        var helperName = ToReaderName(typeName, type);
-        var sourceType = ToRuntimeReadType(type);
-        var targetType = $"{dataTypeName}.{typeName}";
-        if (type.Dimensions > 0)
-        {
-            var childType = WithoutOneDimension(type);
-            var childName = ToReaderName(typeName, childType);
-            builder.AppendLine();
-            builder.AppendLine($"{indent}private static {targetType}{string.Concat(Enumerable.Repeat("[]", type.Dimensions))} {helperName}({sourceType} value) => value.Select(item => {childName}(item)).ToArray();");
-            AppendComplexReaders(builder, childType, typeName, dataTypeName, indent);
-            return;
-        }
-
-        if (type.IsLocalization)
-        {
-            builder.AppendLine();
-            builder.AppendLine($"{indent}private static {targetType} {helperName}(RuntimeLocalizationValue value) => new {targetType} {{ Key = value.Key }};");
-            return;
-        }
-        if (type.IsBeans)
-        {
-            builder.AppendLine();
-            builder.AppendLine($"{indent}private static {targetType} {helperName}(RuntimeBeanValue value) => new {targetType}");
-            builder.AppendLine($"{indent}{{");
-            foreach (var field in type.BeanFields ?? [])
-            {
-                var member = ToPascal(field.Name);
-                var raw = $"value.Get(\"{Escape(field.Name)}\")";
-                var expression = field.Type.IsComplex
-                    ? $"{ToReaderName(field.Name, field.Type)}(({ToRuntimeReadType(field.Type)}){raw}!)"
-                    : IsUnityType(field.Type.BaseType)
-                        ? ToUnityReadExpression(field.Type, raw, field.Name)
-                        : $"RuntimeValueConverter.Convert<{ToCSharpType(field.Type, field.Name)}>({raw}, \"{Escape(field.Name)}\")";
-                builder.AppendLine($"{indent}    {member} = {expression},");
-            }
-            builder.AppendLine($"{indent}}};");
-            foreach (var field in type.BeanFields ?? [])
-                if (field.Type.IsComplex)
-                    AppendComplexReaders(builder, field.Type, ToComplexTypeName(field.Name, field.Type), dataTypeName, indent);
-            return;
-        }
-        if (type.IsMap)
-        {
-            var keyType = ToCSharpType(type.KeyType!, "key");
-            var entryType = $"{dataTypeName}.{typeName}";
-            builder.AppendLine();
-            builder.AppendLine($"{indent}private static Dictionary<{keyType}, {entryType}> {helperName}(RuntimeMapValue value) => value.Entries.ToDictionary(");
-            builder.AppendLine($"{indent}    item => RuntimeValueConverter.Convert<{keyType}>(item.Key, \"map.key\"),");
-            builder.AppendLine($"{indent}    item => new {entryType}");
-            builder.AppendLine($"{indent}    {{");
-            builder.AppendLine($"{indent}        Key = RuntimeValueConverter.Convert<{keyType}>(item.Key, \"map.key\"),");
-            builder.AppendLine($"{indent}        Text = {ToMapValueExpression(type.ValueType!, "item.Text", dataTypeName)},");
-            builder.AppendLine($"{indent}        Bean = {ToMapValueExpression(type.BeanType!, "item.Bean", dataTypeName)},");
-            builder.AppendLine($"{indent}    }});");
-            if (type.ValueType!.IsComplex)
-                AppendComplexReaders(builder, type.ValueType, ToComplexTypeName("text", type.ValueType), dataTypeName, indent);
-            if (type.BeanType!.IsComplex)
-                AppendComplexReaders(builder, type.BeanType, ToComplexTypeName("bean", type.BeanType), dataTypeName, indent);
-        }
-    }
-
-    private static string ToMapValueExpression(TypeDescriptor type, string expression, string dataTypeName) =>
-        type.IsComplex
-            ? $"{ToReaderName(type.IsBeans ? "bean" : "text", type)}(({ToRuntimeReadType(type)}){expression}!)"
-            : $"RuntimeValueConverter.Convert<{ToCSharpType(type, type.IsBeans ? "bean" : "text")}>({expression}, \"map.value\")";
-
-    private static string ToUnityReadExpression(TypeDescriptor type, string expression, string fieldName)
-    {
-        var method = $"Read{type.BaseType}{(type.Dimensions == 0 ? string.Empty : type.Dimensions.ToString())}";
-        return $"{method}(RuntimeValueConverter.Convert<{ToComponentArrayType(type.Dimensions)}>({expression}, \"{Escape(fieldName)}\"))";
-    }
-
-    private static void AppendUnityReaders(StringBuilder builder, string baseType, int dimensions)
-    {
-        if (dimensions > 0)
-        {
-            AppendUnityReaders(builder, baseType, dimensions - 1);
-            var sourceType = ToComponentArrayType(dimensions);
-            var outputType = ToUnityArrayType(baseType, dimensions);
-            var innerMethod = $"Read{baseType}{(dimensions == 1 ? string.Empty : (dimensions - 1).ToString())}";
-            builder.AppendLine();
-            builder.AppendLine($"    private static {outputType} Read{baseType}{dimensions}({sourceType} value) => value.Select(item => {innerMethod}(item)).ToArray();");
-            return;
-        }
-
-        var components = baseType switch
-        {
-            "Vector2" => "value[0], value[1]",
-            "Vector3" => "value[0], value[1], value[2]",
-            "Vector4" => "value[0], value[1], value[2], value[3]",
-            "Quaternion" => "value[0], value[1], value[2], value[3]",
-            "Color" => "value[0], value[1], value[2], value.Length > 3 ? value[3] : 1f",
-            _ => throw new InvalidOperationException($"Unsupported Unity type '{baseType}'.")
-        };
-        builder.AppendLine();
-        builder.AppendLine($"    private static {baseType} Read{baseType}(float[] value) => new {baseType}({components});");
-    }
-
-    private static string ToRuntimeReadType(TypeDescriptor type)
-    {
-        var baseType = type.IsLocalization
-            ? "RuntimeLocalizationValue"
-            : type.IsBeans
-                ? "RuntimeBeanValue"
-                : "RuntimeMapValue";
-        return baseType + string.Concat(Enumerable.Repeat("[]", type.Dimensions));
-    }
 
     private static string ToCSharpType(TypeDescriptor type, string fieldName)
     {
@@ -291,19 +142,6 @@ public static class CSharpExporter
     private static string ToComplexTypeName(string fieldName, TypeDescriptor type) =>
         ToPascal(fieldName) + (type.IsLocalization ? "Value" : type.IsBeans ? "Bean" : "Entry");
 
-    private static string ToReaderName(string fieldName, TypeDescriptor type) =>
-        "Read" + ToPascal(fieldName) + (type.IsLocalization ? "Value" : type.IsBeans ? "Bean" : "Map");
-
-    private static TypeDescriptor WithoutOneDimension(TypeDescriptor type) => new(
-        type.BaseType,
-        type.Dimensions - 1,
-        type.EnumValues,
-        type.IsValid,
-        type.RawText,
-        type.BeanFields,
-        type.KeyType,
-        type.ValueType,
-        type.BeanType);
 
     private static string ToEnumName(FieldSchema field) => $"{ToPascal(field.Name)}Value";
     private static string ToEnumName(string fieldName) => $"{ToPascal(fieldName)}Value";
